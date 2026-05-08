@@ -10,7 +10,7 @@ ENV_FILE = BACKEND_DIR / ".env"
 class Settings(BaseSettings):
     app_name: str = "Mealio Backend API"
     app_version: str = "0.1.0"
-    database_url: str | None = None
+    database_url: str
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
