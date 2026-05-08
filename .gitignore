@@ -155,3 +155,11 @@ Thumbs.db
 
 # Node.js
 node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node.js
+node_modules/
