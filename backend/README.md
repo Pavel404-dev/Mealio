@@ -13,28 +13,21 @@ Backend API for the Mealio mobile application.
 
 ## Local Development
 
-Create a local environment file:
+From the repository root:
 
 ```bash
-cp .env.example .env
-```
-
-Install dependencies:
-
-```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-Run the application from the `backend/` directory:
-
-```bash
+copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
 Health check:
 
 ```txt
-GET /health
+http://127.0.0.1:8000/health
 ```
 
 Expected response:
