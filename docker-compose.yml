@@ -1,3 +1,15 @@
-services:{}
-# PostgreSQL service will be added in the next infrastructure issue.
-# This file is created now to prepare local development infrastructure.
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mealio}
+      POSTGRES_USER: ${POSTGRES_USER:-mealio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mealio_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - mealio_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  mealio_postgres_data:
