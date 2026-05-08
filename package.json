@@ -1,0 +1,27 @@
+{
+  "name": "mealio",
+  "version": "1.0.0",
+  "description": "Mealio is an AI-powered mobile application for generating recipes from ingredients that users already have at home.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pavel404-dev/Mealio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Pavel404-dev/Mealio/issues"
+  },
+  "homepage": "https://github.com/Pavel404-dev/Mealio#readme",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
