@@ -1,54 +1,83 @@
-# Miscellaneous
-*.class
-*.lock
-*.log
-*.pyc
-*.swp
-.buildlog/
-.history
+# ============================================================
+# Mealio .gitignore
+# ============================================================
 
+# ------------------------------------------------------------
+# Environment files
+# ------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+backend/.env.*.local
 
+# Keep example env files in Git
+!.env.example
+!backend/.env.example
 
-# Flutter repo-specific
-/bin/cache/
-/bin/internal/bootstrap.bat
-/bin/internal/bootstrap.sh
-/bin/mingit/
-/dev/benchmarks/mega_gallery/
-/dev/bots/.recipe_deps
-/dev/bots/android_tools/
-/dev/devicelab/ABresults*.json
-/dev/docs/doc/
-/dev/docs/flutter.docs.zip
-/dev/docs/lib/
-/dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
-/dev/integration_tests/**/Pods
-/packages/flutter/coverage/
-version
-analysis_benchmark.json
+# ------------------------------------------------------------
+# Python / FastAPI
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
 
-# packages file containing multi-root paths
-.packages.generated
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+backend/env/
+backend/ENV/
 
-# Flutter/Dart/Pub related
-**/doc/api/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+*.db
+*.sqlite3
+
+# ------------------------------------------------------------
+# Node.js
+# ------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------
+# Flutter / Dart / Pub
+# ------------------------------------------------------------
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-**/generated_plugin_registrant.dart
 .packages
-.pub-preload-cache/
+.packages.generated
 .pub/
+.pub-cache/
+.pub-preload-cache/
 build/
+
+**/doc/api/
+**/generated_plugin_registrant.dart
+
 flutter_*.png
 linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
-# Android related
-**/android/**/gradle-wrapper.jar
+# ------------------------------------------------------------
+# Android
+# ------------------------------------------------------------
 .gradle/
+**/android/**/gradle-wrapper.jar
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
@@ -57,7 +86,9 @@ unlinked_spec.ds
 **/android/key.properties
 *.jks
 
-# iOS/XCode related
+# ------------------------------------------------------------
+# iOS / Xcode
+# ------------------------------------------------------------
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
@@ -87,79 +118,87 @@ unlinked_spec.ds
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
-# macOS
+# Exceptions for Xcode default files
+!**/ios/**/default.mode1v3
+!**/ios/**/default.mode2v3
+!**/ios/**/default.pbxuser
+!**/ios/**/default.perspectivev3
+
+# ------------------------------------------------------------
+# macOS Flutter
+# ------------------------------------------------------------
 **/Flutter/ephemeral/
 **/Pods/
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
 **/xcuserdata/
 
-# Windows
+# ------------------------------------------------------------
+# Windows Flutter
+# ------------------------------------------------------------
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
 
-# Linux
+# ------------------------------------------------------------
+# Linux Flutter
+# ------------------------------------------------------------
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
 
-# Coverage
-coverage/
-
-# Symbols
-app.*.symbols
-
-# Exceptions to above rules.
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
+# ------------------------------------------------------------
+# Flutter repository specific
+# ------------------------------------------------------------
+/bin/cache/
+/bin/internal/bootstrap.bat
+/bin/internal/bootstrap.sh
+/bin/mingit/
+/dev/benchmarks/mega_gallery/
+/dev/bots/.recipe_deps
+/dev/bots/android_tools/
+/dev/devicelab/ABresults*.json
+/dev/docs/doc/
+/dev/docs/flutter.docs.zip
+/dev/docs/lib/
+/dev/docs/pubspec.yaml
+/dev/integration_tests/**/xcuserdata
+/dev/integration_tests/**/Pods
+/packages/flutter/coverage/
+version
+analysis_benchmark.json
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# ------------------------------------------------------------
+# Coverage
+# ------------------------------------------------------------
+coverage/
 
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-venv/
-.venv/
-env/
-ENV/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+# ------------------------------------------------------------
+# Symbols
+# ------------------------------------------------------------
+app.*.symbols
 
-# FastAPI / backend
-*.db
-*.sqlite3
-
+# ------------------------------------------------------------
 # IDE
+# ------------------------------------------------------------
 .idea/
 .vscode/
 *.iml
 
-# OS
+# ------------------------------------------------------------
+# OS files
+# ------------------------------------------------------------
 .DS_Store
 Thumbs.db
 
-# Logs
+# ------------------------------------------------------------
+# Logs and temporary files
+# ------------------------------------------------------------
 *.log
-
-# Node.js
-node_modules/
-
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# Node.js
-node_modules/
+*.lock
+*.swp
+*.class
+.buildlog/
+.history
