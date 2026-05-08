@@ -1,14 +1,13 @@
 services:
   postgres:
     image: postgres:17
-    container_name: mealio_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mealio}
+      POSTGRES_USER: ${POSTGRES_USER:-mealio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mealio_password}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - mealio_postgres_data:/var/lib/postgresql/data
 
