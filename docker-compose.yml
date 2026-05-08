@@ -1,0 +1,3 @@
+services:{}
+# PostgreSQL service will be added in the next infrastructure issue.
+# This file is created now to prepare local development infrastructure.

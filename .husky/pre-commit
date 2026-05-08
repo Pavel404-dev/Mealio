@@ -1,0 +1,5 @@
+echo "Running Mealio pre-commit checks..."
+
+git status --short
+
+echo "Pre-commit checks completed."
