@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class NutritionValueBase(BaseModel):
@@ -28,6 +28,22 @@ class IngredientBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     category: str | None = Field(default=None, max_length=100)
 
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Ingredient name cannot be empty")
+        return value
+
+    @field_validator("category")
+    @classmethod
+    def normalize_category(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+        return value
+
 
 class IngredientCreate(IngredientBase):
     nutrition_value: NutritionValueCreate | None = None
@@ -37,6 +53,22 @@ class IngredientUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     category: str | None = Field(default=None, max_length=100)
     nutrition_value: NutritionValueCreate | None = None
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value == "":
+            raise ValueError("Ingredient name cannot be empty")
+        return value
+
+    @field_validator("category")
+    @classmethod
+    def normalize_category(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+        return value
 
 
 class IngredientRead(IngredientBase):

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.pantry import PantryRepository
 from app.schemas.pantry import PantryItemCreate, PantryItemUpdate
+from app.repositories.exceptions import DuplicateResourceError
 
 
 class PantryService:
@@ -35,8 +36,13 @@ class PantryService:
                 detail="Ingredient already exists in user pantry",
             )
 
-        return await self.repository.create(user_id=user_id, data=data)
-
+        try:
+            return await self.repository.create(user_id=user_id, data=data)
+        except DuplicateResourceError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
     async def update_pantry_item(
             self,
             *,

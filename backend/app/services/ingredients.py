@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.ingredients import IngredientsRepository
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.repositories.exceptions import DuplicateResourceError
 
 
 class IngredientsService:
@@ -44,8 +45,13 @@ class IngredientsService:
                 detail="Ingredient with this name already exists",
             )
 
-        return await self.repository.create(data)
-
+        try:
+            return await self.repository.create(data)
+        except DuplicateResourceError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
     async def update_ingredient(
             self,
             ingredient_id: uuid.UUID,
@@ -62,8 +68,13 @@ class IngredientsService:
                     detail="Ingredient with this name already exists",
                 )
 
-        return await self.repository.update(ingredient, data)
-
+        try:
+            return await self.repository.update(ingredient, data)
+        except DuplicateResourceError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
     async def delete_ingredient(self, ingredient_id: uuid.UUID) -> None:
         await self.get_ingredient(ingredient_id)
         await self.repository.delete(ingredient_id)

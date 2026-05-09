@@ -1,11 +1,13 @@
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient, NutritionValue
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.repositories.exceptions import DuplicateResourceError
 
 
 class IngredientsRepository:
@@ -47,7 +49,7 @@ class IngredientsRepository:
         stmt = (
             select(Ingredient)
             .options(selectinload(Ingredient.nutrition_value))
-            .where(Ingredient.name.ilike(name))
+            .where(func.lower(Ingredient.name) == name.lower())
         )
 
         result = await self.db.execute(stmt)
@@ -69,7 +71,12 @@ class IngredientsRepository:
             )
 
         self.db.add(ingredient)
-        await self.db.commit()
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise DuplicateResourceError("Ingredient with this name already exists") from exc
 
         created = await self.get_by_id(ingredient.id)
         if created is None:
@@ -107,8 +114,11 @@ class IngredientsRepository:
                 ingredient.nutrition_value.fat_g = data.nutrition_value.fat_g
                 ingredient.nutrition_value.portion_g = data.nutrition_value.portion_g
 
-        await self.db.commit()
-
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise DuplicateResourceError("Ingredient with this name already exists") from exc
         updated = await self.get_by_id(ingredient.id)
         if updated is None:
             raise RuntimeError("Updated ingredient was not found")

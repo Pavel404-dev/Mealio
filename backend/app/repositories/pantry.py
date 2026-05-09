@@ -3,10 +3,12 @@ import uuid
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 
 from app.models.ingredient import Ingredient, UserIngredient
 from app.models.user import User
 from app.schemas.pantry import PantryItemCreate, PantryItemUpdate
+from app.repositories.exceptions import DuplicateResourceError
 
 
 class PantryRepository:
@@ -88,7 +90,12 @@ class PantryRepository:
         )
 
         self.db.add(pantry_item)
-        await self.db.commit()
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise DuplicateResourceError("Ingredient already exists in user pantry") from exc
 
         created = await self.get_user_pantry_item(
             user_id=user_id,
