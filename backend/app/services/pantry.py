@@ -109,3 +109,4 @@ class PantryService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ingredient not found",
             )
+        

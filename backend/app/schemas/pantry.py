@@ -29,3 +29,4 @@ class PantryItemRead(BaseModel):
     ingredient: IngredientRead
 
     model_config = ConfigDict(from_attributes=True)
+    

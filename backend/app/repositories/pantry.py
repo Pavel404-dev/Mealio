@@ -146,3 +146,4 @@ class PantryRepository:
 
         await self.db.execute(stmt)
         await self.db.commit()
+        
