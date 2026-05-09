@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -34,13 +36,13 @@ class RecipeAIRequest(Base):
         nullable=False,
     )
 
-    ingredients_input: Mapped[dict | None] = mapped_column(
-        JSONB,
+    ingredients_input: Mapped[dict[str, Any] | None] = mapped_column(
+        MutableDict.as_mutable(JSONB),
         nullable=True,
     )
 
-    ai_response: Mapped[dict | None] = mapped_column(
-        JSONB,
+    ai_response: Mapped[dict[str, Any] | None] = mapped_column(
+        MutableDict.as_mutable(JSONB),
         nullable=True,
     )
 
@@ -53,6 +55,7 @@ class RecipeAIRequest(Base):
         String(50),
         nullable=False,
         default="pending",
+        server_default="pending",
     )
 
     error_message: Mapped[str | None] = mapped_column(

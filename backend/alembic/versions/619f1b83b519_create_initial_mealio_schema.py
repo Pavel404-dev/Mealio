@@ -1,8 +1,8 @@
 """create initial mealio schema
 
-Revision ID: 08c4fa6842ff
+Revision ID: 619f1b83b519
 Revises: 
-Create Date: 2026-05-09 16:31:44.486817
+Create Date: 2026-05-09 16:37:53.694595
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '08c4fa6842ff'
+revision: str = '619f1b83b519'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -109,7 +109,7 @@ def upgrade() -> None:
     sa.Column('ingredients_input', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('ai_response', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('model_name', sa.String(length=100), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('status', sa.String(length=50), server_default='pending', nullable=False),
     sa.Column('error_message', sa.Text(), nullable=True),
     sa.Column('duration_ms', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
