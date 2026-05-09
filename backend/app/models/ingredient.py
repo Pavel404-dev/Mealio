@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -69,33 +70,37 @@ class NutritionValue(Base):
         nullable=False,
     )
 
-    calories: Mapped[float] = mapped_column(
+    calories: Mapped[Decimal] = mapped_column(
         Numeric(8, 2),
         nullable=False,
     )
 
-    protein_g: Mapped[float] = mapped_column(
+    protein_g: Mapped[Decimal] = mapped_column(
         Numeric(8, 2),
         nullable=False,
-        default=0,
+        default=Decimal("0"),
+        server_default="0",
     )
 
-    carbs_g: Mapped[float] = mapped_column(
+    carbs_g: Mapped[Decimal] = mapped_column(
         Numeric(8, 2),
         nullable=False,
-        default=0,
+        default=Decimal("0"),
+        server_default="0",
     )
 
-    fat_g: Mapped[float] = mapped_column(
+    fat_g: Mapped[Decimal] = mapped_column(
         Numeric(8, 2),
         nullable=False,
-        default=0,
+        default=Decimal("0"),
+        server_default="0",
     )
 
-    portion_g: Mapped[float] = mapped_column(
+    portion_g: Mapped[Decimal] = mapped_column(
         Numeric(8, 2),
         nullable=False,
-        default=100,
+        default=Decimal("100"),
+        server_default="100",
     )
 
     ingredient = relationship(
@@ -133,10 +138,11 @@ class UserIngredient(Base):
         nullable=False,
     )
 
-    quantity_g: Mapped[float] = mapped_column(
+    quantity_g: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
-        default=0,
+        default=Decimal("0"),
+        server_default="0",
     )
 
     expires_at: Mapped[datetime | None] = mapped_column(
@@ -159,7 +165,7 @@ class UserIngredient(Base):
 
     user = relationship(
         "User",
-        back_populates="ingredients",
+        back_populates="user_ingredients",
     )
 
     ingredient = relationship(

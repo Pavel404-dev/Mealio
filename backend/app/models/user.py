@@ -47,7 +47,7 @@ class User(Base):
         nullable=False,
     )
 
-    ingredients = relationship(
+    user_ingredients = relationship(
         "UserIngredient",
         back_populates="user",
         cascade="all, delete-orphan",

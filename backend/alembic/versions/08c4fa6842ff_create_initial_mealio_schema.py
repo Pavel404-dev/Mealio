@@ -1,8 +1,8 @@
 """create initial mealio schema
 
-Revision ID: fa1883a6b283
+Revision ID: 08c4fa6842ff
 Revises: 
-Create Date: 2026-05-09 16:10:47.444278
+Create Date: 2026-05-09 16:31:44.486817
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'fa1883a6b283'
+revision: str = '08c4fa6842ff'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -53,10 +53,10 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('ingredient_id', sa.UUID(), nullable=False),
     sa.Column('calories', sa.Numeric(precision=8, scale=2), nullable=False),
-    sa.Column('protein_g', sa.Numeric(precision=8, scale=2), nullable=False),
-    sa.Column('carbs_g', sa.Numeric(precision=8, scale=2), nullable=False),
-    sa.Column('fat_g', sa.Numeric(precision=8, scale=2), nullable=False),
-    sa.Column('portion_g', sa.Numeric(precision=8, scale=2), nullable=False),
+    sa.Column('protein_g', sa.Numeric(precision=8, scale=2), server_default='0', nullable=False),
+    sa.Column('carbs_g', sa.Numeric(precision=8, scale=2), server_default='0', nullable=False),
+    sa.Column('fat_g', sa.Numeric(precision=8, scale=2), server_default='0', nullable=False),
+    sa.Column('portion_g', sa.Numeric(precision=8, scale=2), server_default='100', nullable=False),
     sa.ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('ingredient_id')
@@ -81,7 +81,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('ingredient_id', sa.UUID(), nullable=False),
-    sa.Column('quantity_g', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('quantity_g', sa.Numeric(precision=10, scale=2), server_default='0', nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

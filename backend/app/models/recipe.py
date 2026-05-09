@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -43,22 +44,22 @@ class Recipe(Base):
         nullable=True,
     )
 
-    total_calories: Mapped[float | None] = mapped_column(
+    total_calories: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2),
         nullable=True,
     )
 
-    total_protein_g: Mapped[float | None] = mapped_column(
+    total_protein_g: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2),
         nullable=True,
     )
 
-    total_carbs_g: Mapped[float | None] = mapped_column(
+    total_carbs_g: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2),
         nullable=True,
     )
 
-    total_fat_g: Mapped[float | None] = mapped_column(
+    total_fat_g: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2),
         nullable=True,
     )
@@ -81,7 +82,7 @@ class Recipe(Base):
         back_populates="recipes",
     )
 
-    ingredients = relationship(
+    recipe_ingredients = relationship(
         "RecipeIngredient",
         back_populates="recipe",
         cascade="all, delete-orphan",
@@ -127,14 +128,14 @@ class RecipeIngredient(Base):
         nullable=False,
     )
 
-    quantity_g: Mapped[float] = mapped_column(
+    quantity_g: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
     )
 
     recipe = relationship(
         "Recipe",
-        back_populates="ingredients",
+        back_populates="recipe_ingredients",
     )
 
     ingredient = relationship(
