@@ -57,6 +57,54 @@ class MealPlanSummariesRepository:
             "total_fat_g": self._to_decimal(row.total_fat_g),
         }
 
+    async def get_daily_nutrition_summary(
+            self,
+            *,
+            meal_plan_id: uuid.UUID,
+    ) -> list[dict]:
+        stmt = (
+            select(
+                MealPlanItem.planned_date.label("date"),
+                func.count(MealPlanItem.id).label("items_count"),
+                func.coalesce(
+                    func.sum(func.coalesce(Recipe.total_calories, ZERO)),
+                    ZERO,
+                ).label("total_calories"),
+                func.coalesce(
+                    func.sum(func.coalesce(Recipe.total_protein_g, ZERO)),
+                    ZERO,
+                ).label("total_protein_g"),
+                func.coalesce(
+                    func.sum(func.coalesce(Recipe.total_carbs_g, ZERO)),
+                    ZERO,
+                ).label("total_carbs_g"),
+                func.coalesce(
+                    func.sum(func.coalesce(Recipe.total_fat_g, ZERO)),
+                    ZERO,
+                ).label("total_fat_g"),
+            )
+            .select_from(MealPlanItem)
+            .join(Recipe, Recipe.id == MealPlanItem.recipe_id)
+            .where(MealPlanItem.meal_plan_id == meal_plan_id)
+            .group_by(MealPlanItem.planned_date)
+            .order_by(MealPlanItem.planned_date.asc())
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        return [
+            {
+                "date": row.date,
+                "items_count": row.items_count or 0,
+                "total_calories": self._to_decimal(row.total_calories),
+                "total_protein_g": self._to_decimal(row.total_protein_g),
+                "total_carbs_g": self._to_decimal(row.total_carbs_g),
+                "total_fat_g": self._to_decimal(row.total_fat_g),
+            }
+            for row in rows
+        ]
+
     def _to_decimal(self, value) -> Decimal:
         if value is None:
             return ZERO

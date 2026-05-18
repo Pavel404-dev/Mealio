@@ -276,3 +276,211 @@ async def test_get_meal_plan_nutrition_summary_rejects_missing_meal_plan(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Meal plan not found"
+
+@pytest.mark.asyncio
+async def test_get_meal_plan_daily_nutrition_summary_success(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+
+    breakfast_recipe_id = await create_test_recipe(
+        client,
+        title="Breakfast Bowl",
+        total_calories="500.00",
+        total_protein_g="30.00",
+        total_carbs_g="55.00",
+        total_fat_g="12.00",
+    )
+
+    lunch_recipe_id = await create_test_recipe(
+        client,
+        title="Chicken Rice",
+        total_calories="750.00",
+        total_protein_g="45.00",
+        total_carbs_g="80.00",
+        total_fat_g="20.00",
+    )
+
+    dinner_recipe_id = await create_test_recipe(
+        client,
+        title="Salmon Dinner",
+        total_calories="600.00",
+        total_protein_g="40.00",
+        total_carbs_g="35.00",
+        total_fat_g="25.00",
+    )
+
+    meal_plan = await create_test_meal_plan(
+        client,
+        user_id=str(user.id),
+    )
+
+    await add_meal_plan_item(
+        client,
+        user_id=str(user.id),
+        meal_plan_id=meal_plan["id"],
+        recipe_id=breakfast_recipe_id,
+        planned_date="2026-05-18",
+        meal_type="breakfast",
+    )
+
+    await add_meal_plan_item(
+        client,
+        user_id=str(user.id),
+        meal_plan_id=meal_plan["id"],
+        recipe_id=lunch_recipe_id,
+        planned_date="2026-05-18",
+        meal_type="lunch",
+    )
+
+    await add_meal_plan_item(
+        client,
+        user_id=str(user.id),
+        meal_plan_id=meal_plan["id"],
+        recipe_id=dinner_recipe_id,
+        planned_date="2026-05-19",
+        meal_type="dinner",
+    )
+
+    response = await client.get(
+        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/daily-summary"
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == [
+        {
+            "date": "2026-05-18",
+            "items_count": 2,
+            "total_calories": "1250.00",
+            "total_protein_g": "75.00",
+            "total_carbs_g": "135.00",
+            "total_fat_g": "32.00",
+        },
+        {
+            "date": "2026-05-19",
+            "items_count": 1,
+            "total_calories": "600.00",
+            "total_protein_g": "40.00",
+            "total_carbs_g": "35.00",
+            "total_fat_g": "25.00",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+
+    meal_plan = await create_test_meal_plan(
+        client,
+        user_id=str(user.id),
+    )
+
+    response = await client.get(
+        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/daily-summary"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+
+    recipe_with_null_values_id = await create_test_recipe(
+        client,
+        title="Recipe Without Nutrition",
+        total_calories=None,
+        total_protein_g=None,
+        total_carbs_g=None,
+        total_fat_g=None,
+    )
+
+    recipe_with_values_id = await create_test_recipe(
+        client,
+        title="Recipe With Nutrition",
+        total_calories="400.00",
+        total_protein_g="25.00",
+        total_carbs_g="40.00",
+        total_fat_g="10.00",
+    )
+
+    meal_plan = await create_test_meal_plan(
+        client,
+        user_id=str(user.id),
+    )
+
+    await add_meal_plan_item(
+        client,
+        user_id=str(user.id),
+        meal_plan_id=meal_plan["id"],
+        recipe_id=recipe_with_null_values_id,
+        planned_date="2026-05-18",
+        meal_type="breakfast",
+    )
+
+    await add_meal_plan_item(
+        client,
+        user_id=str(user.id),
+        meal_plan_id=meal_plan["id"],
+        recipe_id=recipe_with_values_id,
+        planned_date="2026-05-18",
+        meal_type="dinner",
+    )
+
+    response = await client.get(
+        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/daily-summary"
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == [
+        {
+            "date": "2026-05-18",
+            "items_count": 2,
+            "total_calories": "400.00",
+            "total_protein_g": "25.00",
+            "total_carbs_g": "40.00",
+            "total_fat_g": "10.00",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_user(
+        client: AsyncClient,
+) -> None:
+    missing_user_id = uuid4()
+    meal_plan_id = uuid4()
+
+    response = await client.get(
+        f"/api/v1/users/{missing_user_id}/meal-plans/{meal_plan_id}/daily-summary"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+
+
+@pytest.mark.asyncio
+async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_meal_plan(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+    missing_meal_plan_id = uuid4()
+
+    response = await client.get(
+        f"/api/v1/users/{user.id}/meal-plans/{missing_meal_plan_id}/daily-summary"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Meal plan not found"
