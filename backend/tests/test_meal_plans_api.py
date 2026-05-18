@@ -151,6 +151,34 @@ async def test_create_meal_plan_with_items_rejects_date_outside_range(
 
 
 @pytest.mark.asyncio
+async def test_create_meal_plan_with_items_rejects_missing_recipe(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+    missing_recipe_id = uuid4()
+
+    response = await client.post(
+        f"/api/v1/users/{user.id}/meal-plans",
+        json={
+            "title": "Weekly Meal Plan",
+            "start_date": "2026-05-18",
+            "end_date": "2026-05-24",
+            "items": [
+                {
+                    "recipe_id": str(missing_recipe_id),
+                    "planned_date": "2026-05-18",
+                    "meal_type": "dinner",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 404
+    assert "Recipes not found" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_create_meal_plan_rejects_duplicate_slots(
         client: AsyncClient,
         db_session: AsyncSession,

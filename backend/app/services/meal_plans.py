@@ -8,6 +8,7 @@ from app.models.meal_plan import MealPlan
 from app.repositories.meal_plans import (
     MealPlanItemSlotConflictError,
     MealPlansRepository,
+    normalize_meal_type,
 )
 from app.schemas.meal_plan import (
     MealPlanCreate,
@@ -154,7 +155,7 @@ class MealPlansService:
             meal_plan_id=meal_plan_id,
         )
 
-        normalized_meal_type = self._normalize_meal_type(data.meal_type)
+        normalized_meal_type = normalize_meal_type(data.meal_type)
 
         await self._validate_recipe_exists(data.recipe_id)
 
@@ -214,7 +215,7 @@ class MealPlansService:
         )
 
         meal_type = (
-            self._normalize_meal_type(data.meal_type)
+            normalize_meal_type(data.meal_type)
             if data.meal_type is not None
             else item.meal_type
         )
@@ -289,15 +290,32 @@ class MealPlansService:
             self,
             items: list[MealPlanItemCreate],
     ) -> None:
-        for item in items:
-            await self._validate_recipe_exists(item.recipe_id)
+        recipe_ids = list({item.recipe_id for item in items})
+
+        if not recipe_ids:
+            return
+
+        existing_recipes = await self.repository.get_recipes_by_ids(recipe_ids)
+        existing_ids = {recipe.id for recipe in existing_recipes}
+
+        missing_ids = [
+            str(recipe_id)
+            for recipe_id in recipe_ids
+            if recipe_id not in existing_ids
+        ]
+
+        if missing_ids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Recipes not found: {', '.join(missing_ids)}",
+            )
 
     def _validate_unique_slots(
             self,
             items: list[MealPlanItemCreate],
     ) -> None:
         slots = [
-            (item.planned_date, self._normalize_meal_type(item.meal_type))
+            (item.planned_date, normalize_meal_type(item.meal_type))
             for item in items
         ]
 
@@ -318,7 +336,7 @@ class MealPlansService:
         existing_item = await self.repository.get_item_by_slot(
             meal_plan_id=meal_plan_id,
             planned_date=planned_date,
-            meal_type=self._normalize_meal_type(meal_type),
+            meal_type=normalize_meal_type(meal_type),
             exclude_item_id=exclude_item_id,
         )
 
@@ -358,6 +376,3 @@ class MealPlansService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Planned date cannot be later than meal plan end date",
             )
-
-    def _normalize_meal_type(self, meal_type: str) -> str:
-        return meal_type.strip().lower()

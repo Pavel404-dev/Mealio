@@ -21,7 +21,7 @@ class MealPlanItemSlotConflictError(Exception):
     pass
 
 
-def _normalize_meal_type(meal_type: str) -> str:
+def normalize_meal_type(meal_type: str) -> str:
     return meal_type.strip().lower()
 
 
@@ -42,6 +42,18 @@ class MealPlansRepository:
         )
 
         return result.scalar_one_or_none()
+
+    async def get_recipes_by_ids(
+            self,
+            recipe_ids: list[uuid.UUID],
+    ) -> list[Recipe]:
+        if not recipe_ids:
+            return []
+
+        stmt = select(Recipe).where(Recipe.id.in_(recipe_ids))
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().all())
 
     async def list_for_user(
             self,
@@ -99,7 +111,7 @@ class MealPlansRepository:
             MealPlanItem(
                 recipe_id=item.recipe_id,
                 planned_date=item.planned_date,
-                meal_type=_normalize_meal_type(item.meal_type),
+                meal_type=normalize_meal_type(item.meal_type),
             )
             for item in data.items
         ]
@@ -188,7 +200,7 @@ class MealPlansRepository:
             .where(
                 MealPlanItem.meal_plan_id == meal_plan_id,
                 MealPlanItem.planned_date == planned_date,
-                MealPlanItem.meal_type == _normalize_meal_type(meal_type),
+                MealPlanItem.meal_type == normalize_meal_type(meal_type),
                 )
         )
 
@@ -209,7 +221,7 @@ class MealPlansRepository:
             meal_plan_id=meal_plan_id,
             recipe_id=data.recipe_id,
             planned_date=data.planned_date,
-            meal_type=_normalize_meal_type(data.meal_type),
+            meal_type=normalize_meal_type(data.meal_type),
         )
 
         self.db.add(item)
@@ -239,7 +251,7 @@ class MealPlansRepository:
             item.planned_date = data.planned_date
 
         if "meal_type" in update_data and data.meal_type is not None:
-            item.meal_type = _normalize_meal_type(data.meal_type)
+            item.meal_type = normalize_meal_type(data.meal_type)
 
         try:
             await self.db.commit()
