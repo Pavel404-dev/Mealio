@@ -30,15 +30,15 @@ class MealPlanSummariesRepository:
                 func.coalesce(
                     func.sum(func.coalesce(Recipe.total_protein_g, ZERO)),
                     ZERO,
-                ).label("total_protein"),
+                ).label("total_protein_g"),
                 func.coalesce(
                     func.sum(func.coalesce(Recipe.total_carbs_g, ZERO)),
                     ZERO,
-                ).label("total_carbs"),
+                ).label("total_carbs_g"),
                 func.coalesce(
                     func.sum(func.coalesce(Recipe.total_fat_g, ZERO)),
                     ZERO,
-                ).label("total_fat"),
+                ).label("total_fat_g"),
             )
             .select_from(MealPlanItem)
             .join(Recipe, Recipe.id == MealPlanItem.recipe_id)
@@ -52,9 +52,9 @@ class MealPlanSummariesRepository:
             "meal_plan_id": meal_plan_id,
             "items_count": row.items_count or 0,
             "total_calories": self._to_decimal(row.total_calories),
-            "total_protein": self._to_decimal(row.total_protein),
-            "total_carbs": self._to_decimal(row.total_carbs),
-            "total_fat": self._to_decimal(row.total_fat),
+            "total_protein_g": self._to_decimal(row.total_protein_g),
+            "total_carbs_g": self._to_decimal(row.total_carbs_g),
+            "total_fat_g": self._to_decimal(row.total_fat_g),
         }
 
     def _to_decimal(self, value) -> Decimal:

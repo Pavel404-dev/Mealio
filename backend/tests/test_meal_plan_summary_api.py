@@ -151,9 +151,9 @@ async def test_get_meal_plan_nutrition_summary_success(
     assert data["meal_plan_id"] == meal_plan["id"]
     assert data["items_count"] == 2
     assert data["total_calories"] == "1250.00"
-    assert data["total_protein"] == "75.00"
-    assert data["total_carbs"] == "135.00"
-    assert data["total_fat"] == "32.00"
+    assert data["total_protein_g"] == "75.00"
+    assert data["total_carbs_g"] == "135.00"
+    assert data["total_fat_g"] == "32.00"
 
 
 @pytest.mark.asyncio
@@ -179,9 +179,9 @@ async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
     assert data["meal_plan_id"] == meal_plan["id"]
     assert data["items_count"] == 0
     assert data["total_calories"] == "0.00"
-    assert data["total_protein"] == "0.00"
-    assert data["total_carbs"] == "0.00"
-    assert data["total_fat"] == "0.00"
+    assert data["total_protein_g"] == "0.00"
+    assert data["total_carbs_g"] == "0.00"
+    assert data["total_fat_g"] == "0.00"
 
 
 @pytest.mark.asyncio
@@ -242,9 +242,9 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
     assert data["items_count"] == 2
     assert data["total_calories"] == "400.00"
-    assert data["total_protein"] == "25.00"
-    assert data["total_carbs"] == "40.00"
-    assert data["total_fat"] == "10.00"
+    assert data["total_protein_g"] == "25.00"
+    assert data["total_carbs_g"] == "40.00"
+    assert data["total_fat_g"] == "10.00"
 
 
 @pytest.mark.asyncio
