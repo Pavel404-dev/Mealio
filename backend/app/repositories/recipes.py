@@ -15,7 +15,10 @@ class RecipesRepository:
         self.db = db
 
     async def get_user(self, user_id: uuid.UUID) -> User | None:
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        result = await self.db.execute(
+            select(User).where(User.id == user_id)
+        )
+
         return result.scalar_one_or_none()
 
     async def get_ingredients_by_ids(
@@ -136,14 +139,16 @@ class RecipesRepository:
 
         if data.ingredients is not None:
             recipe.recipe_ingredients.clear()
-            recipe.recipe_ingredients = [
+            await self.db.flush()
+
+            recipe.recipe_ingredients.extend(
                 RecipeIngredient(
                     recipe_id=recipe.id,
                     ingredient_id=item.ingredient_id,
                     quantity_g=item.quantity_g,
                 )
                 for item in data.ingredients
-            ]
+            )
 
         await self.db.commit()
 

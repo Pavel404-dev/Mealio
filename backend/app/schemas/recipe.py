@@ -33,25 +33,25 @@ class RecipeBase(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+    @field_validator("title", "instructions", mode="before")
+    @classmethod
+    def reject_null_required_fields(cls, value):
+        if value is None:
+            raise ValueError("Field cannot be null")
+        return value
+
     @field_validator("title")
     @classmethod
-    def validate_title(cls, value: str) -> str:
-        if not value:
+    def validate_title(cls, value: str | None) -> str | None:
+        if value == "":
             raise ValueError("Recipe title cannot be empty")
         return value
 
     @field_validator("instructions")
     @classmethod
-    def validate_instructions(cls, value: str) -> str:
-        if not value:
-            raise ValueError("Recipe instructions cannot be empty")
-        return value
-
-    @field_validator("description", "diet_type")
-    @classmethod
-    def normalize_optional_text(cls, value: str | None) -> str | None:
+    def validate_instructions(cls, value: str | None) -> str | None:
         if value == "":
-            return None
+            raise ValueError("Recipe instructions cannot be empty")
         return value
 
 
@@ -81,6 +81,20 @@ class RecipeUpdate(BaseModel):
     ingredients: list[RecipeIngredientCreate] | None = None
 
     model_config = ConfigDict(str_strip_whitespace=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_required_fields(cls, data):
+        if not isinstance(data, dict):
+            return data
+
+        if "title" in data and data["title"] is None:
+            raise ValueError("Recipe title cannot be null")
+
+        if "instructions" in data and data["instructions"] is None:
+            raise ValueError("Recipe instructions cannot be null")
+
+        return data
 
     @field_validator("title")
     @classmethod

@@ -162,6 +162,121 @@ async def test_create_recipe_rejects_duplicate_ingredients(
 
     assert response.status_code == 422
 
+@pytest.mark.asyncio
+async def test_create_recipe_rejects_non_positive_ingredient_quantity(
+        client: AsyncClient,
+) -> None:
+    ingredient_id = await create_test_ingredient(client)
+
+    response = await client.post(
+        "/api/v1/recipes",
+        json={
+            "title": "Invalid Quantity Recipe",
+            "instructions": "Cook ingredients.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient_id,
+                    "quantity_g": "0",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_create_recipe_rejects_negative_nutrition_total(
+        client: AsyncClient,
+) -> None:
+    response = await client.post(
+        "/api/v1/recipes",
+        json={
+            "title": "Invalid Nutrition Recipe",
+            "instructions": "Cook something.",
+            "total_calories": "-100",
+        },
+    )
+
+    assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_update_recipe_rejects_null_required_fields(
+        client: AsyncClient,
+) -> None:
+    create_response = await client.post(
+        "/api/v1/recipes",
+        json={
+            "title": "Original Recipe",
+            "instructions": "Original instructions.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    recipe_id = create_response.json()["id"]
+
+    title_response = await client.patch(
+        f"/api/v1/recipes/{recipe_id}",
+        json={
+            "title": None,
+        },
+    )
+
+    assert title_response.status_code == 422
+
+    instructions_response = await client.patch(
+        f"/api/v1/recipes/{recipe_id}",
+        json={
+            "instructions": None,
+        },
+    )
+
+    assert instructions_response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_update_recipe_can_replace_existing_ingredient_quantity(
+        client: AsyncClient,
+) -> None:
+    ingredient_id = await create_test_ingredient(client)
+
+    create_response = await client.post(
+        "/api/v1/recipes",
+        json={
+            "title": "Chicken Bowl",
+            "instructions": "Cook chicken.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient_id,
+                    "quantity_g": "100",
+                }
+            ],
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    recipe_id = create_response.json()["id"]
+
+    update_response = await client.patch(
+        f"/api/v1/recipes/{recipe_id}",
+        json={
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient_id,
+                    "quantity_g": "250",
+                }
+            ],
+        },
+    )
+
+    assert update_response.status_code == 200
+
+    data = update_response.json()
+
+    assert len(data["recipe_ingredients"]) == 1
+    assert data["recipe_ingredients"][0]["ingredient_id"] == ingredient_id
+    assert Decimal(str(data["recipe_ingredients"][0]["quantity_g"])) == Decimal("250")
+
 
 @pytest.mark.asyncio
 async def test_create_recipe_rejects_missing_user(client: AsyncClient) -> None:
