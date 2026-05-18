@@ -4,8 +4,11 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.meal_plan import MealPlan, MealPlanItem
-from app.repositories.meal_plans import MealPlansRepository
+from app.models.meal_plan import MealPlan
+from app.repositories.meal_plans import (
+    MealPlanItemSlotConflictError,
+    MealPlansRepository,
+)
 from app.schemas.meal_plan import (
     MealPlanCreate,
     MealPlanItemCreate,
@@ -64,10 +67,23 @@ class MealPlansService:
         await self._validate_items(data.items)
         self._validate_unique_slots(data.items)
 
-        return await self.repository.create(
-            user_id=user_id,
-            data=data,
-        )
+        for item in data.items:
+            self._validate_planned_date_inside_range(
+                planned_date=item.planned_date,
+                start_date=data.start_date,
+                end_date=data.end_date,
+            )
+
+        try:
+            return await self.repository.create(
+                user_id=user_id,
+                data=data,
+            )
+        except MealPlanItemSlotConflictError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Meal plan cannot contain duplicate meal slots",
+            )
 
     async def update_meal_plan(
             self,
@@ -81,14 +97,17 @@ class MealPlansService:
             meal_plan_id=meal_plan_id,
         )
 
+        update_data = data.model_dump(exclude_unset=True)
+
         new_start_date = (
             data.start_date
             if data.start_date is not None
             else meal_plan.start_date
         )
+
         new_end_date = (
             data.end_date
-            if "end_date" in data.model_dump(exclude_unset=True)
+            if "end_date" in update_data
             else meal_plan.end_date
         )
 
@@ -135,21 +154,31 @@ class MealPlansService:
             meal_plan_id=meal_plan_id,
         )
 
+        normalized_meal_type = self._normalize_meal_type(data.meal_type)
+
         await self._validate_recipe_exists(data.recipe_id)
+
         self._validate_planned_date_inside_meal_plan(
             meal_plan=meal_plan,
             planned_date=data.planned_date,
         )
+
         await self._validate_slot_is_available(
             meal_plan_id=meal_plan.id,
             planned_date=data.planned_date,
-            meal_type=data.meal_type.strip(),
+            meal_type=normalized_meal_type,
         )
 
-        return await self.repository.add_item(
-            meal_plan_id=meal_plan.id,
-            data=data,
-        )
+        try:
+            return await self.repository.add_item(
+                meal_plan_id=meal_plan.id,
+                data=data,
+            )
+        except MealPlanItemSlotConflictError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Meal plan already has an item for this date and meal type",
+            )
 
     async def update_meal_plan_item(
             self,
@@ -183,8 +212,9 @@ class MealPlansService:
             if data.planned_date is not None
             else item.planned_date
         )
+
         meal_type = (
-            data.meal_type.strip()
+            self._normalize_meal_type(data.meal_type)
             if data.meal_type is not None
             else item.meal_type
         )
@@ -201,10 +231,16 @@ class MealPlansService:
             exclude_item_id=item.id,
         )
 
-        return await self.repository.update_item(
-            item=item,
-            data=data,
-        )
+        try:
+            return await self.repository.update_item(
+                item=item,
+                data=data,
+            )
+        except MealPlanItemSlotConflictError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Meal plan already has an item for this date and meal type",
+            )
 
     async def delete_meal_plan_item(
             self,
@@ -261,13 +297,13 @@ class MealPlansService:
             items: list[MealPlanItemCreate],
     ) -> None:
         slots = [
-            (item.planned_date, item.meal_type.strip().lower())
+            (item.planned_date, self._normalize_meal_type(item.meal_type))
             for item in items
         ]
 
         if len(slots) != len(set(slots)):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="Meal plan cannot contain duplicate meal slots",
             )
 
@@ -282,7 +318,7 @@ class MealPlansService:
         existing_item = await self.repository.get_item_by_slot(
             meal_plan_id=meal_plan_id,
             planned_date=planned_date,
-            meal_type=meal_type,
+            meal_type=self._normalize_meal_type(meal_type),
             exclude_item_id=exclude_item_id,
         )
 
@@ -322,3 +358,6 @@ class MealPlansService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Planned date cannot be later than meal plan end date",
             )
+
+    def _normalize_meal_type(self, meal_type: str) -> str:
+        return meal_type.strip().lower()

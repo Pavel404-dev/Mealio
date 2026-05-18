@@ -1,6 +1,8 @@
 import uuid
+from datetime import date
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +15,14 @@ from app.schemas.meal_plan import (
     MealPlanItemUpdate,
     MealPlanUpdate,
 )
+
+
+class MealPlanItemSlotConflictError(Exception):
+    pass
+
+
+def _normalize_meal_type(meal_type: str) -> str:
+    return meal_type.strip().lower()
 
 
 class MealPlansRepository:
@@ -89,13 +99,18 @@ class MealPlansRepository:
             MealPlanItem(
                 recipe_id=item.recipe_id,
                 planned_date=item.planned_date,
-                meal_type=item.meal_type.strip(),
+                meal_type=_normalize_meal_type(item.meal_type),
             )
             for item in data.items
         ]
 
         self.db.add(meal_plan)
-        await self.db.commit()
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise MealPlanItemSlotConflictError from exc
 
         created = await self.get_by_id(
             user_id=user_id,
@@ -164,7 +179,7 @@ class MealPlansRepository:
             self,
             *,
             meal_plan_id: uuid.UUID,
-            planned_date,
+            planned_date: date,
             meal_type: str,
             exclude_item_id: uuid.UUID | None = None,
     ) -> MealPlanItem | None:
@@ -173,7 +188,7 @@ class MealPlansRepository:
             .where(
                 MealPlanItem.meal_plan_id == meal_plan_id,
                 MealPlanItem.planned_date == planned_date,
-                MealPlanItem.meal_type == meal_type,
+                MealPlanItem.meal_type == _normalize_meal_type(meal_type),
                 )
         )
 
@@ -194,11 +209,17 @@ class MealPlansRepository:
             meal_plan_id=meal_plan_id,
             recipe_id=data.recipe_id,
             planned_date=data.planned_date,
-            meal_type=data.meal_type.strip(),
+            meal_type=_normalize_meal_type(data.meal_type),
         )
 
         self.db.add(item)
-        await self.db.commit()
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise MealPlanItemSlotConflictError from exc
+
         await self.db.refresh(item)
 
         return item
@@ -218,9 +239,14 @@ class MealPlansRepository:
             item.planned_date = data.planned_date
 
         if "meal_type" in update_data and data.meal_type is not None:
-            item.meal_type = data.meal_type.strip()
+            item.meal_type = _normalize_meal_type(data.meal_type)
 
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise MealPlanItemSlotConflictError from exc
+
         await self.db.refresh(item)
 
         return item

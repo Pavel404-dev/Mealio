@@ -121,6 +121,71 @@ async def test_create_meal_plan_with_items_success(
 
 
 @pytest.mark.asyncio
+async def test_create_meal_plan_with_items_rejects_date_outside_range(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+    recipe_id = await create_test_recipe(client)
+
+    response = await client.post(
+        f"/api/v1/users/{user.id}/meal-plans",
+        json={
+            "title": "Weekly Meal Plan",
+            "start_date": "2026-05-18",
+            "end_date": "2026-05-24",
+            "items": [
+                {
+                    "recipe_id": recipe_id,
+                    "planned_date": "2026-05-30",
+                    "meal_type": "dinner",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "Planned date cannot be later than meal plan end date"
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_meal_plan_rejects_duplicate_slots(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+    recipe_id = await create_test_recipe(client)
+
+    response = await client.post(
+        f"/api/v1/users/{user.id}/meal-plans",
+        json={
+            "title": "Weekly Meal Plan",
+            "start_date": "2026-05-18",
+            "end_date": "2026-05-24",
+            "items": [
+                {
+                    "recipe_id": recipe_id,
+                    "planned_date": "2026-05-18",
+                    "meal_type": "Lunch",
+                },
+                {
+                    "recipe_id": recipe_id,
+                    "planned_date": "2026-05-18",
+                    "meal_type": "lunch",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Meal plan cannot contain duplicate meal slots"
+    )
+
+
+@pytest.mark.asyncio
 async def test_create_meal_plan_rejects_missing_user(
         client: AsyncClient,
 ) -> None:
@@ -328,6 +393,42 @@ async def test_add_meal_plan_item_rejects_duplicate_slot(
     second_response = await client.post(
         f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
         json=payload,
+    )
+
+    assert second_response.status_code == 409
+    assert second_response.json()["detail"] == (
+        "Meal plan already has an item for this date and meal type"
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
+        client: AsyncClient,
+        db_session: AsyncSession,
+) -> None:
+    user = await create_test_user(db_session)
+    recipe_id = await create_test_recipe(client)
+    meal_plan = await create_test_meal_plan(client, str(user.id))
+
+    first_response = await client.post(
+        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        json={
+            "recipe_id": recipe_id,
+            "planned_date": "2026-05-18",
+            "meal_type": "Lunch",
+        },
+    )
+
+    assert first_response.status_code == 201
+    assert first_response.json()["meal_type"] == "lunch"
+
+    second_response = await client.post(
+        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        json={
+            "recipe_id": recipe_id,
+            "planned_date": "2026-05-18",
+            "meal_type": "lunch",
+        },
     )
 
     assert second_response.status_code == 409
