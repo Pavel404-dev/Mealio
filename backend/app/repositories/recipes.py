@@ -1,0 +1,161 @@
+import uuid
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.ingredient import Ingredient
+from app.models.recipe import Recipe, RecipeIngredient
+from app.models.user import User
+from app.schemas.recipe import RecipeCreate, RecipeUpdate
+
+
+class RecipesRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+
+    async def get_user(self, user_id: uuid.UUID) -> User | None:
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+
+    async def get_ingredients_by_ids(
+            self,
+            ingredient_ids: list[uuid.UUID],
+    ) -> list[Ingredient]:
+        if not ingredient_ids:
+            return []
+
+        stmt = select(Ingredient).where(Ingredient.id.in_(ingredient_ids))
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().all())
+
+    async def list(
+            self,
+            *,
+            search: str | None = None,
+            diet_type: str | None = None,
+            created_by_user_id: uuid.UUID | None = None,
+            limit: int = 50,
+            offset: int = 0,
+    ) -> list[Recipe]:
+        stmt = (
+            select(Recipe)
+            .options(selectinload(Recipe.recipe_ingredients))
+            .order_by(Recipe.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        if search:
+            stmt = stmt.where(Recipe.title.ilike(f"%{search}%"))
+
+        if diet_type:
+            stmt = stmt.where(Recipe.diet_type == diet_type)
+
+        if created_by_user_id:
+            stmt = stmt.where(Recipe.created_by_user_id == created_by_user_id)
+
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().all())
+
+    async def get_by_id(self, recipe_id: uuid.UUID) -> Recipe | None:
+        stmt = (
+            select(Recipe)
+            .options(selectinload(Recipe.recipe_ingredients))
+            .where(Recipe.id == recipe_id)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    async def create(self, data: RecipeCreate) -> Recipe:
+        recipe = Recipe(
+            created_by_user_id=data.created_by_user_id,
+            title=data.title.strip(),
+            description=data.description.strip() if data.description else None,
+            instructions=data.instructions.strip(),
+            diet_type=data.diet_type.strip() if data.diet_type else None,
+            total_calories=data.total_calories,
+            total_protein_g=data.total_protein_g,
+            total_carbs_g=data.total_carbs_g,
+            total_fat_g=data.total_fat_g,
+        )
+
+        recipe.recipe_ingredients = [
+            RecipeIngredient(
+                ingredient_id=item.ingredient_id,
+                quantity_g=item.quantity_g,
+            )
+            for item in data.ingredients
+        ]
+
+        self.db.add(recipe)
+        await self.db.commit()
+
+        created = await self.get_by_id(recipe.id)
+
+        if created is None:
+            raise RuntimeError("Created recipe was not found")
+
+        return created
+
+    async def update(
+            self,
+            *,
+            recipe: Recipe,
+            data: RecipeUpdate,
+    ) -> Recipe:
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "title" in update_data and data.title is not None:
+            recipe.title = data.title.strip()
+
+        if "description" in update_data:
+            recipe.description = data.description.strip() if data.description else None
+
+        if "instructions" in update_data and data.instructions is not None:
+            recipe.instructions = data.instructions.strip()
+
+        if "diet_type" in update_data:
+            recipe.diet_type = data.diet_type.strip() if data.diet_type else None
+
+        if "total_calories" in update_data:
+            recipe.total_calories = data.total_calories
+
+        if "total_protein_g" in update_data:
+            recipe.total_protein_g = data.total_protein_g
+
+        if "total_carbs_g" in update_data:
+            recipe.total_carbs_g = data.total_carbs_g
+
+        if "total_fat_g" in update_data:
+            recipe.total_fat_g = data.total_fat_g
+
+        if data.ingredients is not None:
+            recipe.recipe_ingredients.clear()
+            recipe.recipe_ingredients = [
+                RecipeIngredient(
+                    recipe_id=recipe.id,
+                    ingredient_id=item.ingredient_id,
+                    quantity_g=item.quantity_g,
+                )
+                for item in data.ingredients
+            ]
+
+        await self.db.commit()
+
+        updated = await self.get_by_id(recipe.id)
+
+        if updated is None:
+            raise RuntimeError("Updated recipe was not found")
+
+        return updated
+
+    async def delete(self, recipe_id: uuid.UUID) -> None:
+        stmt = delete(Recipe).where(Recipe.id == recipe_id)
+
+        await self.db.execute(stmt)
+        await self.db.commit()
