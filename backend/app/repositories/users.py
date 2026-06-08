@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.repositories.exceptions import DuplicateResourceError
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserUpdate
 
 
 class UsersRepository:
@@ -54,3 +54,30 @@ class UsersRepository:
             raise RuntimeError("Created user was not found")
 
         return created_user
+
+    async def update(
+            self,
+            *,
+            user: User,
+            data: UserUpdate,
+    ) -> User:
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "email" in update_data:
+            user.email = str(update_data["email"]).strip().lower()
+
+        if "full_name" in update_data:
+            user.full_name = update_data["full_name"]
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+
+            raise DuplicateResourceError(
+                "User with this email already exists"
+            ) from exc
+
+        await self.db.refresh(user)
+
+        return user
