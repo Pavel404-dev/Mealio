@@ -55,6 +55,37 @@ class UsersRepository:
 
         return created_user
 
+    async def create_registered(
+            self,
+            *,
+            email: str,
+            full_name: str | None,
+            password_hash: str,
+    ) -> User:
+        user = User(
+            email=email.strip().lower(),
+            full_name=full_name,
+            password_hash=password_hash,
+        )
+
+        self.db.add(user)
+
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+
+            raise DuplicateResourceError(
+                "User with this email already exists"
+            ) from exc
+
+        created_user = await self.get_by_id(user.id)
+
+        if created_user is None:
+            raise RuntimeError("Created user was not found")
+
+        return created_user
+
     async def update(
             self,
             *,
