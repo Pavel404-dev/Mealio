@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -74,3 +74,8 @@ class UserLogin(BaseModel):
             return value.strip().lower()
 
         return value
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str = Field(min_length=1)
+    token_type: Literal["bearer"] = "bearer"

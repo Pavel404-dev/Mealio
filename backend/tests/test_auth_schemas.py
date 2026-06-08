@@ -1,7 +1,11 @@
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from app.schemas.auth import UserLogin, UserRegister
+from app.schemas.auth import (
+    AccessTokenResponse,
+    UserLogin,
+    UserRegister,
+)
 
 
 VALID_PASSWORD = "Mealio-secure-15"
@@ -451,3 +455,185 @@ def test_login_whitespace_only_password_is_allowed_and_preserved(
     )
 
     assert login.password.get_secret_value() == password
+
+
+VALID_ACCESS_TOKEN = (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJzdWIiOiJwYXZlbEBleGFtcGxlLmNvbSJ9."
+    "example-signature"
+)
+
+
+def test_valid_access_token_data_creates_schema() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    assert response.access_token == VALID_ACCESS_TOKEN
+    assert response.token_type == "bearer"
+
+
+def test_access_token_is_preserved_without_modification() -> None:
+    token = "  header.payload.signature  "
+
+    response = AccessTokenResponse(
+        access_token=token,
+    )
+
+    assert response.access_token == token
+
+
+def test_missing_access_token_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        AccessTokenResponse.model_validate({})
+
+
+def test_null_access_token_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        AccessTokenResponse.model_validate(
+            {
+                "access_token": None,
+            }
+        )
+
+
+def test_empty_access_token_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        AccessTokenResponse(
+            access_token="",
+        )
+
+
+def test_jwt_like_access_token_is_allowed() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    assert response.access_token == VALID_ACCESS_TOKEN
+
+
+def test_long_access_token_is_allowed() -> None:
+    token = (
+        ("header-" + ("a" * 500))
+        + "."
+        + ("payload-" + ("b" * 1000))
+        + "."
+        + ("signature-" + ("c" * 500))
+    )
+
+    response = AccessTokenResponse(
+        access_token=token,
+    )
+
+    assert response.access_token == token
+
+
+def test_unicode_access_token_is_allowed() -> None:
+    token = "заголовок.данные.подпись-🔐"
+
+    response = AccessTokenResponse(
+        access_token=token,
+    )
+
+    assert response.access_token == token
+
+
+def test_token_type_defaults_to_bearer() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    assert response.token_type == "bearer"
+
+
+def test_explicit_bearer_token_type_is_allowed() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+        token_type="bearer",
+    )
+
+    assert response.token_type == "bearer"
+
+
+@pytest.mark.parametrize(
+    "token_type",
+    [
+        "Bearer",
+        "BEARER",
+        "jwt",
+        "token",
+        "basic",
+    ],
+)
+def test_other_token_types_are_rejected(
+    token_type: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        AccessTokenResponse.model_validate(
+            {
+                "access_token": VALID_ACCESS_TOKEN,
+                "token_type": token_type,
+            }
+        )
+
+
+def test_null_token_type_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        AccessTokenResponse.model_validate(
+            {
+                "access_token": VALID_ACCESS_TOKEN,
+                "token_type": None,
+            }
+        )
+
+
+def test_access_token_is_present_in_json() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    serialized = response.model_dump_json()
+    deserialized = AccessTokenResponse.model_validate_json(
+        serialized
+    )
+
+    assert deserialized.access_token == VALID_ACCESS_TOKEN
+
+
+def test_token_type_is_bearer_in_json() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    serialized = response.model_dump_json()
+    deserialized = AccessTokenResponse.model_validate_json(
+        serialized
+    )
+
+    assert deserialized.token_type == "bearer"
+
+
+def test_access_token_response_contains_no_password_fields() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    data = response.model_dump()
+
+    assert set(data) == {
+        "access_token",
+        "token_type",
+    }
+    assert "password" not in data
+    assert "password_hash" not in data
+    assert "refresh_token" not in data
+
+
+def test_access_token_does_not_use_secret_str() -> None:
+    response = AccessTokenResponse(
+        access_token=VALID_ACCESS_TOKEN,
+    )
+
+    assert isinstance(response.access_token, str)
+    assert not isinstance(response.access_token, SecretStr)
+    assert VALID_ACCESS_TOKEN in response.model_dump_json()
