@@ -83,3 +83,7 @@ def test_unicode_password_rejects_different_value() -> None:
         different_password,
         hashed_password,
     ) is False
+
+def test_verify_password_rejects_missing_hash() -> None:
+    assert verify_password("Mealio-secure-password", None) is False
+    assert verify_password("Mealio-secure-password", "") is False

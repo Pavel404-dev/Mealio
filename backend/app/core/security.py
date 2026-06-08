@@ -11,8 +11,11 @@ def hash_password(plain_password: str) -> str:
 
 def verify_password(
         plain_password: str,
-        hashed_password: str,
+        hashed_password: str | None,
 ) -> bool:
+    if not hashed_password:
+        return False
+
     try:
         return _password_hasher.verify(
             plain_password,
