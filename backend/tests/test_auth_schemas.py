@@ -593,9 +593,11 @@ def test_access_token_is_present_in_json() -> None:
     )
 
     serialized = response.model_dump_json()
+    deserialized = AccessTokenResponse.model_validate_json(
+        serialized
+    )
 
-    assert VALID_ACCESS_TOKEN in serialized
-    assert '"access_token"' in serialized
+    assert deserialized.access_token == VALID_ACCESS_TOKEN
 
 
 def test_token_type_is_bearer_in_json() -> None:
@@ -604,8 +606,11 @@ def test_token_type_is_bearer_in_json() -> None:
     )
 
     serialized = response.model_dump_json()
+    deserialized = AccessTokenResponse.model_validate_json(
+        serialized
+    )
 
-    assert '"token_type":"bearer"' in serialized
+    assert deserialized.token_type == "bearer"
 
 
 def test_access_token_response_contains_no_password_fields() -> None:
