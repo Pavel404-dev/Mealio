@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.security import hash_password
 from app.repositories.exceptions import DuplicateResourceError
@@ -23,7 +24,10 @@ class AuthService:
             )
 
         plain_password = data.password.get_secret_value()
-        password_hash = hash_password(plain_password)
+        password_hash = await run_in_threadpool(
+            hash_password,
+            plain_password,
+        )
 
         try:
             return await self.repository.create_registered(
