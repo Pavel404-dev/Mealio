@@ -438,3 +438,16 @@ def test_login_validation_error_does_not_expose_password(
         )
 
     assert invalid_password not in str(exc_info.value)
+
+
+def test_login_whitespace_only_password_is_allowed_and_preserved(
+) -> None:
+    password = "   "
+
+    login = UserLogin.model_validate(
+        build_login_data(
+            password=password,
+        )
+    )
+
+    assert login.password.get_secret_value() == password
