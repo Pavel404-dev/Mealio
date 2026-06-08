@@ -54,3 +54,23 @@ class UserRegister(BaseModel):
             )
 
         return value
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: SecretStr = Field(
+        min_length=1,
+        max_length=128,
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().lower()
+
+        return value

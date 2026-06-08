@@ -1,7 +1,7 @@
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
-from app.schemas.auth import UserRegister
+from app.schemas.auth import UserLogin, UserRegister
 
 
 VALID_PASSWORD = "Mealio-secure-15"
@@ -12,12 +12,28 @@ VALID_DATA: dict[str, object] = {
     "password": VALID_PASSWORD,
 }
 
+VALID_LOGIN_PASSWORD = "LoginPassword"
+
+VALID_LOGIN_DATA: dict[str, object] = {
+    "email": "pavel@example.com",
+    "password": VALID_LOGIN_PASSWORD,
+}
+
 
 def build_registration_data(
     **overrides: object,
 ) -> dict[str, object]:
     return {
         **VALID_DATA,
+        **overrides,
+    }
+
+
+def build_login_data(
+    **overrides: object,
+) -> dict[str, object]:
+    return {
+        **VALID_LOGIN_DATA,
         **overrides,
     }
 
@@ -252,6 +268,171 @@ def test_validation_error_string_does_not_expose_password(
     with pytest.raises(ValidationError) as exc_info:
         UserRegister.model_validate(
             build_registration_data(
+                password=invalid_password,
+            )
+        )
+
+    assert invalid_password not in str(exc_info.value)
+
+
+def test_valid_login_data_creates_schema() -> None:
+    login = UserLogin.model_validate(VALID_LOGIN_DATA)
+
+    assert str(login.email) == "pavel@example.com"
+    assert (
+        login.password.get_secret_value()
+        == VALID_LOGIN_PASSWORD
+    )
+
+
+def test_login_email_is_trimmed_and_lowercased() -> None:
+    login = UserLogin.model_validate(
+        build_login_data(
+            email="  Pavel.User@Example.COM  ",
+        )
+    )
+
+    assert str(login.email) == "pavel.user@example.com"
+
+
+def test_login_invalid_email_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(
+            build_login_data(
+                email="not-an-email",
+            )
+        )
+
+
+def test_login_missing_email_is_rejected() -> None:
+    data = build_login_data()
+    data.pop("email")
+
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(data)
+
+
+def test_login_null_email_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(
+            build_login_data(
+                email=None,
+            )
+        )
+
+
+def test_login_password_uses_secret_str() -> None:
+    login = UserLogin.model_validate(VALID_LOGIN_DATA)
+
+    assert isinstance(login.password, SecretStr)
+
+
+def test_login_missing_password_is_rejected() -> None:
+    data = build_login_data()
+    data.pop("password")
+
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(data)
+
+
+def test_login_null_password_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(
+            build_login_data(
+                password=None,
+            )
+        )
+
+
+def test_login_empty_password_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(
+            build_login_data(
+                password="",
+            )
+        )
+
+
+def test_login_password_longer_than_128_characters_is_rejected(
+) -> None:
+    with pytest.raises(ValidationError):
+        UserLogin.model_validate(
+            build_login_data(
+                password="a" * 129,
+            )
+        )
+
+
+def test_login_password_shorter_than_registration_minimum_is_allowed(
+) -> None:
+    password = "short"
+
+    login = UserLogin.model_validate(
+        build_login_data(
+            password=password,
+        )
+    )
+
+    assert login.password.get_secret_value() == password
+
+
+def test_login_unicode_password_is_allowed() -> None:
+    password = "Пароль-🔐"
+
+    login = UserLogin.model_validate(
+        build_login_data(
+            password=password,
+        )
+    )
+
+    assert login.password.get_secret_value() == password
+
+
+def test_login_password_case_is_preserved() -> None:
+    password = "LoginPasswordABC"
+
+    login = UserLogin.model_validate(
+        build_login_data(
+            password=password,
+        )
+    )
+
+    assert login.password.get_secret_value() == password
+
+
+def test_login_password_surrounding_spaces_are_preserved(
+) -> None:
+    password = "  LoginPassword  "
+
+    login = UserLogin.model_validate(
+        build_login_data(
+            password=password,
+        )
+    )
+
+    assert login.password.get_secret_value() == password
+
+
+def test_login_password_is_masked_in_schema_representation(
+) -> None:
+    login = UserLogin.model_validate(VALID_LOGIN_DATA)
+
+    assert VALID_LOGIN_PASSWORD not in repr(login)
+    assert VALID_LOGIN_PASSWORD not in str(login)
+    assert (
+        VALID_LOGIN_PASSWORD
+        not in login.model_dump_json()
+    )
+    assert "**********" in repr(login)
+
+
+def test_login_validation_error_does_not_expose_password(
+) -> None:
+    invalid_password = "VisibleSecret-" + ("x" * 120)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserLogin.model_validate(
+            build_login_data(
                 password=invalid_password,
             )
         )
