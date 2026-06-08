@@ -6,10 +6,13 @@ from app.api.v1.endpoints import (
     meal_plans,
     pantry,
     recipes,
+    users,
 )
+
 
 api_router = APIRouter(prefix="/api/v1")
 
+api_router.include_router(users.router)
 api_router.include_router(ingredients.router)
 api_router.include_router(pantry.router)
 api_router.include_router(recipes.router)
