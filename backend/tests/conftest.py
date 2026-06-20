@@ -20,6 +20,12 @@ if not TEST_DATABASE_URL:
     )
 
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ.setdefault(
+    "JWT_SECRET_KEY",
+    "test_mealio_secret_key_with_more_than_32_chars",
+)
+os.environ.setdefault("JWT_ALGORITHM", "HS256")
+os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 
 from app.db.base import Base
 from app.db.session import get_db
