@@ -2,20 +2,22 @@
 
 [![Backend Tests](https://github.com/Pavel404-dev/Mealio/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/Pavel404-dev/Mealio/actions/workflows/backend-tests.yml)
 
-Mealio is an AI-powered mobile application designed to generate recipes and nutrition information from ingredients that users already have available.
+Mealio is an AI-powered meal planning application designed to help users manage ingredients, generate recipes, organize meal plans, and calculate nutrition summaries.
 
-The project is being developed as part of a Bachelor's Thesis and currently uses a monorepo containing the FastAPI backend, the planned Flutter mobile client, and technical documentation.
+The project is being developed as part of a Bachelor's Thesis and is maintained as a monorepo containing the FastAPI backend, planned Flutter mobile client, and technical documentation.
 
 ## Overview
 
 Mealio aims to help users:
 
 * manage ingredients available at home;
-* generate recipes from available ingredients;
-* organize recipes and meal plans;
-* calculate meal and daily nutrition summaries;
-* classify recipes by dietary preferences;
-* receive AI-assisted recipe and nutrition recommendations.
+* manage a personal pantry;
+* create and organize recipes;
+* create meal plans;
+* calculate meal plan nutrition summaries;
+* calculate daily nutrition summaries;
+* authenticate users with JWT access tokens;
+* receive AI-assisted recipe and nutrition recommendations in the future.
 
 The project is currently under active development.
 
@@ -28,6 +30,11 @@ The backend currently includes:
 * user profile creation;
 * user profile retrieval by ID;
 * partial user profile updates;
+* user registration;
+* user login;
+* JWT access token generation;
+* current authenticated user endpoint;
+* Argon2 password hashing and verification;
 * ingredient management;
 * user pantry management;
 * recipe management;
@@ -35,30 +42,32 @@ The backend currently includes:
 * meal plan item management;
 * meal plan nutrition summaries;
 * daily nutrition summaries;
-* Argon2 password hashing and verification utilities;
 * PostgreSQL persistence;
 * asynchronous SQLAlchemy integration;
-* Alembic migrations;
-* automated pytest test coverage;
-* GitHub Actions backend CI.
+* Alembic database migrations;
+* Dockerfile for the backend;
+* local Docker Compose setup for backend and PostgreSQL;
+* automated backend CI with GitHub Actions;
+* Ruff lint check;
+* Ruff format check;
+* Alembic migration checks;
+* pytest test suite;
+* backend test coverage report;
+* backend Docker image build check.
 
 ### Planned
 
 The following functionality is planned for future development:
 
-* user registration with passwords;
-* login and logout;
-* JWT access tokens;
 * refresh tokens;
-* authenticated and protected routes;
-* current-user endpoints;
+* logout flow;
 * password reset;
 * email verification;
 * AI recipe generation;
 * AI recipe classification;
 * personalized nutrition recommendations;
 * Flutter mobile application integration;
-* production deployment.
+* production or staging deployment.
 
 ## Architecture
 
@@ -96,18 +105,15 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 
 ## Technology Stack
 
-### Mobile
-
-* Flutter
-* Dart
-
 ### Backend
 
 * Python 3.12
 * FastAPI
 * Uvicorn
 * Pydantic
+* Pydantic Settings
 * pwdlib with Argon2
+* PyJWT
 
 ### Database
 
@@ -116,20 +122,29 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 * asyncpg
 * Alembic
 
-### Testing
+### Testing and Quality
 
 * pytest
 * pytest-asyncio
+* pytest-cov
 * HTTPX
+* Ruff
 
-### Development and CI
+### DevOps and Tooling
 
-* Git
+* Docker
+* Docker Compose
+* GitHub Actions
 * GitHub Issues
 * GitHub Pull Requests
-* GitHub Actions
-* Docker Compose
 * Husky
+
+### Mobile
+
+* Flutter
+* Dart
+
+The mobile application is planned / under development.
 
 ## Repository Structure
 
@@ -155,8 +170,10 @@ Mealio/
 │   │   ├── services/
 │   │   └── main.py
 │   ├── tests/
+│   ├── .dockerignore
 │   ├── .env.example
 │   ├── alembic.ini
+│   ├── Dockerfile
 │   ├── README.md
 │   └── requirements.txt
 │
@@ -176,11 +193,12 @@ Mealio is intentionally maintained as a monorepo because the backend, mobile app
 
 ## Prerequisites
 
-Before running the backend locally, install:
+Before running the project locally, install:
 
 * Git
-* Python 3.12
-* Docker Desktop with Docker Compose
+* Docker
+* Docker Compose
+* Python 3.12, required for manual backend setup
 * PostgreSQL client tools, optional
 * Flutter SDK, required only for mobile development
 
@@ -188,9 +206,9 @@ Verify the required tools:
 
 ```bash
 git --version
-python --version
 docker --version
 docker compose version
+python --version
 ```
 
 ## Getting Started
@@ -202,7 +220,89 @@ git clone https://github.com/Pavel404-dev/Mealio.git
 cd Mealio
 ```
 
-### 2. Create a Python virtual environment
+### 2. Run backend with Docker Compose
+
+The recommended local backend startup method is Docker Compose.
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+If Docker requires administrator permissions on Linux, use:
+
+```bash
+sudo docker compose up --build
+```
+
+This command:
+
+* starts PostgreSQL 17;
+* builds the backend Docker image;
+* waits until PostgreSQL is healthy;
+* applies Alembic migrations automatically;
+* starts the FastAPI backend with Uvicorn.
+
+When the backend is running, open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+To stop the services:
+
+```bash
+docker compose down
+```
+
+If Docker requires administrator permissions:
+
+```bash
+sudo docker compose down
+```
+
+To stop the services and remove the local PostgreSQL volume:
+
+```bash
+docker compose down -v
+```
+
+If Docker requires administrator permissions:
+
+```bash
+sudo docker compose down -v
+```
+
+> Removing the volume permanently deletes local PostgreSQL data.
+
+## API Documentation
+
+When the backend is running, open:
+
+| Resource       | URL                                  |
+| -------------- | ------------------------------------ |
+| Health check   | `http://127.0.0.1:8000/health`       |
+| Swagger UI     | `http://127.0.0.1:8000/docs`         |
+| ReDoc          | `http://127.0.0.1:8000/redoc`        |
+| OpenAPI schema | `http://127.0.0.1:8000/openapi.json` |
+
+Expected health response:
+
+```json
+{
+  "status": "ok",
+  "service": "mealio-backend"
+}
+```
+
+## Manual Backend Setup
+
+Docker Compose is the recommended way to start the backend locally.
+
+The following manual setup is useful when developing the backend directly on the host machine without running the backend inside Docker.
+
+### 1. Create a Python virtual environment
 
 From the repository root:
 
@@ -229,14 +329,14 @@ python --version
 python -c "import sys; print(sys.executable)"
 ```
 
-### 3. Install backend dependencies
+### 2. Install backend dependencies
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r backend/requirements.txt
 ```
 
-### 4. Create the backend environment file
+### 3. Create the backend environment file
 
 Windows PowerShell:
 
@@ -258,12 +358,18 @@ postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio
 
 The `.env` file is local configuration and must not be committed.
 
-### 5. Start PostgreSQL
+### 4. Start PostgreSQL only
 
 From the repository root:
 
 ```bash
 docker compose up -d postgres
+```
+
+If Docker requires administrator permissions:
+
+```bash
+sudo docker compose up -d postgres
 ```
 
 Check the service:
@@ -284,15 +390,7 @@ Stop the local services:
 docker compose down
 ```
 
-To stop the services and remove the PostgreSQL volume:
-
-```bash
-docker compose down -v
-```
-
-> Removing the volume permanently deletes the local database data.
-
-### 6. Apply database migrations
+### 5. Apply database migrations
 
 Move into the backend directory:
 
@@ -324,7 +422,7 @@ Return to the repository root when needed:
 cd ..
 ```
 
-### 7. Run the FastAPI backend
+### 6. Run the FastAPI backend manually
 
 From the `backend` directory:
 
@@ -338,288 +436,134 @@ The backend is available at:
 http://127.0.0.1:8000
 ```
 
-## API Documentation
-
-When the backend is running, open:
-
-| Resource       | URL                                  |
-| -------------- | ------------------------------------ |
-| Health check   | `http://127.0.0.1:8000/health`       |
-| Swagger UI     | `http://127.0.0.1:8000/docs`         |
-| ReDoc          | `http://127.0.0.1:8000/redoc`        |
-| OpenAPI schema | `http://127.0.0.1:8000/openapi.json` |
-
-Expected health response:
-
-```json
-{
-  "status": "ok",
-  "service": "mealio-backend"
-}
-```
-
-## API Modules
-
-The backend currently provides functionality for:
-
-| Module              | Current capabilities                                   |
-| ------------------- | ------------------------------------------------------ |
-| Users               | Create, retrieve, and partially update user profiles   |
-| Ingredients         | Create, list, retrieve, update, and delete ingredients |
-| Pantry              | Manage ingredients stored by a user                    |
-| Recipes             | Create, list, retrieve, update, and delete recipes     |
-| Meal plans          | Manage meal plans and meal plan items                  |
-| Nutrition summaries | Calculate meal plan and daily nutrition totals         |
-| Security utilities  | Hash and verify passwords using Argon2                 |
-
-Authentication endpoints are not implemented yet.
-
 ## Running Tests
 
-### Important database warning
+Before running tests, make sure test database configuration is available.
 
-Backend tests require a dedicated disposable PostgreSQL database.
-
-Never set `TEST_DATABASE_URL` to:
-
-* a production database;
-* a database containing important data;
-* the regular local `mealio` development database.
-
-The current test fixtures create and remove application tables during test execution.
-
-### 1. Create the test database
-
-Start PostgreSQL first:
+From the `backend` directory:
 
 ```bash
-docker compose up -d postgres
+export DATABASE_URL=postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test
+export TEST_DATABASE_URL=postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test
 ```
 
-Create the test database once:
-
-```bash
-docker compose exec postgres createdb -U mealio_user mealio_test
-```
-
-If the database already exists, this command may report that it cannot be created again. That message can be ignored when `mealio_test` is already available.
-
-### 2. Configure test environment variables
-
-Windows PowerShell:
-
-```powershell
-$env:DATABASE_URL="postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test"
-$env:TEST_DATABASE_URL="postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test"
-```
-
-macOS or Linux:
-
-```bash
-export DATABASE_URL="postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test"
-export TEST_DATABASE_URL="postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test"
-```
-
-### 3. Run the complete backend test suite
-
-From the repository root:
+Run tests:
 
 ```bash
 python -m pytest -v
 ```
 
-Run one test file:
+Run tests with coverage:
 
 ```bash
-python -m pytest backend/tests/test_security.py -v
+python -m pytest -v --cov=app --cov-report=term-missing
 ```
 
-Run one test by name:
+## Code Quality
+
+Run Ruff lint check:
 
 ```bash
-python -m pytest backend/tests/test_security.py -v -k "unicode"
+python -m ruff check backend
+```
+
+Run Ruff format check:
+
+```bash
+python -m ruff format --check backend
+```
+
+Apply Ruff formatting:
+
+```bash
+python -m ruff format backend
 ```
 
 ## Database Migrations
 
-Create migrations only when the database schema changes.
-
 From the `backend` directory:
-
-```bash
-alembic revision --autogenerate -m "describe schema change"
-```
-
-Review the generated migration before applying it.
-
-Apply migrations:
 
 ```bash
 alembic upgrade head
 ```
 
-Check for unexpected schema differences:
+Check whether models and migrations are synchronized:
 
 ```bash
 alembic check
 ```
 
-A dependency, documentation, service, or utility-only change normally does not require a database migration.
+Create a new migration after changing SQLAlchemy models:
 
-## Development Workflow
-
-Mealio is developed through small, isolated GitHub issues.
-
-The expected workflow is:
-
-1. Create a focused GitHub issue.
-2. Update the local `main` branch.
-3. Create a branch using the issue number.
-4. Implement only the requested scope.
-5. Run the relevant tests.
-6. Review `git diff`.
-7. Use a Conventional Commit message.
-8. Push the branch.
-9. Open a pull request into `main`.
-10. Wait for GitHub Actions.
-11. Address review comments.
-12. Squash and merge.
-13. Update local `main`.
-14. Delete the completed feature branch.
-
-Example branch names:
-
-```text
-feat/32-password-hashing
-docs/33-improve-readme
-fix/34-example-fix
+```bash
+alembic revision --autogenerate -m "describe migration"
 ```
 
-Example commit messages:
+## Docker
 
-```text
-feat(auth): add password hashing utilities
-docs: improve project README and setup guide
-fix(users): handle duplicate normalized emails
+### Build backend image
+
+From the repository root:
+
+```bash
+docker build -t mealio-backend ./backend
 ```
+
+If Docker requires administrator permissions:
+
+```bash
+sudo docker build -t mealio-backend ./backend
+```
+
+### Run backend image manually
+
+```bash
+docker run --rm -p 8000:8000 mealio-backend
+```
+
+For normal local development, use Docker Compose instead because it also starts PostgreSQL and applies migrations.
 
 ## Continuous Integration
 
-GitHub Actions automatically:
+The backend CI workflow runs on pull requests to `main` and pushes to `main`.
 
-1. starts PostgreSQL 17;
-2. installs backend dependencies;
-3. applies Alembic migrations;
-4. runs the complete backend test suite.
+The workflow includes:
 
-The workflow runs for pull requests targeting `main` and for pushes to `main`.
+* backend quality checks;
+* Ruff lint check;
+* Ruff format check;
+* PostgreSQL service for tests;
+* Alembic migrations;
+* Alembic migration state check;
+* pytest test suite;
+* pytest coverage report;
+* backend Docker image build check.
 
-## Security
+## Git Workflow
 
-The project currently includes:
+Development is organized with issues, branches, pull requests, and squash merges.
 
-* Argon2 password hashing utilities;
-* random password salts;
-* safe password verification;
-* database-backed email uniqueness;
-* environment-based database configuration;
-* ignored local `.env` files.
+Typical workflow:
 
-The project does not currently include complete authentication.
-
-Do not use the application as a production authentication system until registration, login, token handling, protected routes, and deployment security have been completed and reviewed.
-
-## Roadmap
-
-### Backend foundation
-
-* [x] Initial FastAPI application
-* [x] PostgreSQL integration
-* [x] SQLAlchemy models
-* [x] Alembic migrations
-* [x] Ingredients and pantry APIs
-* [x] Recipes API
-* [x] Meal plans API
-* [x] Nutrition summaries
-* [x] Users API
-* [x] Backend CI
-* [x] Password hashing utilities
-
-### Authentication
-
-* [ ] Registration schema
-* [ ] Registration endpoint
-* [ ] Login endpoint
-* [ ] JWT access tokens
-* [ ] Refresh tokens
-* [ ] Authentication dependencies
-* [ ] Current-user endpoint
-* [ ] Protected routes
-* [ ] Password reset
-* [ ] Email verification
-
-### Artificial intelligence
-
-* [ ] Recipe generation from available ingredients
-* [ ] Recipe classification
-* [ ] Nutrition recommendation logic
-* [ ] AI request persistence and monitoring
-* [ ] Generated recipe images
-
-### Mobile application
-
-* [ ] Flutter application foundation
-* [ ] API client
-* [ ] Authentication screens
-* [ ] Pantry screens
-* [ ] Recipe generation screens
-* [ ] Meal planning screens
-* [ ] Nutrition summary screens
-
-### Production readiness
-
-* [ ] Deployment configuration
-* [ ] Production environment configuration
-* [ ] Structured logging
-* [ ] Monitoring
-* [ ] Rate limiting
-* [ ] Coverage reporting
-* [ ] Release versioning
-
-## Documentation
-
-Project documentation is stored in:
-
-```text
-docs/
+```bash
+git checkout main
+git pull
+git checkout -b type/short-description
 ```
 
-It is intended to contain:
+After making changes:
 
-* architecture decisions;
-* database documentation;
-* ER diagrams;
-* UML diagrams;
-* API documentation;
-* Bachelor's Thesis materials.
+```bash
+git status
+git add .
+git commit -m "type: short description"
+git push -u origin type/short-description
+```
 
-## Academic Context
+Then open a pull request into `main`.
 
-Mealio is developed as part of a Bachelor's Thesis focused on an intelligent AI-powered mobile application for instant recipe and nutrition generation based on available ingredients.
+## Notes
 
-The project demonstrates:
+This project is actively evolving as part of a Bachelor's Thesis.
 
-* mobile application development;
-* REST API design;
-* asynchronous database access;
-* relational database modeling;
-* automated testing;
-* continuous integration;
-* authentication and application security;
-* future AI service integration.
-
-## Author
-
-**Pavel Potapenko**
-
-GitHub: [Pavel404-dev](https://github.com/Pavel404-dev)
+The current priority is building a stable backend foundation with clean architecture, database migrations, automated tests, Docker support, and CI checks before completing the mobile client and AI features.
