@@ -61,5 +61,9 @@ jobs:
         working-directory: backend
         run: alembic upgrade head
 
+      - name: Check Alembic migration state
+        working-directory: backend
+        run: alembic check
+
       - name: Run backend tests
         run: python -m pytest -v
