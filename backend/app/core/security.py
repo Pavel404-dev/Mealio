@@ -7,6 +7,7 @@ from pwdlib.exceptions import UnknownHashError
 
 from app.core.config import get_settings
 
+
 _password_hasher = PasswordHash.recommended()
 
 
@@ -36,7 +37,9 @@ def create_access_token(
 ) -> str:
     settings = get_settings()
 
-    expire = datetime.now(UTC) + (
+    now = datetime.now(UTC)
+
+    expire = now + (
             expires_delta
             or timedelta(minutes=settings.access_token_expire_minutes)
     )
@@ -44,11 +47,21 @@ def create_access_token(
     payload: dict[str, Any] = {
         "sub": subject,
         "exp": expire,
-        "iat": datetime.now(UTC),
+        "iat": now,
     }
 
     return jwt.encode(
         payload,
         settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    settings = get_settings()
+
+    return jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
     )

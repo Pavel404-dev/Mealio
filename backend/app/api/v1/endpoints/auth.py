@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.auth import (
     AccessTokenResponse,
     UserLogin,
@@ -42,3 +44,13 @@ async def login_user(
     service = AuthService(db)
 
     return await service.login_user(payload)
+
+
+@router.get(
+    "/me",
+    response_model=UserRead,
+)
+async def read_current_user(
+        current_user: User = Depends(get_current_user),
+):
+    return current_user
