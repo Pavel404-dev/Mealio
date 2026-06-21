@@ -22,10 +22,10 @@ router = APIRouter(
 
 @router.get("", response_model=list[MealPlanRead])
 async def list_user_meal_plans(
-        user_id: uuid.UUID,
-        limit: int = Query(default=50, ge=1, le=100),
-        offset: int = Query(default=0, ge=0),
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -42,9 +42,9 @@ async def list_user_meal_plans(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_meal_plan(
-        user_id: uuid.UUID,
-        payload: MealPlanCreate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    payload: MealPlanCreate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -56,9 +56,9 @@ async def create_meal_plan(
 
 @router.get("/{meal_plan_id}", response_model=MealPlanRead)
 async def get_meal_plan(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -70,10 +70,10 @@ async def get_meal_plan(
 
 @router.patch("/{meal_plan_id}", response_model=MealPlanRead)
 async def update_meal_plan(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        payload: MealPlanUpdate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    payload: MealPlanUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -89,9 +89,9 @@ async def update_meal_plan(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_meal_plan(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -109,10 +109,10 @@ async def delete_meal_plan(
     status_code=status.HTTP_201_CREATED,
 )
 async def add_meal_plan_item(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        payload: MealPlanItemCreate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    payload: MealPlanItemCreate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -128,11 +128,11 @@ async def add_meal_plan_item(
     response_model=MealPlanItemRead,
 )
 async def update_meal_plan_item(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        item_id: uuid.UUID,
-        payload: MealPlanItemUpdate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    item_id: uuid.UUID,
+    payload: MealPlanItemUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 
@@ -149,10 +149,10 @@ async def update_meal_plan_item(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_meal_plan_item(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        item_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    item_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlansService(db)
 

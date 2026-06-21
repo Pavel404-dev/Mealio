@@ -15,11 +15,11 @@ class IngredientsRepository:
         self.db = db
 
     async def list(
-            self,
-            *,
-            search: str | None = None,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        search: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[Ingredient]:
         stmt = (
             select(Ingredient)
@@ -76,7 +76,9 @@ class IngredientsRepository:
             await self.db.commit()
         except IntegrityError as exc:
             await self.db.rollback()
-            raise DuplicateResourceError("Ingredient with this name already exists") from exc
+            raise DuplicateResourceError(
+                "Ingredient with this name already exists"
+            ) from exc
 
         created = await self.get_by_id(ingredient.id)
         if created is None:
@@ -85,9 +87,9 @@ class IngredientsRepository:
         return created
 
     async def update(
-            self,
-            ingredient: Ingredient,
-            data: IngredientUpdate,
+        self,
+        ingredient: Ingredient,
+        data: IngredientUpdate,
     ) -> Ingredient:
         update_data = data.model_dump(exclude_unset=True)
 
@@ -118,7 +120,9 @@ class IngredientsRepository:
             await self.db.commit()
         except IntegrityError as exc:
             await self.db.rollback()
-            raise DuplicateResourceError("Ingredient with this name already exists") from exc
+            raise DuplicateResourceError(
+                "Ingredient with this name already exists"
+            ) from exc
         updated = await self.get_by_id(ingredient.id)
         if updated is None:
             raise RuntimeError("Updated ingredient was not found")

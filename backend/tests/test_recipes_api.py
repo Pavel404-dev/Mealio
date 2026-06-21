@@ -23,8 +23,8 @@ async def create_test_user(db_session: AsyncSession) -> User:
 
 
 async def create_test_ingredient(
-        client: AsyncClient,
-        name: str = "Chicken Breast",
+    client: AsyncClient,
+    name: str = "Chicken Breast",
 ) -> str:
     response = await client.post(
         "/api/v1/ingredients",
@@ -48,8 +48,8 @@ async def create_test_ingredient(
 
 @pytest.mark.asyncio
 async def test_create_recipe_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     ingredient_id = await create_test_ingredient(client)
@@ -116,7 +116,7 @@ async def test_create_recipe_rejects_blank_instructions(client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_create_recipe_normalizes_blank_optional_fields(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/recipes",
@@ -138,7 +138,7 @@ async def test_create_recipe_normalizes_blank_optional_fields(
 
 @pytest.mark.asyncio
 async def test_create_recipe_rejects_duplicate_ingredients(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     ingredient_id = await create_test_ingredient(client)
 
@@ -162,9 +162,10 @@ async def test_create_recipe_rejects_duplicate_ingredients(
 
     assert response.status_code == 422
 
+
 @pytest.mark.asyncio
 async def test_create_recipe_rejects_non_positive_ingredient_quantity(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     ingredient_id = await create_test_ingredient(client)
 
@@ -184,9 +185,10 @@ async def test_create_recipe_rejects_non_positive_ingredient_quantity(
 
     assert response.status_code == 422
 
+
 @pytest.mark.asyncio
 async def test_create_recipe_rejects_negative_nutrition_total(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/recipes",
@@ -199,9 +201,10 @@ async def test_create_recipe_rejects_negative_nutrition_total(
 
     assert response.status_code == 422
 
+
 @pytest.mark.asyncio
 async def test_update_recipe_rejects_null_required_fields(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     create_response = await client.post(
         "/api/v1/recipes",
@@ -233,9 +236,10 @@ async def test_update_recipe_rejects_null_required_fields(
 
     assert instructions_response.status_code == 422
 
+
 @pytest.mark.asyncio
 async def test_update_recipe_can_replace_existing_ingredient_quantity(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     ingredient_id = await create_test_ingredient(client)
 
@@ -297,7 +301,7 @@ async def test_create_recipe_rejects_missing_user(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_create_recipe_rejects_missing_ingredient(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_ingredient_id = uuid4()
 

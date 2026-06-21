@@ -21,9 +21,7 @@ class AuthService:
         self.repository = UsersRepository(db)
 
     async def register_user(self, data: UserRegister):
-        existing_user = await self.repository.get_by_email(
-            str(data.email)
-        )
+        existing_user = await self.repository.get_by_email(str(data.email))
 
         if existing_user is not None:
             raise HTTPException(
@@ -50,8 +48,8 @@ class AuthService:
             ) from exc
 
     async def login_user(
-            self,
-            data: UserLogin,
+        self,
+        data: UserLogin,
     ) -> AccessTokenResponse:
         invalid_credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -59,9 +57,7 @@ class AuthService:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-        user = await self.repository.get_by_email(
-            str(data.email)
-        )
+        user = await self.repository.get_by_email(str(data.email))
 
         if user is None:
             raise invalid_credentials_exception
@@ -77,9 +73,7 @@ class AuthService:
         if not is_password_valid:
             raise invalid_credentials_exception
 
-        access_token = create_access_token(
-            subject=str(user.id)
-        )
+        access_token = create_access_token(subject=str(user.id))
 
         return AccessTokenResponse(
             access_token=access_token,

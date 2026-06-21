@@ -12,13 +12,13 @@ class RecipesService:
         self.repository = RecipesRepository(db)
 
     async def list_recipes(
-            self,
-            *,
-            search: str | None = None,
-            diet_type: str | None = None,
-            created_by_user_id: uuid.UUID | None = None,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        search: str | None = None,
+        diet_type: str | None = None,
+        created_by_user_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ):
         if created_by_user_id is not None:
             user = await self.repository.get_user(created_by_user_id)
@@ -63,9 +63,9 @@ class RecipesService:
         return await self.repository.create(data)
 
     async def update_recipe(
-            self,
-            recipe_id: uuid.UUID,
-            data: RecipeUpdate,
+        self,
+        recipe_id: uuid.UUID,
+        data: RecipeUpdate,
     ):
         recipe = await self.get_recipe(recipe_id)
 
@@ -82,15 +82,17 @@ class RecipesService:
         await self.repository.delete(recipe_id)
 
     async def _validate_ingredients_exist(
-            self,
-            ingredients: list[RecipeIngredientCreate],
+        self,
+        ingredients: list[RecipeIngredientCreate],
     ) -> None:
         ingredient_ids = [item.ingredient_id for item in ingredients]
 
         if not ingredient_ids:
             return
 
-        existing_ingredients = await self.repository.get_ingredients_by_ids(ingredient_ids)
+        existing_ingredients = await self.repository.get_ingredients_by_ids(
+            ingredient_ids
+        )
         existing_ids = {ingredient.id for ingredient in existing_ingredients}
 
         missing_ids = [

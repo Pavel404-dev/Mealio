@@ -60,6 +60,9 @@ jobs:
       - name: Run Ruff lint check
         run: python -m ruff check backend
 
+      - name: Run Ruff format check
+        run: python -m ruff format --check backend
+
       - name: Run database migrations
         working-directory: backend
         run: alembic upgrade head

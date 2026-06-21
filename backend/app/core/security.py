@@ -16,8 +16,8 @@ def hash_password(plain_password: str) -> str:
 
 
 def verify_password(
-        plain_password: str,
-        hashed_password: str | None,
+    plain_password: str,
+    hashed_password: str | None,
 ) -> bool:
     if not hashed_password:
         return False
@@ -32,16 +32,15 @@ def verify_password(
 
 
 def create_access_token(
-        subject: str,
-        expires_delta: timedelta | None = None,
+    subject: str,
+    expires_delta: timedelta | None = None,
 ) -> str:
     settings = get_settings()
 
     now = datetime.now(UTC)
 
     expire = now + (
-            expires_delta
-            or timedelta(minutes=settings.access_token_expire_minutes)
+        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
 
     payload: dict[str, Any] = {

@@ -24,9 +24,7 @@ class UsersService:
         return user
 
     async def create_user(self, data: UserCreate):
-        existing_user = await self.repository.get_by_email(
-            str(data.email)
-        )
+        existing_user = await self.repository.get_by_email(str(data.email))
 
         if existing_user is not None:
             raise HTTPException(
@@ -43,9 +41,9 @@ class UsersService:
             ) from exc
 
     async def update_user(
-            self,
-            user_id: uuid.UUID,
-            data: UserUpdate,
+        self,
+        user_id: uuid.UUID,
+        data: UserUpdate,
     ):
         user = await self.get_user(user_id)
         update_data = data.model_dump(exclude_unset=True)
@@ -55,10 +53,7 @@ class UsersService:
                 str(update_data["email"])
             )
 
-            if (
-                    existing_user is not None
-                    and existing_user.id != user.id
-            ):
+            if existing_user is not None and existing_user.id != user.id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="User with this email already exists",

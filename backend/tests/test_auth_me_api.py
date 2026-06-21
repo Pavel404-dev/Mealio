@@ -15,7 +15,7 @@ ME_URL = "/api/v1/auth/me"
 
 @pytest.mark.asyncio
 async def test_auth_me_returns_current_user(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     password = "Mealio-password-123"
 
@@ -67,7 +67,7 @@ async def test_auth_me_returns_current_user(
 
 @pytest.mark.asyncio
 async def test_auth_me_without_token_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(ME_URL)
 
@@ -76,7 +76,7 @@ async def test_auth_me_without_token_returns_401(
 
 @pytest.mark.asyncio
 async def test_auth_me_with_invalid_token_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(
         ME_URL,
@@ -91,7 +91,7 @@ async def test_auth_me_with_invalid_token_returns_401(
 
 @pytest.mark.asyncio
 async def test_auth_me_with_token_without_subject_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     settings = get_settings()
 
@@ -117,7 +117,7 @@ async def test_auth_me_with_token_without_subject_returns_401(
 
 @pytest.mark.asyncio
 async def test_auth_me_with_invalid_user_id_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     settings = get_settings()
 
@@ -144,7 +144,7 @@ async def test_auth_me_with_invalid_user_id_returns_401(
 
 @pytest.mark.asyncio
 async def test_auth_me_with_unknown_user_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     settings = get_settings()
 
@@ -171,7 +171,7 @@ async def test_auth_me_with_unknown_user_returns_401(
 
 @pytest.mark.asyncio
 async def test_auth_me_with_expired_token_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     settings = get_settings()
 

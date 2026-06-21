@@ -47,10 +47,7 @@ def test_valid_registration_data_creates_schema() -> None:
 
     assert str(registration.email) == "pavel@example.com"
     assert registration.full_name == "Pavel Potapenko"
-    assert (
-        registration.password.get_secret_value()
-        == VALID_PASSWORD
-    )
+    assert registration.password.get_secret_value() == VALID_PASSWORD
 
 
 def test_email_is_trimmed_and_lowercased() -> None:
@@ -60,10 +57,7 @@ def test_email_is_trimmed_and_lowercased() -> None:
         )
     )
 
-    assert (
-        str(registration.email)
-        == "pavel.user@example.com"
-    )
+    assert str(registration.email) == "pavel.user@example.com"
 
 
 def test_invalid_email_is_rejected() -> None:
@@ -132,8 +126,7 @@ def test_null_full_name_is_allowed() -> None:
     assert registration.full_name is None
 
 
-def test_full_name_longer_than_255_characters_is_rejected(
-) -> None:
+def test_full_name_longer_than_255_characters_is_rejected() -> None:
     with pytest.raises(ValidationError):
         UserRegister.model_validate(
             build_registration_data(
@@ -142,8 +135,7 @@ def test_full_name_longer_than_255_characters_is_rejected(
         )
 
 
-def test_password_with_exact_minimum_length_is_allowed(
-) -> None:
+def test_password_with_exact_minimum_length_is_allowed() -> None:
     password = "a" * 15
 
     registration = UserRegister.model_validate(
@@ -152,14 +144,10 @@ def test_password_with_exact_minimum_length_is_allowed(
         )
     )
 
-    assert (
-        registration.password.get_secret_value()
-        == password
-    )
+    assert registration.password.get_secret_value() == password
 
 
-def test_password_shorter_than_minimum_length_is_rejected(
-) -> None:
+def test_password_shorter_than_minimum_length_is_rejected() -> None:
     with pytest.raises(ValidationError):
         UserRegister.model_validate(
             build_registration_data(
@@ -168,8 +156,7 @@ def test_password_shorter_than_minimum_length_is_rejected(
         )
 
 
-def test_password_longer_than_maximum_length_is_rejected(
-) -> None:
+def test_password_longer_than_maximum_length_is_rejected() -> None:
     with pytest.raises(ValidationError):
         UserRegister.model_validate(
             build_registration_data(
@@ -213,14 +200,10 @@ def test_unicode_password_is_allowed() -> None:
         )
     )
 
-    assert (
-        registration.password.get_secret_value()
-        == password
-    )
+    assert registration.password.get_secret_value() == password
 
 
-def test_password_leading_and_trailing_spaces_are_preserved(
-) -> None:
+def test_password_leading_and_trailing_spaces_are_preserved() -> None:
     password = "  Mealio-password  "
 
     registration = UserRegister.model_validate(
@@ -229,10 +212,7 @@ def test_password_leading_and_trailing_spaces_are_preserved(
         )
     )
 
-    assert (
-        registration.password.get_secret_value()
-        == password
-    )
+    assert registration.password.get_secret_value() == password
 
 
 def test_password_is_not_lowercased() -> None:
@@ -244,29 +224,19 @@ def test_password_is_not_lowercased() -> None:
         )
     )
 
-    assert (
-        registration.password.get_secret_value()
-        == password
-    )
+    assert registration.password.get_secret_value() == password
 
 
-def test_password_is_masked_in_schema_representation(
-) -> None:
-    registration = UserRegister.model_validate(
-        VALID_DATA
-    )
+def test_password_is_masked_in_schema_representation() -> None:
+    registration = UserRegister.model_validate(VALID_DATA)
 
     assert VALID_PASSWORD not in repr(registration)
     assert VALID_PASSWORD not in str(registration)
-    assert (
-        VALID_PASSWORD
-        not in registration.model_dump_json()
-    )
+    assert VALID_PASSWORD not in registration.model_dump_json()
     assert "**********" in repr(registration)
 
 
-def test_validation_error_string_does_not_expose_password(
-) -> None:
+def test_validation_error_string_does_not_expose_password() -> None:
     invalid_password = "too-short"
 
     with pytest.raises(ValidationError) as exc_info:
@@ -283,10 +253,7 @@ def test_valid_login_data_creates_schema() -> None:
     login = UserLogin.model_validate(VALID_LOGIN_DATA)
 
     assert str(login.email) == "pavel@example.com"
-    assert (
-        login.password.get_secret_value()
-        == VALID_LOGIN_PASSWORD
-    )
+    assert login.password.get_secret_value() == VALID_LOGIN_PASSWORD
 
 
 def test_login_email_is_trimmed_and_lowercased() -> None:
@@ -357,8 +324,7 @@ def test_login_empty_password_is_rejected() -> None:
         )
 
 
-def test_login_password_longer_than_128_characters_is_rejected(
-) -> None:
+def test_login_password_longer_than_128_characters_is_rejected() -> None:
     with pytest.raises(ValidationError):
         UserLogin.model_validate(
             build_login_data(
@@ -367,8 +333,7 @@ def test_login_password_longer_than_128_characters_is_rejected(
         )
 
 
-def test_login_password_shorter_than_registration_minimum_is_allowed(
-) -> None:
+def test_login_password_shorter_than_registration_minimum_is_allowed() -> None:
     password = "short"
 
     login = UserLogin.model_validate(
@@ -404,8 +369,7 @@ def test_login_password_case_is_preserved() -> None:
     assert login.password.get_secret_value() == password
 
 
-def test_login_password_surrounding_spaces_are_preserved(
-) -> None:
+def test_login_password_surrounding_spaces_are_preserved() -> None:
     password = "  LoginPassword  "
 
     login = UserLogin.model_validate(
@@ -417,21 +381,16 @@ def test_login_password_surrounding_spaces_are_preserved(
     assert login.password.get_secret_value() == password
 
 
-def test_login_password_is_masked_in_schema_representation(
-) -> None:
+def test_login_password_is_masked_in_schema_representation() -> None:
     login = UserLogin.model_validate(VALID_LOGIN_DATA)
 
     assert VALID_LOGIN_PASSWORD not in repr(login)
     assert VALID_LOGIN_PASSWORD not in str(login)
-    assert (
-        VALID_LOGIN_PASSWORD
-        not in login.model_dump_json()
-    )
+    assert VALID_LOGIN_PASSWORD not in login.model_dump_json()
     assert "**********" in repr(login)
 
 
-def test_login_validation_error_does_not_expose_password(
-) -> None:
+def test_login_validation_error_does_not_expose_password() -> None:
     invalid_password = "VisibleSecret-" + ("x" * 120)
 
     with pytest.raises(ValidationError) as exc_info:
@@ -444,8 +403,7 @@ def test_login_validation_error_does_not_expose_password(
     assert invalid_password not in str(exc_info.value)
 
 
-def test_login_whitespace_only_password_is_allowed_and_preserved(
-) -> None:
+def test_login_whitespace_only_password_is_allowed_and_preserved() -> None:
     password = "   "
 
     login = UserLogin.model_validate(
@@ -593,9 +551,7 @@ def test_access_token_is_present_in_json() -> None:
     )
 
     serialized = response.model_dump_json()
-    deserialized = AccessTokenResponse.model_validate_json(
-        serialized
-    )
+    deserialized = AccessTokenResponse.model_validate_json(serialized)
 
     assert deserialized.access_token == VALID_ACCESS_TOKEN
 
@@ -606,9 +562,7 @@ def test_token_type_is_bearer_in_json() -> None:
     )
 
     serialized = response.model_dump_json()
-    deserialized = AccessTokenResponse.model_validate_json(
-        serialized
-    )
+    deserialized = AccessTokenResponse.model_validate_json(serialized)
 
     assert deserialized.token_type == "bearer"
 

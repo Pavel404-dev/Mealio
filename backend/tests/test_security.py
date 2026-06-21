@@ -26,10 +26,13 @@ def test_verify_password_accepts_correct_password() -> None:
 def test_verify_password_rejects_incorrect_password() -> None:
     hashed_password = hash_password("correct-password")
 
-    assert verify_password(
-        "incorrect-password",
-        hashed_password,
-    ) is False
+    assert (
+        verify_password(
+            "incorrect-password",
+            hashed_password,
+        )
+        is False
+    )
 
 
 def test_hash_password_uses_random_salt() -> None:
@@ -54,15 +57,21 @@ def test_both_hashes_verify_for_same_password() -> None:
 def test_verify_password_rejects_invalid_or_unknown_hash() -> None:
     plain_password = "Mealio-secure-password"
 
-    assert verify_password(
-        plain_password,
-        "not-a-valid-password-hash",
-    ) is False
+    assert (
+        verify_password(
+            plain_password,
+            "not-a-valid-password-hash",
+        )
+        is False
+    )
 
-    assert verify_password(
-        plain_password,
-        "$argon2id$v=19$m=65536,t=3,p=4$invalid",
-    ) is False
+    assert (
+        verify_password(
+            plain_password,
+            "$argon2id$v=19$m=65536,t=3,p=4$invalid",
+        )
+        is False
+    )
 
 
 def test_unicode_password_can_be_hashed_and_verified() -> None:
@@ -79,10 +88,14 @@ def test_unicode_password_rejects_different_value() -> None:
 
     hashed_password = hash_password(plain_password)
 
-    assert verify_password(
-        different_password,
-        hashed_password,
-    ) is False
+    assert (
+        verify_password(
+            different_password,
+            hashed_password,
+        )
+        is False
+    )
+
 
 def test_verify_password_rejects_missing_hash() -> None:
     assert verify_password("Mealio-secure-password", None) is False

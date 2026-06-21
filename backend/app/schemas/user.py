@@ -48,11 +48,7 @@ class UserUpdate(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def reject_null_email(cls, data: Any) -> Any:
-        if (
-                isinstance(data, dict)
-                and "email" in data
-                and data["email"] is None
-        ):
+        if isinstance(data, dict) and "email" in data and data["email"] is None:
             raise ValueError("Email cannot be null")
 
         return data

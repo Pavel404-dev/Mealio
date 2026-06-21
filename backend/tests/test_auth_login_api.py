@@ -11,7 +11,7 @@ LOGIN_URL = "/api/v1/auth/login"
 
 @pytest.mark.asyncio
 async def test_login_user_success(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     password = "Mealio-password-123"
 
@@ -60,7 +60,7 @@ async def test_login_user_success(
 
 @pytest.mark.asyncio
 async def test_login_with_wrong_password_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     register_response = await client.post(
         REGISTER_URL,
@@ -87,7 +87,7 @@ async def test_login_with_wrong_password_returns_401(
 
 @pytest.mark.asyncio
 async def test_login_with_unknown_email_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     login_response = await client.post(
         LOGIN_URL,
@@ -103,7 +103,7 @@ async def test_login_with_unknown_email_returns_401(
 
 @pytest.mark.asyncio
 async def test_login_user_without_password_hash_returns_401(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     create_user_response = await client.post(
         "/api/v1/users",
@@ -149,8 +149,8 @@ async def test_login_user_without_password_hash_returns_401(
     ],
 )
 async def test_login_rejects_invalid_payload(
-        client: AsyncClient,
-        payload: dict[str, object],
+    client: AsyncClient,
+    payload: dict[str, object],
 ) -> None:
     response = await client.post(
         LOGIN_URL,

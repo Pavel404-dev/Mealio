@@ -23,11 +23,11 @@ class MealPlansService:
         self.repository = MealPlansRepository(db)
 
     async def list_user_meal_plans(
-            self,
-            *,
-            user_id: uuid.UUID,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        user_id: uuid.UUID,
+        limit: int = 50,
+        offset: int = 0,
     ):
         await self._validate_user_exists(user_id)
 
@@ -38,10 +38,10 @@ class MealPlansService:
         )
 
     async def get_meal_plan(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ):
         await self._validate_user_exists(user_id)
 
@@ -59,10 +59,10 @@ class MealPlansService:
         return meal_plan
 
     async def create_meal_plan(
-            self,
-            *,
-            user_id: uuid.UUID,
-            data: MealPlanCreate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: MealPlanCreate,
     ):
         await self._validate_user_exists(user_id)
         await self._validate_items(data.items)
@@ -87,11 +87,11 @@ class MealPlansService:
             )
 
     async def update_meal_plan(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
-            data: MealPlanUpdate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
+        data: MealPlanUpdate,
     ):
         meal_plan = await self.get_meal_plan(
             user_id=user_id,
@@ -101,15 +101,11 @@ class MealPlansService:
         update_data = data.model_dump(exclude_unset=True)
 
         new_start_date = (
-            data.start_date
-            if data.start_date is not None
-            else meal_plan.start_date
+            data.start_date if data.start_date is not None else meal_plan.start_date
         )
 
         new_end_date = (
-            data.end_date
-            if "end_date" in update_data
-            else meal_plan.end_date
+            data.end_date if "end_date" in update_data else meal_plan.end_date
         )
 
         if new_end_date is not None and new_end_date < new_start_date:
@@ -131,10 +127,10 @@ class MealPlansService:
         )
 
     async def delete_meal_plan(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ) -> None:
         meal_plan = await self.get_meal_plan(
             user_id=user_id,
@@ -144,11 +140,11 @@ class MealPlansService:
         await self.repository.delete(meal_plan.id)
 
     async def add_meal_plan_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
-            data: MealPlanItemCreate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
+        data: MealPlanItemCreate,
     ):
         meal_plan = await self.get_meal_plan(
             user_id=user_id,
@@ -182,12 +178,12 @@ class MealPlansService:
             )
 
     async def update_meal_plan_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
-            item_id: uuid.UUID,
-            data: MealPlanItemUpdate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
+        item_id: uuid.UUID,
+        data: MealPlanItemUpdate,
     ):
         meal_plan = await self.get_meal_plan(
             user_id=user_id,
@@ -209,9 +205,7 @@ class MealPlansService:
             await self._validate_recipe_exists(data.recipe_id)
 
         planned_date = (
-            data.planned_date
-            if data.planned_date is not None
-            else item.planned_date
+            data.planned_date if data.planned_date is not None else item.planned_date
         )
 
         meal_type = (
@@ -244,11 +238,11 @@ class MealPlansService:
             )
 
     async def delete_meal_plan_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
-            item_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
+        item_id: uuid.UUID,
     ) -> None:
         meal_plan = await self.get_meal_plan(
             user_id=user_id,
@@ -287,8 +281,8 @@ class MealPlansService:
             )
 
     async def _validate_items(
-            self,
-            items: list[MealPlanItemCreate],
+        self,
+        items: list[MealPlanItemCreate],
     ) -> None:
         recipe_ids = list({item.recipe_id for item in items})
 
@@ -299,9 +293,7 @@ class MealPlansService:
         existing_ids = {recipe.id for recipe in existing_recipes}
 
         missing_ids = [
-            str(recipe_id)
-            for recipe_id in recipe_ids
-            if recipe_id not in existing_ids
+            str(recipe_id) for recipe_id in recipe_ids if recipe_id not in existing_ids
         ]
 
         if missing_ids:
@@ -311,12 +303,11 @@ class MealPlansService:
             )
 
     def _validate_unique_slots(
-            self,
-            items: list[MealPlanItemCreate],
+        self,
+        items: list[MealPlanItemCreate],
     ) -> None:
         slots = [
-            (item.planned_date, normalize_meal_type(item.meal_type))
-            for item in items
+            (item.planned_date, normalize_meal_type(item.meal_type)) for item in items
         ]
 
         if len(slots) != len(set(slots)):
@@ -326,12 +317,12 @@ class MealPlansService:
             )
 
     async def _validate_slot_is_available(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
-            planned_date: date,
-            meal_type: str,
-            exclude_item_id: uuid.UUID | None = None,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
+        planned_date: date,
+        meal_type: str,
+        exclude_item_id: uuid.UUID | None = None,
     ) -> None:
         existing_item = await self.repository.get_item_by_slot(
             meal_plan_id=meal_plan_id,
@@ -347,10 +338,10 @@ class MealPlansService:
             )
 
     def _validate_planned_date_inside_meal_plan(
-            self,
-            *,
-            meal_plan: MealPlan,
-            planned_date: date,
+        self,
+        *,
+        meal_plan: MealPlan,
+        planned_date: date,
     ) -> None:
         self._validate_planned_date_inside_range(
             planned_date=planned_date,
@@ -359,11 +350,11 @@ class MealPlansService:
         )
 
     def _validate_planned_date_inside_range(
-            self,
-            *,
-            planned_date: date,
-            start_date: date,
-            end_date: date | None,
+        self,
+        *,
+        planned_date: date,
+        start_date: date,
+        end_date: date | None,
     ) -> None:
         if planned_date < start_date:
             raise HTTPException(
