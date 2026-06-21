@@ -91,5 +91,5 @@ jobs:
         working-directory: backend
         run: alembic check
 
-      - name: Run backend tests
-        run: python -m pytest -v
+      - name: Run backend tests with coverage
+        run: python -m pytest -v --cov=app --cov-report=term-missing
