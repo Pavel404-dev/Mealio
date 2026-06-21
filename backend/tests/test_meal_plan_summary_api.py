@@ -62,6 +62,7 @@ async def create_authenticated_user(
 async def create_test_recipe(
     client: AsyncClient,
     *,
+    headers: dict[str, str],
     title: str,
     total_calories: str | None = "500.00",
     total_protein_g: str | None = "30.00",
@@ -80,6 +81,7 @@ async def create_test_recipe(
 
     response = await client.post(
         "/api/v1/recipes",
+        headers=headers,
         json=payload,
     )
 
@@ -140,6 +142,7 @@ async def test_get_meal_plan_nutrition_summary_success(
 
     breakfast_recipe_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Breakfast Bowl",
         total_calories="500.00",
         total_protein_g="30.00",
@@ -149,6 +152,7 @@ async def test_get_meal_plan_nutrition_summary_success(
 
     lunch_recipe_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Chicken Rice",
         total_calories="750.00",
         total_protein_g="45.00",
@@ -232,6 +236,7 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
     recipe_with_null_values_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Recipe Without Nutrition",
         total_calories=None,
         total_protein_g=None,
@@ -241,6 +246,7 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
     recipe_with_values_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Recipe With Nutrition",
         total_calories="400.00",
         total_protein_g="25.00",
@@ -295,6 +301,7 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
 
     breakfast_recipe_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Breakfast Bowl",
         total_calories="500.00",
         total_protein_g="30.00",
@@ -304,6 +311,7 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
 
     lunch_recipe_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Chicken Rice",
         total_calories="750.00",
         total_protein_g="45.00",
@@ -313,6 +321,7 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
 
     dinner_recipe_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Salmon Dinner",
         total_calories="600.00",
         total_protein_g="40.00",
@@ -407,6 +416,7 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
 
     recipe_with_null_values_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Recipe Without Nutrition",
         total_calories=None,
         total_protein_g=None,
@@ -416,6 +426,7 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
 
     recipe_with_values_id = await create_test_recipe(
         client,
+        headers=headers,
         title="Recipe With Nutrition",
         total_calories="400.00",
         total_protein_g="25.00",

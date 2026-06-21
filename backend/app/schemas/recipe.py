@@ -56,8 +56,9 @@ class RecipeBase(BaseModel):
 
 
 class RecipeCreate(RecipeBase):
-    created_by_user_id: uuid.UUID | None = None
     ingredients: list[RecipeIngredientCreate] = Field(default_factory=list)
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     @model_validator(mode="after")
     def validate_unique_ingredients(self) -> "RecipeCreate":
@@ -80,7 +81,7 @@ class RecipeUpdate(BaseModel):
     total_fat_g: Decimal | None = Field(default=None, ge=0)
     ingredients: list[RecipeIngredientCreate] | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     @model_validator(mode="before")
     @classmethod

@@ -11,34 +11,33 @@ class RecipesService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = RecipesRepository(db)
 
-    async def list_recipes(
+    async def list_user_recipes(
         self,
         *,
+        user_id: uuid.UUID,
         search: str | None = None,
         diet_type: str | None = None,
-        created_by_user_id: uuid.UUID | None = None,
         limit: int = 50,
         offset: int = 0,
     ):
-        if created_by_user_id is not None:
-            user = await self.repository.get_user(created_by_user_id)
-
-            if user is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="User not found",
-                )
-
         return await self.repository.list(
             search=search,
             diet_type=diet_type,
-            created_by_user_id=created_by_user_id,
+            created_by_user_id=user_id,
             limit=limit,
             offset=offset,
         )
 
-    async def get_recipe(self, recipe_id: uuid.UUID):
-        recipe = await self.repository.get_by_id(recipe_id)
+    async def get_recipe(
+        self,
+        *,
+        user_id: uuid.UUID,
+        recipe_id: uuid.UUID,
+    ):
+        recipe = await self.repository.get_by_id(
+            recipe_id=recipe_id,
+            created_by_user_id=user_id,
+        )
 
         if recipe is None:
             raise HTTPException(
@@ -48,26 +47,30 @@ class RecipesService:
 
         return recipe
 
-    async def create_recipe(self, data: RecipeCreate):
-        if data.created_by_user_id is not None:
-            user = await self.repository.get_user(data.created_by_user_id)
-
-            if user is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="User not found",
-                )
-
+    async def create_recipe(
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: RecipeCreate,
+    ):
         await self._validate_ingredients_exist(data.ingredients)
 
-        return await self.repository.create(data)
+        return await self.repository.create(
+            created_by_user_id=user_id,
+            data=data,
+        )
 
     async def update_recipe(
         self,
+        *,
+        user_id: uuid.UUID,
         recipe_id: uuid.UUID,
         data: RecipeUpdate,
     ):
-        recipe = await self.get_recipe(recipe_id)
+        recipe = await self.get_recipe(
+            user_id=user_id,
+            recipe_id=recipe_id,
+        )
 
         if data.ingredients is not None:
             await self._validate_ingredients_exist(data.ingredients)
@@ -77,9 +80,18 @@ class RecipesService:
             data=data,
         )
 
-    async def delete_recipe(self, recipe_id: uuid.UUID) -> None:
-        await self.get_recipe(recipe_id)
-        await self.repository.delete(recipe_id)
+    async def delete_recipe(
+        self,
+        *,
+        user_id: uuid.UUID,
+        recipe_id: uuid.UUID,
+    ) -> None:
+        recipe = await self.get_recipe(
+            user_id=user_id,
+            recipe_id=recipe_id,
+        )
+
+        await self.repository.delete(recipe.id)
 
     async def _validate_ingredients_exist(
         self,

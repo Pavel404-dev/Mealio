@@ -6,18 +6,12 @@ from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient
 from app.models.recipe import Recipe, RecipeIngredient
-from app.models.user import User
 from app.schemas.recipe import RecipeCreate, RecipeUpdate
 
 
 class RecipesRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
-
-    async def get_user(self, user_id: uuid.UUID) -> User | None:
-        result = await self.db.execute(select(User).where(User.id == user_id))
-
-        return result.scalar_one_or_none()
 
     async def get_ingredients_by_ids(
         self,
@@ -61,20 +55,33 @@ class RecipesRepository:
 
         return list(result.scalars().all())
 
-    async def get_by_id(self, recipe_id: uuid.UUID) -> Recipe | None:
+    async def get_by_id(
+        self,
+        recipe_id: uuid.UUID,
+        *,
+        created_by_user_id: uuid.UUID | None = None,
+    ) -> Recipe | None:
         stmt = (
             select(Recipe)
             .options(selectinload(Recipe.recipe_ingredients))
             .where(Recipe.id == recipe_id)
         )
 
+        if created_by_user_id is not None:
+            stmt = stmt.where(Recipe.created_by_user_id == created_by_user_id)
+
         result = await self.db.execute(stmt)
 
         return result.scalar_one_or_none()
 
-    async def create(self, data: RecipeCreate) -> Recipe:
+    async def create(
+        self,
+        *,
+        created_by_user_id: uuid.UUID,
+        data: RecipeCreate,
+    ) -> Recipe:
         recipe = Recipe(
-            created_by_user_id=data.created_by_user_id,
+            created_by_user_id=created_by_user_id,
             title=data.title.strip(),
             description=data.description.strip() if data.description else None,
             instructions=data.instructions.strip(),
@@ -96,7 +103,10 @@ class RecipesRepository:
         self.db.add(recipe)
         await self.db.commit()
 
-        created = await self.get_by_id(recipe.id)
+        created = await self.get_by_id(
+            recipe.id,
+            created_by_user_id=created_by_user_id,
+        )
 
         if created is None:
             raise RuntimeError("Created recipe was not found")
