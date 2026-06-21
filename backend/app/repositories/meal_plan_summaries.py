@@ -16,9 +16,9 @@ class MealPlanSummariesRepository:
         self.db = db
 
     async def get_nutrition_summary(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
     ) -> dict:
         stmt = (
             select(
@@ -58,9 +58,9 @@ class MealPlanSummariesRepository:
         }
 
     async def get_daily_nutrition_summary(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
     ) -> list[dict]:
         stmt = (
             select(

@@ -19,9 +19,9 @@ router = APIRouter(
 
 @router.get("/summary", response_model=MealPlanNutritionSummaryRead)
 async def get_meal_plan_nutrition_summary(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlanSummariesService(db)
 
@@ -36,9 +36,9 @@ async def get_meal_plan_nutrition_summary(
     response_model=list[MealPlanDailyNutritionSummaryRead],
 )
 async def get_meal_plan_daily_nutrition_summary(
-        user_id: uuid.UUID,
-        meal_plan_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    meal_plan_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = MealPlanSummariesService(db)
 

@@ -17,10 +17,10 @@ class PantryService:
         return await self.repository.list_user_pantry(user_id)
 
     async def add_pantry_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            data: PantryItemCreate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: PantryItemCreate,
     ):
         await self._ensure_user_exists(user_id)
         await self._ensure_ingredient_exists(data.ingredient_id)
@@ -43,12 +43,13 @@ class PantryService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
     async def update_pantry_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            pantry_item_id: uuid.UUID,
-            data: PantryItemUpdate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        pantry_item_id: uuid.UUID,
+        data: PantryItemUpdate,
     ):
         await self._ensure_user_exists(user_id)
 
@@ -69,10 +70,10 @@ class PantryService:
         )
 
     async def delete_pantry_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            pantry_item_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        pantry_item_id: uuid.UUID,
     ) -> None:
         await self._ensure_user_exists(user_id)
 
@@ -109,4 +110,3 @@ class PantryService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ingredient not found",
             )
-        

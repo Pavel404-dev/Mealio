@@ -13,11 +13,11 @@ class IngredientsService:
         self.repository = IngredientsRepository(db)
 
     async def list_ingredients(
-            self,
-            *,
-            search: str | None = None,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        search: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ):
         return await self.repository.list(
             search=search,
@@ -52,10 +52,11 @@ class IngredientsService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
     async def update_ingredient(
-            self,
-            ingredient_id: uuid.UUID,
-            data: IngredientUpdate,
+        self,
+        ingredient_id: uuid.UUID,
+        data: IngredientUpdate,
     ):
         ingredient = await self.get_ingredient(ingredient_id)
 
@@ -75,6 +76,7 @@ class IngredientsService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
     async def delete_ingredient(self, ingredient_id: uuid.UUID) -> None:
         await self.get_ingredient(ingredient_id)
         await self.repository.delete(ingredient_id)

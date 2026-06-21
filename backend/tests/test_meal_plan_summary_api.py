@@ -22,13 +22,13 @@ async def create_test_user(db_session: AsyncSession) -> User:
 
 
 async def create_test_recipe(
-        client: AsyncClient,
-        *,
-        title: str,
-        total_calories: str | None = "500.00",
-        total_protein_g: str | None = "30.00",
-        total_carbs_g: str | None = "50.00",
-        total_fat_g: str | None = "15.00",
+    client: AsyncClient,
+    *,
+    title: str,
+    total_calories: str | None = "500.00",
+    total_protein_g: str | None = "30.00",
+    total_carbs_g: str | None = "50.00",
+    total_fat_g: str | None = "15.00",
 ) -> str:
     payload = {
         "title": title,
@@ -51,9 +51,9 @@ async def create_test_recipe(
 
 
 async def create_test_meal_plan(
-        client: AsyncClient,
-        *,
-        user_id: str,
+    client: AsyncClient,
+    *,
+    user_id: str,
 ) -> dict:
     response = await client.post(
         f"/api/v1/users/{user_id}/meal-plans",
@@ -70,13 +70,13 @@ async def create_test_meal_plan(
 
 
 async def add_meal_plan_item(
-        client: AsyncClient,
-        *,
-        user_id: str,
-        meal_plan_id: str,
-        recipe_id: str,
-        planned_date: str,
-        meal_type: str,
+    client: AsyncClient,
+    *,
+    user_id: str,
+    meal_plan_id: str,
+    recipe_id: str,
+    planned_date: str,
+    meal_type: str,
 ) -> dict:
     response = await client.post(
         f"/api/v1/users/{user_id}/meal-plans/{meal_plan_id}/items",
@@ -94,8 +94,8 @@ async def add_meal_plan_item(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -158,8 +158,8 @@ async def test_get_meal_plan_nutrition_summary_success(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -186,8 +186,8 @@ async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -249,7 +249,7 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_rejects_missing_user(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
     meal_plan_id = uuid4()
@@ -264,8 +264,8 @@ async def test_get_meal_plan_nutrition_summary_rejects_missing_user(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_rejects_missing_meal_plan(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     missing_meal_plan_id = uuid4()
@@ -277,10 +277,11 @@ async def test_get_meal_plan_nutrition_summary_rejects_missing_meal_plan(
     assert response.status_code == 404
     assert response.json()["detail"] == "Meal plan not found"
 
+
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -371,8 +372,8 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -391,8 +392,8 @@ async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -457,7 +458,7 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_user(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
     meal_plan_id = uuid4()
@@ -472,8 +473,8 @@ async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_user(
 
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_meal_plan(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     missing_meal_plan_id = uuid4()

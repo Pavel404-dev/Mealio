@@ -20,8 +20,8 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(
-        payload: UserCreate,
-        db: AsyncSession = Depends(get_db),
+    payload: UserCreate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = UsersService(db)
 
@@ -33,8 +33,8 @@ async def create_user(
     response_model=UserRead,
 )
 async def get_user(
-        user_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = UsersService(db)
 
@@ -46,9 +46,9 @@ async def get_user(
     response_model=UserRead,
 )
 async def update_user(
-        user_id: uuid.UUID,
-        payload: UserUpdate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    payload: UserUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = UsersService(db)
 

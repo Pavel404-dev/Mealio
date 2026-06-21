@@ -12,8 +12,8 @@ router = APIRouter(prefix="/users/{user_id}/pantry", tags=["User Pantry"])
 
 @router.get("", response_model=list[PantryItemRead])
 async def list_user_pantry(
-        user_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = PantryService(db)
     return await service.list_user_pantry(user_id)
@@ -25,9 +25,9 @@ async def list_user_pantry(
     status_code=status.HTTP_201_CREATED,
 )
 async def add_pantry_item(
-        user_id: uuid.UUID,
-        payload: PantryItemCreate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    payload: PantryItemCreate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = PantryService(db)
 
@@ -39,10 +39,10 @@ async def add_pantry_item(
 
 @router.patch("/{pantry_item_id}", response_model=PantryItemRead)
 async def update_pantry_item(
-        user_id: uuid.UUID,
-        pantry_item_id: uuid.UUID,
-        payload: PantryItemUpdate,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    pantry_item_id: uuid.UUID,
+    payload: PantryItemUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     service = PantryService(db)
 
@@ -58,9 +58,9 @@ async def update_pantry_item(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_pantry_item(
-        user_id: uuid.UUID,
-        pantry_item_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID,
+    pantry_item_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
 ):
     service = PantryService(db)
 

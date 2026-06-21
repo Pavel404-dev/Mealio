@@ -48,7 +48,7 @@ async def test_create_ingredient_rejects_blank_name(client: AsyncClient) -> None
 
 @pytest.mark.asyncio
 async def test_create_ingredient_normalizes_blank_category_to_null(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/ingredients",
@@ -87,7 +87,10 @@ async def test_create_ingredient_rejects_duplicate_name(client: AsyncClient) -> 
     )
 
     assert duplicate_response.status_code == 409
-    assert duplicate_response.json()["detail"] == "Ingredient with this name already exists"
+    assert (
+        duplicate_response.json()["detail"]
+        == "Ingredient with this name already exists"
+    )
 
 
 @pytest.mark.asyncio

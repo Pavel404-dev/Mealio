@@ -22,8 +22,8 @@ async def create_test_user(db_session: AsyncSession) -> User:
 
 
 async def create_test_recipe(
-        client: AsyncClient,
-        title: str = "Chicken Bowl",
+    client: AsyncClient,
+    title: str = "Chicken Bowl",
 ) -> str:
     response = await client.post(
         "/api/v1/recipes",
@@ -41,8 +41,8 @@ async def create_test_recipe(
 
 
 async def create_test_meal_plan(
-        client: AsyncClient,
-        user_id: str,
+    client: AsyncClient,
+    user_id: str,
 ) -> dict:
     response = await client.post(
         f"/api/v1/users/{user_id}/meal-plans",
@@ -60,8 +60,8 @@ async def create_test_meal_plan(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -88,8 +88,8 @@ async def test_create_meal_plan_success(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -122,8 +122,8 @@ async def test_create_meal_plan_with_items_success(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_rejects_date_outside_range(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -152,8 +152,8 @@ async def test_create_meal_plan_with_items_rejects_date_outside_range(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_rejects_missing_recipe(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     missing_recipe_id = uuid4()
@@ -180,8 +180,8 @@ async def test_create_meal_plan_with_items_rejects_missing_recipe(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_duplicate_slots(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -215,7 +215,7 @@ async def test_create_meal_plan_rejects_duplicate_slots(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_missing_user(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
 
@@ -234,8 +234,8 @@ async def test_create_meal_plan_rejects_missing_user(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_blank_title(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -253,8 +253,8 @@ async def test_create_meal_plan_rejects_blank_title(
 
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_invalid_date_range(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
 
@@ -272,15 +272,13 @@ async def test_create_meal_plan_rejects_invalid_date_range(
 
 @pytest.mark.asyncio
 async def test_list_get_update_and_delete_meal_plan(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     meal_plan = await create_test_meal_plan(client, str(user.id))
 
-    list_response = await client.get(
-        f"/api/v1/users/{user.id}/meal-plans"
-    )
+    list_response = await client.get(f"/api/v1/users/{user.id}/meal-plans")
 
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
@@ -323,8 +321,8 @@ async def test_list_get_update_and_delete_meal_plan(
 
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -352,8 +350,8 @@ async def test_add_meal_plan_item_success(
 
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_missing_recipe(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     meal_plan = await create_test_meal_plan(client, str(user.id))
@@ -374,8 +372,8 @@ async def test_add_meal_plan_item_rejects_missing_recipe(
 
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_date_outside_range(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -398,8 +396,8 @@ async def test_add_meal_plan_item_rejects_date_outside_range(
 
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_duplicate_slot(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -431,8 +429,8 @@ async def test_add_meal_plan_item_rejects_duplicate_slot(
 
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client)
@@ -467,8 +465,8 @@ async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
 
 @pytest.mark.asyncio
 async def test_update_and_delete_meal_plan_item(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     recipe_id = await create_test_recipe(client, title="Chicken Bowl")
@@ -514,8 +512,8 @@ async def test_update_and_delete_meal_plan_item(
 
 @pytest.mark.asyncio
 async def test_delete_missing_meal_plan_item_returns_404(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     meal_plan = await create_test_meal_plan(client, str(user.id))

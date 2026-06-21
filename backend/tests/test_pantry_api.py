@@ -45,8 +45,8 @@ async def create_test_ingredient(client: AsyncClient) -> dict:
 
 @pytest.mark.asyncio
 async def test_add_list_update_and_delete_pantry_item(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     ingredient = await create_test_ingredient(client)
@@ -98,8 +98,8 @@ async def test_add_list_update_and_delete_pantry_item(
 
 @pytest.mark.asyncio
 async def test_add_duplicate_pantry_item_returns_409(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     ingredient = await create_test_ingredient(client)
@@ -123,12 +123,15 @@ async def test_add_duplicate_pantry_item_returns_409(
     )
 
     assert duplicate_response.status_code == 409
-    assert duplicate_response.json()["detail"] == "Ingredient already exists in user pantry"
+    assert (
+        duplicate_response.json()["detail"]
+        == "Ingredient already exists in user pantry"
+    )
 
 
 @pytest.mark.asyncio
 async def test_pantry_returns_404_when_user_does_not_exist(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
 
@@ -140,8 +143,8 @@ async def test_pantry_returns_404_when_user_does_not_exist(
 
 @pytest.mark.asyncio
 async def test_add_pantry_item_returns_404_when_ingredient_does_not_exist(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     missing_ingredient_id = uuid4()
@@ -160,8 +163,8 @@ async def test_add_pantry_item_returns_404_when_ingredient_does_not_exist(
 
 @pytest.mark.asyncio
 async def test_add_pantry_item_rejects_invalid_quantity(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     user = await create_test_user(db_session)
     ingredient = await create_test_ingredient(client)

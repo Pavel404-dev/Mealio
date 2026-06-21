@@ -57,7 +57,7 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 @pytest.fixture
 async def async_session_maker(
-        test_engine: AsyncEngine,
+    test_engine: AsyncEngine,
 ) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(
         bind=test_engine,
@@ -68,7 +68,7 @@ async def async_session_maker(
 
 @pytest.fixture
 async def db_session(
-        async_session_maker: async_sessionmaker[AsyncSession],
+    async_session_maker: async_sessionmaker[AsyncSession],
 ) -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
@@ -76,7 +76,7 @@ async def db_session(
 
 @pytest.fixture
 async def client(
-        async_session_maker: async_sessionmaker[AsyncSession],
+    async_session_maker: async_sessionmaker[AsyncSession],
 ) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         async with async_session_maker() as session:
@@ -85,8 +85,8 @@ async def client(
     app.dependency_overrides[get_db] = override_get_db
 
     async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://testserver",
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
     ) as test_client:
         yield test_client
 

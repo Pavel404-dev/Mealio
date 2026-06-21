@@ -5,10 +5,10 @@ from httpx import AsyncClient
 
 
 async def create_test_user(
-        client: AsyncClient,
-        *,
-        email: str = "pavel@example.com",
-        full_name: str | None = "Pavel Potapenko",
+    client: AsyncClient,
+    *,
+    email: str = "pavel@example.com",
+    full_name: str | None = "Pavel Potapenko",
 ) -> dict:
     response = await client.post(
         "/api/v1/users",
@@ -48,9 +48,7 @@ async def test_create_user_success(client: AsyncClient) -> None:
 async def test_get_existing_user(client: AsyncClient) -> None:
     created_user = await create_test_user(client)
 
-    response = await client.get(
-        f"/api/v1/users/{created_user['id']}"
-    )
+    response = await client.get(f"/api/v1/users/{created_user['id']}")
 
     assert response.status_code == 200
 
@@ -63,7 +61,7 @@ async def test_get_existing_user(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_create_user_rejects_duplicate_email(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     first_response = await client.post(
         "/api/v1/users",
@@ -84,10 +82,7 @@ async def test_create_user_rejects_duplicate_email(
     )
 
     assert duplicate_response.status_code == 409
-    assert (
-            duplicate_response.json()["detail"]
-            == "User with this email already exists"
-    )
+    assert duplicate_response.json()["detail"] == "User with this email already exists"
 
 
 @pytest.mark.asyncio
@@ -102,8 +97,8 @@ async def test_create_user_rejects_duplicate_email(
     ],
 )
 async def test_create_user_rejects_invalid_email(
-        client: AsyncClient,
-        invalid_email: str,
+    client: AsyncClient,
+    invalid_email: str,
 ) -> None:
     response = await client.post(
         "/api/v1/users",
@@ -118,13 +113,11 @@ async def test_create_user_rejects_invalid_email(
 
 @pytest.mark.asyncio
 async def test_get_missing_user_returns_404(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
 
-    response = await client.get(
-        f"/api/v1/users/{missing_user_id}"
-    )
+    response = await client.get(f"/api/v1/users/{missing_user_id}")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
@@ -132,7 +125,7 @@ async def test_get_missing_user_returns_404(
 
 @pytest.mark.asyncio
 async def test_user_response_does_not_expose_password_hash(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/users",
@@ -151,7 +144,7 @@ async def test_user_response_does_not_expose_password_hash(
 
 @pytest.mark.asyncio
 async def test_blank_full_name_is_normalized_to_null(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/users",
@@ -167,7 +160,7 @@ async def test_blank_full_name_is_normalized_to_null(
 
 @pytest.mark.asyncio
 async def test_update_user_full_name_only(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -189,7 +182,7 @@ async def test_update_user_full_name_only(
 
 @pytest.mark.asyncio
 async def test_update_user_email_only(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -210,7 +203,7 @@ async def test_update_user_email_only(
 
 @pytest.mark.asyncio
 async def test_update_user_normalizes_email(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -227,7 +220,7 @@ async def test_update_user_normalizes_email(
 
 @pytest.mark.asyncio
 async def test_update_user_preserves_omitted_fields(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(
         client,
@@ -244,9 +237,7 @@ async def test_update_user_preserves_omitted_fields(
 
     assert update_response.status_code == 200
 
-    get_response = await client.get(
-        f"/api/v1/users/{created_user['id']}"
-    )
+    get_response = await client.get(f"/api/v1/users/{created_user['id']}")
 
     assert get_response.status_code == 200
 
@@ -258,7 +249,7 @@ async def test_update_user_preserves_omitted_fields(
 
 @pytest.mark.asyncio
 async def test_update_user_full_name_null_clears_name(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -282,8 +273,8 @@ async def test_update_user_full_name_null_clears_name(
     ],
 )
 async def test_update_user_blank_full_name_is_normalized_to_null(
-        client: AsyncClient,
-        blank_full_name: str,
+    client: AsyncClient,
+    blank_full_name: str,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -300,7 +291,7 @@ async def test_update_user_blank_full_name_is_normalized_to_null(
 
 @pytest.mark.asyncio
 async def test_update_user_rejects_duplicate_email(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     first_user = await create_test_user(
         client,
@@ -322,10 +313,7 @@ async def test_update_user_rejects_duplicate_email(
 
     assert first_user["email"] == "taken@example.com"
     assert response.status_code == 409
-    assert (
-            response.json()["detail"]
-            == "User with this email already exists"
-    )
+    assert response.json()["detail"] == "User with this email already exists"
 
 
 @pytest.mark.asyncio
@@ -340,8 +328,8 @@ async def test_update_user_rejects_duplicate_email(
     ],
 )
 async def test_update_user_rejects_invalid_email(
-        client: AsyncClient,
-        invalid_email: str,
+    client: AsyncClient,
+    invalid_email: str,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -357,7 +345,7 @@ async def test_update_user_rejects_invalid_email(
 
 @pytest.mark.asyncio
 async def test_update_user_rejects_null_email(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -373,7 +361,7 @@ async def test_update_user_rejects_null_email(
 
 @pytest.mark.asyncio
 async def test_update_missing_user_returns_404(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     missing_user_id = uuid4()
 
@@ -390,7 +378,7 @@ async def test_update_missing_user_returns_404(
 
 @pytest.mark.asyncio
 async def test_update_user_response_does_not_expose_password_hash(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(
         client,
@@ -410,7 +398,7 @@ async def test_update_user_response_does_not_expose_password_hash(
 
 @pytest.mark.asyncio
 async def test_update_user_rejects_full_name_longer_than_255_characters(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(client)
 
@@ -423,9 +411,10 @@ async def test_update_user_rejects_full_name_longer_than_255_characters(
 
     assert response.status_code == 422
 
+
 @pytest.mark.asyncio
 async def test_update_user_allows_current_email(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     created_user = await create_test_user(
         client,

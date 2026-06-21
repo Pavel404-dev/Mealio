@@ -30,22 +30,18 @@ class MealPlansRepository:
         self.db = db
 
     async def get_user(self, user_id: uuid.UUID) -> User | None:
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db.execute(select(User).where(User.id == user_id))
 
         return result.scalar_one_or_none()
 
     async def get_recipe(self, recipe_id: uuid.UUID) -> Recipe | None:
-        result = await self.db.execute(
-            select(Recipe).where(Recipe.id == recipe_id)
-        )
+        result = await self.db.execute(select(Recipe).where(Recipe.id == recipe_id))
 
         return result.scalar_one_or_none()
 
     async def get_recipes_by_ids(
-            self,
-            recipe_ids: list[uuid.UUID],
+        self,
+        recipe_ids: list[uuid.UUID],
     ) -> list[Recipe]:
         if not recipe_ids:
             return []
@@ -56,11 +52,11 @@ class MealPlansRepository:
         return list(result.scalars().all())
 
     async def list_for_user(
-            self,
-            *,
-            user_id: uuid.UUID,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        user_id: uuid.UUID,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[MealPlan]:
         stmt = (
             select(MealPlan)
@@ -76,10 +72,10 @@ class MealPlansRepository:
         return list(result.scalars().all())
 
     async def get_by_id(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ) -> MealPlan | None:
         stmt = (
             select(MealPlan)
@@ -87,7 +83,7 @@ class MealPlansRepository:
             .where(
                 MealPlan.id == meal_plan_id,
                 MealPlan.user_id == user_id,
-                )
+            )
         )
 
         result = await self.db.execute(stmt)
@@ -95,10 +91,10 @@ class MealPlansRepository:
         return result.scalar_one_or_none()
 
     async def create(
-            self,
-            *,
-            user_id: uuid.UUID,
-            data: MealPlanCreate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: MealPlanCreate,
     ) -> MealPlan:
         meal_plan = MealPlan(
             user_id=user_id,
@@ -135,10 +131,10 @@ class MealPlansRepository:
         return created
 
     async def update(
-            self,
-            *,
-            meal_plan: MealPlan,
-            data: MealPlanUpdate,
+        self,
+        *,
+        meal_plan: MealPlan,
+        data: MealPlanUpdate,
     ) -> MealPlan:
         update_data = data.model_dump(exclude_unset=True)
 
@@ -170,17 +166,14 @@ class MealPlansRepository:
         await self.db.commit()
 
     async def get_item_by_id(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
-            item_id: uuid.UUID,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
+        item_id: uuid.UUID,
     ) -> MealPlanItem | None:
-        stmt = (
-            select(MealPlanItem)
-            .where(
-                MealPlanItem.id == item_id,
-                MealPlanItem.meal_plan_id == meal_plan_id,
-                )
+        stmt = select(MealPlanItem).where(
+            MealPlanItem.id == item_id,
+            MealPlanItem.meal_plan_id == meal_plan_id,
         )
 
         result = await self.db.execute(stmt)
@@ -188,20 +181,17 @@ class MealPlansRepository:
         return result.scalar_one_or_none()
 
     async def get_item_by_slot(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
-            planned_date: date,
-            meal_type: str,
-            exclude_item_id: uuid.UUID | None = None,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
+        planned_date: date,
+        meal_type: str,
+        exclude_item_id: uuid.UUID | None = None,
     ) -> MealPlanItem | None:
-        stmt = (
-            select(MealPlanItem)
-            .where(
-                MealPlanItem.meal_plan_id == meal_plan_id,
-                MealPlanItem.planned_date == planned_date,
-                MealPlanItem.meal_type == normalize_meal_type(meal_type),
-                )
+        stmt = select(MealPlanItem).where(
+            MealPlanItem.meal_plan_id == meal_plan_id,
+            MealPlanItem.planned_date == planned_date,
+            MealPlanItem.meal_type == normalize_meal_type(meal_type),
         )
 
         if exclude_item_id is not None:
@@ -212,10 +202,10 @@ class MealPlansRepository:
         return result.scalar_one_or_none()
 
     async def add_item(
-            self,
-            *,
-            meal_plan_id: uuid.UUID,
-            data: MealPlanItemCreate,
+        self,
+        *,
+        meal_plan_id: uuid.UUID,
+        data: MealPlanItemCreate,
     ) -> MealPlanItem:
         item = MealPlanItem(
             meal_plan_id=meal_plan_id,
@@ -237,10 +227,10 @@ class MealPlansRepository:
         return item
 
     async def update_item(
-            self,
-            *,
-            item: MealPlanItem,
-            data: MealPlanItemUpdate,
+        self,
+        *,
+        item: MealPlanItem,
+        data: MealPlanItemUpdate,
     ) -> MealPlanItem:
         update_data = data.model_dump(exclude_unset=True)
 

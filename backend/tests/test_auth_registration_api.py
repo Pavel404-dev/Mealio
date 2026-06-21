@@ -12,8 +12,8 @@ REGISTER_URL = "/api/v1/auth/register"
 
 @pytest.mark.asyncio
 async def test_register_user_success(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     password = "Mealio-Пароль-🔐"
 
@@ -39,9 +39,7 @@ async def test_register_user_success(
     assert "password_hash" not in data
 
     result = await db_session.execute(
-        select(User).where(
-            User.email == "pavel.user@example.com"
-        )
+        select(User).where(User.email == "pavel.user@example.com")
     )
     user = result.scalar_one_or_none()
 
@@ -55,8 +53,8 @@ async def test_register_user_success(
 
 @pytest.mark.asyncio
 async def test_register_user_with_unicode_password(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     password = "Безопасный-Пароль-🔐"
 
@@ -72,9 +70,7 @@ async def test_register_user_with_unicode_password(
     assert response.status_code == 201
 
     result = await db_session.execute(
-        select(User).where(
-            User.email == "unicode@example.com"
-        )
+        select(User).where(User.email == "unicode@example.com")
     )
     user = result.scalar_one()
 
@@ -83,8 +79,8 @@ async def test_register_user_with_unicode_password(
 
 @pytest.mark.asyncio
 async def test_register_preserves_password_surrounding_spaces(
-        client: AsyncClient,
-        db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     password = "  Mealio-password  "
 
@@ -100,9 +96,7 @@ async def test_register_preserves_password_surrounding_spaces(
     assert response.status_code == 201
 
     result = await db_session.execute(
-        select(User).where(
-            User.email == "spaces@example.com"
-        )
+        select(User).where(User.email == "spaces@example.com")
     )
     user = result.scalar_one()
 
@@ -115,7 +109,7 @@ async def test_register_preserves_password_surrounding_spaces(
 
 @pytest.mark.asyncio
 async def test_register_duplicate_email_returns_409(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     first_response = await client.post(
         REGISTER_URL,
@@ -137,10 +131,7 @@ async def test_register_duplicate_email_returns_409(
 
     assert first_response.status_code == 201
     assert duplicate_response.status_code == 409
-    assert (
-            duplicate_response.json()["detail"]
-            == "User with this email already exists"
-    )
+    assert duplicate_response.json()["detail"] == "User with this email already exists"
 
 
 @pytest.mark.asyncio
@@ -174,8 +165,8 @@ async def test_register_duplicate_email_returns_409(
     ],
 )
 async def test_register_rejects_invalid_payload(
-        client: AsyncClient,
-        payload: dict[str, object],
+    client: AsyncClient,
+    payload: dict[str, object],
 ) -> None:
     response = await client.post(
         REGISTER_URL,
@@ -187,7 +178,7 @@ async def test_register_rejects_invalid_payload(
 
 @pytest.mark.asyncio
 async def test_register_allows_null_full_name(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         REGISTER_URL,
@@ -204,7 +195,7 @@ async def test_register_allows_null_full_name(
 
 @pytest.mark.asyncio
 async def test_existing_users_endpoint_still_works_without_password(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.post(
         "/api/v1/users",

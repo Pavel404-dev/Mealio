@@ -14,9 +14,7 @@ class UsersRepository:
         self.db = db
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db.execute(select(User).where(User.id == user_id))
 
         return result.scalar_one_or_none()
 
@@ -24,9 +22,7 @@ class UsersRepository:
         normalized_email = email.strip().lower()
 
         result = await self.db.execute(
-            select(User).where(
-                func.lower(User.email) == normalized_email
-            )
+            select(User).where(func.lower(User.email) == normalized_email)
         )
 
         return result.scalar_one_or_none()
@@ -44,9 +40,7 @@ class UsersRepository:
         except IntegrityError as exc:
             await self.db.rollback()
 
-            raise DuplicateResourceError(
-                "User with this email already exists"
-            ) from exc
+            raise DuplicateResourceError("User with this email already exists") from exc
 
         created_user = await self.get_by_id(user.id)
 
@@ -56,11 +50,11 @@ class UsersRepository:
         return created_user
 
     async def create_registered(
-            self,
-            *,
-            email: str,
-            full_name: str | None,
-            password_hash: str,
+        self,
+        *,
+        email: str,
+        full_name: str | None,
+        password_hash: str,
     ) -> User:
         user = User(
             email=email.strip().lower(),
@@ -75,9 +69,7 @@ class UsersRepository:
         except IntegrityError as exc:
             await self.db.rollback()
 
-            raise DuplicateResourceError(
-                "User with this email already exists"
-            ) from exc
+            raise DuplicateResourceError("User with this email already exists") from exc
 
         created_user = await self.get_by_id(user.id)
 
@@ -87,10 +79,10 @@ class UsersRepository:
         return created_user
 
     async def update(
-            self,
-            *,
-            user: User,
-            data: UserUpdate,
+        self,
+        *,
+        user: User,
+        data: UserUpdate,
     ) -> User:
         update_data = data.model_dump(exclude_unset=True)
 
@@ -105,9 +97,7 @@ class UsersRepository:
         except IntegrityError as exc:
             await self.db.rollback()
 
-            raise DuplicateResourceError(
-                "User with this email already exists"
-            ) from exc
+            raise DuplicateResourceError("User with this email already exists") from exc
 
         await self.db.refresh(user)
 

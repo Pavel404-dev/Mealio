@@ -49,9 +49,7 @@ class UserRegister(BaseModel):
         value: SecretStr,
     ) -> SecretStr:
         if not value.get_secret_value().strip():
-            raise ValueError(
-                "Password cannot contain only whitespace"
-            )
+            raise ValueError("Password cannot contain only whitespace")
 
         return value
 

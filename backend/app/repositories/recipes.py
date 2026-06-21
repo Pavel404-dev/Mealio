@@ -15,15 +15,13 @@ class RecipesRepository:
         self.db = db
 
     async def get_user(self, user_id: uuid.UUID) -> User | None:
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db.execute(select(User).where(User.id == user_id))
 
         return result.scalar_one_or_none()
 
     async def get_ingredients_by_ids(
-            self,
-            ingredient_ids: list[uuid.UUID],
+        self,
+        ingredient_ids: list[uuid.UUID],
     ) -> list[Ingredient]:
         if not ingredient_ids:
             return []
@@ -34,13 +32,13 @@ class RecipesRepository:
         return list(result.scalars().all())
 
     async def list(
-            self,
-            *,
-            search: str | None = None,
-            diet_type: str | None = None,
-            created_by_user_id: uuid.UUID | None = None,
-            limit: int = 50,
-            offset: int = 0,
+        self,
+        *,
+        search: str | None = None,
+        diet_type: str | None = None,
+        created_by_user_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[Recipe]:
         stmt = (
             select(Recipe)
@@ -106,10 +104,10 @@ class RecipesRepository:
         return created
 
     async def update(
-            self,
-            *,
-            recipe: Recipe,
-            data: RecipeUpdate,
+        self,
+        *,
+        recipe: Recipe,
+        data: RecipeUpdate,
     ) -> Recipe:
         update_data = data.model_dump(exclude_unset=True)
 

@@ -41,10 +41,10 @@ class PantryRepository:
         return list(result.scalars().all())
 
     async def get_user_pantry_item(
-            self,
-            *,
-            user_id: uuid.UUID,
-            pantry_item_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        pantry_item_id: uuid.UUID,
     ) -> UserIngredient | None:
         stmt = (
             select(UserIngredient)
@@ -56,31 +56,31 @@ class PantryRepository:
             .where(
                 UserIngredient.id == pantry_item_id,
                 UserIngredient.user_id == user_id,
-                )
+            )
         )
 
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_by_user_and_ingredient(
-            self,
-            *,
-            user_id: uuid.UUID,
-            ingredient_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        ingredient_id: uuid.UUID,
     ) -> UserIngredient | None:
         stmt = select(UserIngredient).where(
             UserIngredient.user_id == user_id,
             UserIngredient.ingredient_id == ingredient_id,
-            )
+        )
 
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def create(
-            self,
-            *,
-            user_id: uuid.UUID,
-            data: PantryItemCreate,
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: PantryItemCreate,
     ) -> UserIngredient:
         pantry_item = UserIngredient(
             user_id=user_id,
@@ -95,7 +95,9 @@ class PantryRepository:
             await self.db.commit()
         except IntegrityError as exc:
             await self.db.rollback()
-            raise DuplicateResourceError("Ingredient already exists in user pantry") from exc
+            raise DuplicateResourceError(
+                "Ingredient already exists in user pantry"
+            ) from exc
 
         created = await self.get_user_pantry_item(
             user_id=user_id,
@@ -108,10 +110,10 @@ class PantryRepository:
         return created
 
     async def update(
-            self,
-            *,
-            pantry_item: UserIngredient,
-            data: PantryItemUpdate,
+        self,
+        *,
+        pantry_item: UserIngredient,
+        data: PantryItemUpdate,
     ) -> UserIngredient:
         update_data = data.model_dump(exclude_unset=True)
 
@@ -134,16 +136,15 @@ class PantryRepository:
         return updated
 
     async def delete(
-            self,
-            *,
-            user_id: uuid.UUID,
-            pantry_item_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        pantry_item_id: uuid.UUID,
     ) -> None:
         stmt = delete(UserIngredient).where(
             UserIngredient.id == pantry_item_id,
             UserIngredient.user_id == user_id,
-            )
+        )
 
         await self.db.execute(stmt)
         await self.db.commit()
-        

@@ -17,10 +17,10 @@ class MealPlanSummariesService:
         self.summaries_repository = MealPlanSummariesRepository(db)
 
     async def get_meal_plan_nutrition_summary(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ) -> MealPlanNutritionSummaryRead:
         meal_plan = await self._validate_user_and_meal_plan(
             user_id=user_id,
@@ -34,10 +34,10 @@ class MealPlanSummariesService:
         return MealPlanNutritionSummaryRead(**summary)
 
     async def get_meal_plan_daily_nutrition_summary(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ) -> list[MealPlanDailyNutritionSummaryRead]:
         meal_plan = await self._validate_user_and_meal_plan(
             user_id=user_id,
@@ -49,15 +49,14 @@ class MealPlanSummariesService:
         )
 
         return [
-            MealPlanDailyNutritionSummaryRead(**summary)
-            for summary in daily_summary
+            MealPlanDailyNutritionSummaryRead(**summary) for summary in daily_summary
         ]
 
     async def _validate_user_and_meal_plan(
-            self,
-            *,
-            user_id: uuid.UUID,
-            meal_plan_id: uuid.UUID,
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
     ):
         user = await self.meal_plans_repository.get_user(user_id)
 
