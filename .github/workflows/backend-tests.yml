@@ -93,3 +93,14 @@ jobs:
 
       - name: Run backend tests with coverage
         run: python -m pytest -v --cov=app --cov-report=term-missing
+        
+  backend-docker-build:
+    name: Build backend Docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build backend Docker image
+        run: docker build -t mealio-backend ./backend
