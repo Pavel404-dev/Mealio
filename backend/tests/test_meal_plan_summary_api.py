@@ -8,6 +8,19 @@ REGISTER_URL = "/api/v1/auth/register"
 LOGIN_URL = "/api/v1/auth/login"
 MEAL_PLANS_URL = "/api/v1/meal-plans"
 
+MEAL_PLAN_SUMMARY_PATHS = (
+    "summary",
+    "daily-summary",
+)
+
+
+def meal_plan_summary_url(meal_plan_id: str) -> str:
+    return f"{MEAL_PLANS_URL}/{meal_plan_id}/summary"
+
+
+def meal_plan_daily_summary_url(meal_plan_id: str) -> str:
+    return f"{MEAL_PLANS_URL}/{meal_plan_id}/daily-summary"
+
 
 async def create_authenticated_user(
     client: AsyncClient,
@@ -123,7 +136,7 @@ async def add_meal_plan_item(
 async def test_get_meal_plan_nutrition_summary_success(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     breakfast_recipe_id = await create_test_recipe(
         client,
@@ -167,7 +180,8 @@ async def test_get_meal_plan_nutrition_summary_success(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/summary"
+        meal_plan_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -186,7 +200,7 @@ async def test_get_meal_plan_nutrition_summary_success(
 async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     meal_plan = await create_test_meal_plan(
         client,
@@ -194,7 +208,8 @@ async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/summary"
+        meal_plan_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -213,7 +228,7 @@ async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
 async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     recipe_with_null_values_id = await create_test_recipe(
         client,
@@ -257,7 +272,8 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/summary"
+        meal_plan_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -272,40 +288,10 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
 
 @pytest.mark.asyncio
-async def test_get_meal_plan_nutrition_summary_rejects_missing_user(
-    client: AsyncClient,
-) -> None:
-    missing_user_id = uuid4()
-    meal_plan_id = uuid4()
-
-    response = await client.get(
-        f"/api/v1/users/{missing_user_id}/meal-plans/{meal_plan_id}/summary"
-    )
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
-
-
-@pytest.mark.asyncio
-async def test_get_meal_plan_nutrition_summary_rejects_missing_meal_plan(
-    client: AsyncClient,
-) -> None:
-    user, _ = await create_authenticated_user(client)
-    missing_meal_plan_id = uuid4()
-
-    response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{missing_meal_plan_id}/summary"
-    )
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Meal plan not found"
-
-
-@pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_success(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     breakfast_recipe_id = await create_test_recipe(
         client,
@@ -367,7 +353,8 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/daily-summary"
+        meal_plan_daily_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -396,7 +383,7 @@ async def test_get_meal_plan_daily_nutrition_summary_success(
 async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     meal_plan = await create_test_meal_plan(
         client,
@@ -404,7 +391,8 @@ async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/daily-summary"
+        meal_plan_daily_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -415,7 +403,7 @@ async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
 async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
     client: AsyncClient,
 ) -> None:
-    user, headers = await create_authenticated_user(client)
+    _, headers = await create_authenticated_user(client)
 
     recipe_with_null_values_id = await create_test_recipe(
         client,
@@ -459,7 +447,8 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
     )
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{meal_plan['id']}/daily-summary"
+        meal_plan_daily_summary_url(meal_plan["id"]),
+        headers=headers,
     )
 
     assert response.status_code == 200
@@ -476,30 +465,84 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
     ]
 
 
+@pytest.mark.parametrize("path_suffix", MEAL_PLAN_SUMMARY_PATHS)
 @pytest.mark.asyncio
-async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_user(
+async def test_meal_plan_summaries_require_authentication(
     client: AsyncClient,
+    path_suffix: str,
 ) -> None:
-    missing_user_id = uuid4()
     meal_plan_id = uuid4()
 
     response = await client.get(
-        f"/api/v1/users/{missing_user_id}/meal-plans/{meal_plan_id}/daily-summary"
+        f"{MEAL_PLANS_URL}/{meal_plan_id}/{path_suffix}",
     )
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.status_code == 401
 
 
+@pytest.mark.parametrize("path_suffix", MEAL_PLAN_SUMMARY_PATHS)
 @pytest.mark.asyncio
-async def test_get_meal_plan_daily_nutrition_summary_rejects_missing_meal_plan(
+async def test_meal_plan_summaries_reject_invalid_token(
     client: AsyncClient,
+    path_suffix: str,
 ) -> None:
-    user, _ = await create_authenticated_user(client)
+    meal_plan_id = uuid4()
+
+    response = await client.get(
+        f"{MEAL_PLANS_URL}/{meal_plan_id}/{path_suffix}",
+        headers={
+            "Authorization": "Bearer invalid-token",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Could not validate credentials"
+
+
+@pytest.mark.parametrize("path_suffix", MEAL_PLAN_SUMMARY_PATHS)
+@pytest.mark.asyncio
+async def test_get_meal_plan_summary_rejects_missing_meal_plan(
+    client: AsyncClient,
+    path_suffix: str,
+) -> None:
+    _, headers = await create_authenticated_user(client)
     missing_meal_plan_id = uuid4()
 
     response = await client.get(
-        f"/api/v1/users/{user['id']}/meal-plans/{missing_meal_plan_id}/daily-summary"
+        f"{MEAL_PLANS_URL}/{missing_meal_plan_id}/{path_suffix}",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Meal plan not found"
+
+
+@pytest.mark.parametrize("path_suffix", MEAL_PLAN_SUMMARY_PATHS)
+@pytest.mark.asyncio
+async def test_user_cannot_access_another_users_meal_plan_summary(
+    client: AsyncClient,
+    path_suffix: str,
+) -> None:
+    first_user, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-summary-user-{uuid4()}@example.com",
+    )
+    second_user, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-summary-user-{uuid4()}@example.com",
+    )
+
+    meal_plan = await create_test_meal_plan(
+        client,
+        headers=first_headers,
+    )
+
+    assert meal_plan["user_id"] == first_user["id"]
+    assert meal_plan["user_id"] != second_user["id"]
+
+    response = await client.get(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/{path_suffix}",
+        headers=second_headers,
     )
 
     assert response.status_code == 404

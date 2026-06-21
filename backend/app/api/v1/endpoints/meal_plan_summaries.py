@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.meal_plan_summary import (
     MealPlanDailyNutritionSummaryRead,
     MealPlanNutritionSummaryRead,
@@ -12,21 +14,21 @@ from app.services.meal_plan_summaries import MealPlanSummariesService
 
 
 router = APIRouter(
-    prefix="/users/{user_id}/meal-plans/{meal_plan_id}",
+    prefix="/meal-plans/{meal_plan_id}",
     tags=["Meal Plans"],
 )
 
 
 @router.get("/summary", response_model=MealPlanNutritionSummaryRead)
 async def get_meal_plan_nutrition_summary(
-    user_id: uuid.UUID,
     meal_plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = MealPlanSummariesService(db)
 
     return await service.get_meal_plan_nutrition_summary(
-        user_id=user_id,
+        user_id=current_user.id,
         meal_plan_id=meal_plan_id,
     )
 
@@ -36,13 +38,13 @@ async def get_meal_plan_nutrition_summary(
     response_model=list[MealPlanDailyNutritionSummaryRead],
 )
 async def get_meal_plan_daily_nutrition_summary(
-    user_id: uuid.UUID,
     meal_plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = MealPlanSummariesService(db)
 
     return await service.get_meal_plan_daily_nutrition_summary(
-        user_id=user_id,
+        user_id=current_user.id,
         meal_plan_id=meal_plan_id,
     )
