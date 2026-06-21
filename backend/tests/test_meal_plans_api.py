@@ -2,23 +2,48 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.user import User
 
 
-async def create_test_user(db_session: AsyncSession) -> User:
-    user = User(
-        email=f"test-user-{uuid4()}@example.com",
-        password_hash="test-password-hash",
-        full_name="Test User",
+REGISTER_URL = "/api/v1/auth/register"
+LOGIN_URL = "/api/v1/auth/login"
+MEAL_PLANS_URL = "/api/v1/meal-plans"
+
+
+async def create_authenticated_user(
+    client: AsyncClient,
+    *,
+    email: str | None = None,
+    password: str = "Mealio-password-123",
+) -> tuple[dict, dict[str, str]]:
+    if email is None:
+        email = f"test-user-{uuid4()}@example.com"
+
+    register_response = await client.post(
+        REGISTER_URL,
+        json={
+            "email": email,
+            "full_name": "Test User",
+            "password": password,
+        },
     )
 
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+    assert register_response.status_code == 201
 
-    return user
+    login_response = await client.post(
+        LOGIN_URL,
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.json()["access_token"]
+
+    return register_response.json(), {
+        "Authorization": f"Bearer {access_token}",
+    }
 
 
 async def create_test_recipe(
@@ -42,10 +67,11 @@ async def create_test_recipe(
 
 async def create_test_meal_plan(
     client: AsyncClient,
-    user_id: str,
+    headers: dict[str, str],
 ) -> dict:
     response = await client.post(
-        f"/api/v1/users/{user_id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -61,12 +87,12 @@ async def create_test_meal_plan(
 @pytest.mark.asyncio
 async def test_create_meal_plan_success(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    user, headers = await create_authenticated_user(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -79,7 +105,7 @@ async def test_create_meal_plan_success(
     data = response.json()
 
     assert data["id"]
-    assert data["user_id"] == str(user.id)
+    assert data["user_id"] == user["id"]
     assert data["title"] == "Weekly Meal Plan"
     assert data["start_date"] == "2026-05-18"
     assert data["end_date"] == "2026-05-24"
@@ -89,13 +115,13 @@ async def test_create_meal_plan_success(
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_success(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -123,13 +149,13 @@ async def test_create_meal_plan_with_items_success(
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_rejects_date_outside_range(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -153,13 +179,13 @@ async def test_create_meal_plan_with_items_rejects_date_outside_range(
 @pytest.mark.asyncio
 async def test_create_meal_plan_with_items_rejects_missing_recipe(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     missing_recipe_id = uuid4()
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -181,13 +207,13 @@ async def test_create_meal_plan_with_items_rejects_missing_recipe(
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_duplicate_slots(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Weekly Meal Plan",
             "start_date": "2026-05-18",
@@ -214,33 +240,14 @@ async def test_create_meal_plan_rejects_duplicate_slots(
 
 
 @pytest.mark.asyncio
-async def test_create_meal_plan_rejects_missing_user(
-    client: AsyncClient,
-) -> None:
-    missing_user_id = uuid4()
-
-    response = await client.post(
-        f"/api/v1/users/{missing_user_id}/meal-plans",
-        json={
-            "title": "Weekly Meal Plan",
-            "start_date": "2026-05-18",
-            "end_date": "2026-05-24",
-        },
-    )
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
-
-
-@pytest.mark.asyncio
 async def test_create_meal_plan_rejects_blank_title(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "   ",
             "start_date": "2026-05-18",
@@ -254,12 +261,12 @@ async def test_create_meal_plan_rejects_blank_title(
 @pytest.mark.asyncio
 async def test_create_meal_plan_rejects_invalid_date_range(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans",
+        MEAL_PLANS_URL,
+        headers=headers,
         json={
             "title": "Invalid Meal Plan",
             "start_date": "2026-05-24",
@@ -273,25 +280,29 @@ async def test_create_meal_plan_rejects_invalid_date_range(
 @pytest.mark.asyncio
 async def test_list_get_update_and_delete_meal_plan(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    _, headers = await create_authenticated_user(client)
+    meal_plan = await create_test_meal_plan(client, headers)
 
-    list_response = await client.get(f"/api/v1/users/{user.id}/meal-plans")
+    list_response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+    )
 
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
 
     get_response = await client.get(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}"
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=headers,
     )
 
     assert get_response.status_code == 200
     assert get_response.json()["title"] == "Weekly Meal Plan"
 
     update_response = await client.patch(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=headers,
         json={
             "title": "Updated Meal Plan",
             "end_date": "2026-05-25",
@@ -306,13 +317,15 @@ async def test_list_get_update_and_delete_meal_plan(
     assert updated_data["end_date"] == "2026-05-25"
 
     delete_response = await client.delete(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}"
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=headers,
     )
 
     assert delete_response.status_code == 204
 
     missing_response = await client.get(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}"
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=headers,
     )
 
     assert missing_response.status_code == 404
@@ -322,14 +335,14 @@ async def test_list_get_update_and_delete_meal_plan(
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_success(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    meal_plan = await create_test_meal_plan(client, headers)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": recipe_id,
             "planned_date": "2026-05-18",
@@ -351,14 +364,14 @@ async def test_add_meal_plan_item_success(
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_missing_recipe(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    _, headers = await create_authenticated_user(client)
+    meal_plan = await create_test_meal_plan(client, headers)
     missing_recipe_id = uuid4()
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": str(missing_recipe_id),
             "planned_date": "2026-05-18",
@@ -373,14 +386,14 @@ async def test_add_meal_plan_item_rejects_missing_recipe(
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_date_outside_range(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    meal_plan = await create_test_meal_plan(client, headers)
 
     response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": recipe_id,
             "planned_date": "2026-05-30",
@@ -397,11 +410,10 @@ async def test_add_meal_plan_item_rejects_date_outside_range(
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_duplicate_slot(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    meal_plan = await create_test_meal_plan(client, headers)
 
     payload = {
         "recipe_id": recipe_id,
@@ -410,14 +422,16 @@ async def test_add_meal_plan_item_rejects_duplicate_slot(
     }
 
     first_response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json=payload,
     )
 
     assert first_response.status_code == 201
 
     second_response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json=payload,
     )
 
@@ -430,14 +444,14 @@ async def test_add_meal_plan_item_rejects_duplicate_slot(
 @pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    meal_plan = await create_test_meal_plan(client, headers)
 
     first_response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": recipe_id,
             "planned_date": "2026-05-18",
@@ -449,7 +463,8 @@ async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
     assert first_response.json()["meal_type"] == "lunch"
 
     second_response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": recipe_id,
             "planned_date": "2026-05-18",
@@ -466,15 +481,15 @@ async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
 @pytest.mark.asyncio
 async def test_update_and_delete_meal_plan_item(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
+    _, headers = await create_authenticated_user(client)
     recipe_id = await create_test_recipe(client, title="Chicken Bowl")
     second_recipe_id = await create_test_recipe(client, title="Rice Bowl")
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    meal_plan = await create_test_meal_plan(client, headers)
 
     create_item_response = await client.post(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=headers,
         json={
             "recipe_id": recipe_id,
             "planned_date": "2026-05-18",
@@ -487,7 +502,8 @@ async def test_update_and_delete_meal_plan_item(
     item_id = create_item_response.json()["id"]
 
     update_response = await client.patch(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items/{item_id}",
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{item_id}",
+        headers=headers,
         json={
             "recipe_id": second_recipe_id,
             "planned_date": "2026-05-19",
@@ -504,7 +520,8 @@ async def test_update_and_delete_meal_plan_item(
     assert updated_data["meal_type"] == "dinner"
 
     delete_response = await client.delete(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items/{item_id}"
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{item_id}",
+        headers=headers,
     )
 
     assert delete_response.status_code == 204
@@ -513,15 +530,143 @@ async def test_update_and_delete_meal_plan_item(
 @pytest.mark.asyncio
 async def test_delete_missing_meal_plan_item_returns_404(
     client: AsyncClient,
-    db_session: AsyncSession,
 ) -> None:
-    user = await create_test_user(db_session)
-    meal_plan = await create_test_meal_plan(client, str(user.id))
+    _, headers = await create_authenticated_user(client)
+    meal_plan = await create_test_meal_plan(client, headers)
     missing_item_id = uuid4()
 
     response = await client.delete(
-        f"/api/v1/users/{user.id}/meal-plans/{meal_plan['id']}/items/{missing_item_id}"
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{missing_item_id}",
+        headers=headers,
     )
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Meal plan item not found"
+
+
+@pytest.mark.asyncio
+async def test_meal_plans_require_authentication(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(MEAL_PLANS_URL)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_meal_plans_reject_invalid_token(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers={
+            "Authorization": "Bearer invalid-token",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Could not validate credentials"
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_access_another_users_meal_plan(
+    client: AsyncClient,
+) -> None:
+    first_user, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-user-{uuid4()}@example.com",
+    )
+    second_user, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-user-{uuid4()}@example.com",
+    )
+
+    meal_plan = await create_test_meal_plan(client, first_headers)
+
+    assert meal_plan["user_id"] == first_user["id"]
+    assert meal_plan["user_id"] != second_user["id"]
+
+    second_user_list_response = await client.get(
+        MEAL_PLANS_URL,
+        headers=second_headers,
+    )
+
+    assert second_user_list_response.status_code == 200
+    assert second_user_list_response.json() == []
+
+    second_user_get_response = await client.get(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=second_headers,
+    )
+
+    assert second_user_get_response.status_code == 404
+    assert second_user_get_response.json()["detail"] == "Meal plan not found"
+
+    second_user_update_response = await client.patch(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=second_headers,
+        json={
+            "title": "Hacked Meal Plan",
+        },
+    )
+
+    assert second_user_update_response.status_code == 404
+    assert second_user_update_response.json()["detail"] == "Meal plan not found"
+
+    second_user_delete_response = await client.delete(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}",
+        headers=second_headers,
+    )
+
+    assert second_user_delete_response.status_code == 404
+    assert second_user_delete_response.json()["detail"] == "Meal plan not found"
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_access_another_users_meal_plan_item(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-item-user-{uuid4()}@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-item-user-{uuid4()}@example.com",
+    )
+
+    recipe_id = await create_test_recipe(client)
+    meal_plan = await create_test_meal_plan(client, first_headers)
+
+    create_item_response = await client.post(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=first_headers,
+        json={
+            "recipe_id": recipe_id,
+            "planned_date": "2026-05-18",
+            "meal_type": "lunch",
+        },
+    )
+
+    assert create_item_response.status_code == 201
+
+    item_id = create_item_response.json()["id"]
+
+    second_user_update_response = await client.patch(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{item_id}",
+        headers=second_headers,
+        json={
+            "meal_type": "dinner",
+        },
+    )
+
+    assert second_user_update_response.status_code == 404
+    assert second_user_update_response.json()["detail"] == "Meal plan not found"
+
+    second_user_delete_response = await client.delete(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{item_id}",
+        headers=second_headers,
+    )
+
+    assert second_user_delete_response.status_code == 404
+    assert second_user_delete_response.json()["detail"] == "Meal plan not found"
