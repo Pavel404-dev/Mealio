@@ -48,10 +48,13 @@ async def create_authenticated_user(
 
 async def create_test_recipe(
     client: AsyncClient,
+    *,
+    headers: dict[str, str],
     title: str = "Chicken Bowl",
 ) -> str:
     response = await client.post(
         "/api/v1/recipes",
+        headers=headers,
         json={
             "title": title,
             "instructions": "Cook and serve.",
@@ -117,7 +120,7 @@ async def test_create_meal_plan_with_items_success(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
 
     response = await client.post(
         MEAL_PLANS_URL,
@@ -151,7 +154,7 @@ async def test_create_meal_plan_with_items_rejects_date_outside_range(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
 
     response = await client.post(
         MEAL_PLANS_URL,
@@ -209,7 +212,7 @@ async def test_create_meal_plan_rejects_duplicate_slots(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
 
     response = await client.post(
         MEAL_PLANS_URL,
@@ -337,7 +340,7 @@ async def test_add_meal_plan_item_success(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
     meal_plan = await create_test_meal_plan(client, headers)
 
     response = await client.post(
@@ -388,7 +391,7 @@ async def test_add_meal_plan_item_rejects_date_outside_range(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
     meal_plan = await create_test_meal_plan(client, headers)
 
     response = await client.post(
@@ -412,7 +415,7 @@ async def test_add_meal_plan_item_rejects_duplicate_slot(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
     meal_plan = await create_test_meal_plan(client, headers)
 
     payload = {
@@ -446,7 +449,7 @@ async def test_add_meal_plan_item_rejects_duplicate_slot_with_different_case(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=headers)
     meal_plan = await create_test_meal_plan(client, headers)
 
     first_response = await client.post(
@@ -483,8 +486,16 @@ async def test_update_and_delete_meal_plan_item(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
-    recipe_id = await create_test_recipe(client, title="Chicken Bowl")
-    second_recipe_id = await create_test_recipe(client, title="Rice Bowl")
+    recipe_id = await create_test_recipe(
+        client,
+        headers=headers,
+        title="Chicken Bowl",
+    )
+    second_recipe_id = await create_test_recipe(
+        client,
+        headers=headers,
+        title="Rice Bowl",
+    )
     meal_plan = await create_test_meal_plan(client, headers)
 
     create_item_response = await client.post(
@@ -635,7 +646,7 @@ async def test_user_cannot_access_another_users_meal_plan_item(
         email=f"second-item-user-{uuid4()}@example.com",
     )
 
-    recipe_id = await create_test_recipe(client)
+    recipe_id = await create_test_recipe(client, headers=first_headers)
     meal_plan = await create_test_meal_plan(client, first_headers)
 
     create_item_response = await client.post(
