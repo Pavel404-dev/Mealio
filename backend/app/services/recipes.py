@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ingredient import Ingredient
 from app.repositories.recipes import RecipesRepository
-from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate, RecipeUpdate
+from app.schemas.recipe import (
+    RecipeCreate,
+    RecipeIngredientCreate,
+    RecipeNutritionTotals,
+    RecipeUpdate,
+)
 
 
 class RecipesService:
@@ -61,14 +66,15 @@ class RecipesService:
             ingredients_by_id=ingredients_by_id,
         )
 
-        data = self._with_calculated_totals(
-            data=data,
+        nutrition_totals = self._calculate_nutrition_totals(
+            ingredients=data.ingredients,
             ingredients_by_id=ingredients_by_id,
         )
 
         return await self.repository.create(
             created_by_user_id=user_id,
             data=data,
+            nutrition_totals=nutrition_totals,
         )
 
     async def update_recipe(
@@ -83,6 +89,8 @@ class RecipesService:
             recipe_id=recipe_id,
         )
 
+        nutrition_totals: RecipeNutritionTotals | None = None
+
         if data.ingredients is not None:
             ingredients_by_id = await self._get_existing_ingredients_by_id(
                 data.ingredients
@@ -92,14 +100,15 @@ class RecipesService:
                 ingredients_by_id=ingredients_by_id,
             )
 
-            data = self._with_calculated_totals(
-                data=data,
+            nutrition_totals = self._calculate_nutrition_totals(
+                ingredients=data.ingredients,
                 ingredients_by_id=ingredients_by_id,
             )
 
         return await self.repository.update(
             recipe=recipe,
             data=data,
+            nutrition_totals=nutrition_totals,
         )
 
     async def delete_recipe(
@@ -154,18 +163,16 @@ class RecipesService:
                 detail=f"Ingredients not found: {', '.join(missing_ids)}",
             )
 
-    def _with_calculated_totals(
+    def _calculate_nutrition_totals(
         self,
         *,
-        data: RecipeCreate | RecipeUpdate,
+        ingredients: list[RecipeIngredientCreate],
         ingredients_by_id: dict[uuid.UUID, Ingredient],
-    ) -> RecipeCreate | RecipeUpdate:
+    ) -> RecipeNutritionTotals:
         total_calories = Decimal("0")
         total_protein_g = Decimal("0")
         total_carbs_g = Decimal("0")
         total_fat_g = Decimal("0")
-
-        ingredients = data.ingredients or []
 
         for recipe_ingredient in ingredients:
             ingredient = ingredients_by_id.get(recipe_ingredient.ingredient_id)
@@ -185,11 +192,9 @@ class RecipesService:
             total_carbs_g += nutrition_value.carbs_g * factor
             total_fat_g += nutrition_value.fat_g * factor
 
-        return data.model_copy(
-            update={
-                "total_calories": total_calories,
-                "total_protein_g": total_protein_g,
-                "total_carbs_g": total_carbs_g,
-                "total_fat_g": total_fat_g,
-            }
+        return RecipeNutritionTotals(
+            total_calories=total_calories,
+            total_protein_g=total_protein_g,
+            total_carbs_g=total_carbs_g,
+            total_fat_g=total_fat_g,
         )

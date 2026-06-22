@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.models.ingredient import Ingredient
 from app.models.meal_plan import MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
-from app.schemas.recipe import RecipeCreate, RecipeUpdate
+from app.schemas.recipe import RecipeCreate, RecipeNutritionTotals, RecipeUpdate
 
 
 class RecipesRepository:
@@ -84,6 +84,7 @@ class RecipesRepository:
         *,
         created_by_user_id: uuid.UUID,
         data: RecipeCreate,
+        nutrition_totals: RecipeNutritionTotals,
     ) -> Recipe:
         recipe = Recipe(
             created_by_user_id=created_by_user_id,
@@ -91,10 +92,10 @@ class RecipesRepository:
             description=data.description.strip() if data.description else None,
             instructions=data.instructions.strip(),
             diet_type=data.diet_type.strip() if data.diet_type else None,
-            total_calories=data.total_calories,
-            total_protein_g=data.total_protein_g,
-            total_carbs_g=data.total_carbs_g,
-            total_fat_g=data.total_fat_g,
+            total_calories=nutrition_totals.total_calories,
+            total_protein_g=nutrition_totals.total_protein_g,
+            total_carbs_g=nutrition_totals.total_carbs_g,
+            total_fat_g=nutrition_totals.total_fat_g,
         )
 
         recipe.recipe_ingredients = [
@@ -123,6 +124,7 @@ class RecipesRepository:
         *,
         recipe: Recipe,
         data: RecipeUpdate,
+        nutrition_totals: RecipeNutritionTotals | None = None,
     ) -> Recipe:
         update_data = data.model_dump(exclude_unset=True)
 
@@ -138,17 +140,11 @@ class RecipesRepository:
         if "diet_type" in update_data:
             recipe.diet_type = data.diet_type.strip() if data.diet_type else None
 
-        if "total_calories" in update_data:
-            recipe.total_calories = data.total_calories
-
-        if "total_protein_g" in update_data:
-            recipe.total_protein_g = data.total_protein_g
-
-        if "total_carbs_g" in update_data:
-            recipe.total_carbs_g = data.total_carbs_g
-
-        if "total_fat_g" in update_data:
-            recipe.total_fat_g = data.total_fat_g
+        if nutrition_totals is not None:
+            recipe.total_calories = nutrition_totals.total_calories
+            recipe.total_protein_g = nutrition_totals.total_protein_g
+            recipe.total_carbs_g = nutrition_totals.total_carbs_g
+            recipe.total_fat_g = nutrition_totals.total_fat_g
 
         if data.ingredients is not None:
             recipe.recipe_ingredients.clear()
