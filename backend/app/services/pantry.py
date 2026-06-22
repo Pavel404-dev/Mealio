@@ -3,18 +3,35 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories.pantry import PantryRepository
-from app.schemas.pantry import PantryItemCreate, PantryItemUpdate
 from app.repositories.exceptions import DuplicateResourceError
+from app.repositories.pantry import PantryRepository
+from app.schemas.pantry import (
+    PantryItemCreate,
+    PantryItemUpdate,
+    PantryNutritionSummaryRead,
+)
+from app.services.pantry_nutrition import PantryNutritionCalculator
 
 
 class PantryService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = PantryRepository(db)
+        self.nutrition_calculator = PantryNutritionCalculator()
 
     async def list_user_pantry(self, user_id: uuid.UUID):
         await self._ensure_user_exists(user_id)
         return await self.repository.list_user_pantry(user_id)
+
+    async def get_user_pantry_nutrition_summary(
+        self,
+        *,
+        user_id: uuid.UUID,
+    ) -> PantryNutritionSummaryRead:
+        await self._ensure_user_exists(user_id)
+
+        pantry_items = await self.repository.list_user_pantry(user_id)
+
+        return self.nutrition_calculator.calculate_from_pantry_items(pantry_items)
 
     async def add_pantry_item(
         self,

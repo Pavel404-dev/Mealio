@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.pantry import PantryItemCreate, PantryItemRead, PantryItemUpdate
+from app.schemas.pantry import (
+    PantryItemCreate,
+    PantryItemRead,
+    PantryItemUpdate,
+    PantryNutritionSummaryRead,
+)
 from app.services.pantry import PantryService
 
 router = APIRouter(prefix="/pantry", tags=["Pantry"])
@@ -20,6 +25,18 @@ async def list_current_user_pantry(
     service = PantryService(db)
 
     return await service.list_user_pantry(current_user.id)
+
+
+@router.get("/summary", response_model=PantryNutritionSummaryRead)
+async def get_current_user_pantry_nutrition_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PantryService(db)
+
+    return await service.get_user_pantry_nutrition_summary(
+        user_id=current_user.id,
+    )
 
 
 @router.post(
