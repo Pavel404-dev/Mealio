@@ -21,7 +21,11 @@ class RecipesRepository:
         if not ingredient_ids:
             return []
 
-        stmt = select(Ingredient).where(Ingredient.id.in_(ingredient_ids))
+        stmt = (
+            select(Ingredient)
+            .options(selectinload(Ingredient.nutrition_value))
+            .where(Ingredient.id.in_(ingredient_ids))
+        )
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())

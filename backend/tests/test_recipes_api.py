@@ -131,7 +131,10 @@ async def test_create_recipe_success(
     assert data["created_by_user_id"] == user["id"]
     assert data["title"] == "High Protein Chicken Bowl"
     assert data["diet_type"] == "high-protein"
-    assert Decimal(str(data["total_calories"])) == Decimal("550")
+    assert Decimal(str(data["total_calories"])) == Decimal("330")
+    assert Decimal(str(data["total_protein_g"])) == Decimal("62")
+    assert Decimal(str(data["total_carbs_g"])) == Decimal("0")
+    assert Decimal(str(data["total_fat_g"])) == Decimal("7.20")
     assert len(data["recipe_ingredients"]) == 1
     assert data["recipe_ingredients"][0]["ingredient_id"] == ingredient_id
 
