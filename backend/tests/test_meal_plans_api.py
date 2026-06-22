@@ -208,6 +208,45 @@ async def test_create_meal_plan_with_items_rejects_missing_recipe(
 
 
 @pytest.mark.asyncio
+async def test_user_cannot_create_meal_plan_with_another_users_recipe(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-recipe-owner-{uuid4()}@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-meal-plan-owner-{uuid4()}@example.com",
+    )
+
+    another_users_recipe_id = await create_test_recipe(
+        client,
+        headers=first_headers,
+    )
+
+    response = await client.post(
+        MEAL_PLANS_URL,
+        headers=second_headers,
+        json={
+            "title": "Weekly Meal Plan",
+            "start_date": "2026-05-18",
+            "end_date": "2026-05-24",
+            "items": [
+                {
+                    "recipe_id": another_users_recipe_id,
+                    "planned_date": "2026-05-18",
+                    "meal_type": "breakfast",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 404
+    assert "Recipes not found" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_create_meal_plan_rejects_duplicate_slots(
     client: AsyncClient,
 ) -> None:
@@ -387,6 +426,39 @@ async def test_add_meal_plan_item_rejects_missing_recipe(
 
 
 @pytest.mark.asyncio
+async def test_user_cannot_add_meal_plan_item_with_another_users_recipe(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-add-item-user-{uuid4()}@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-add-item-user-{uuid4()}@example.com",
+    )
+
+    another_users_recipe_id = await create_test_recipe(
+        client,
+        headers=first_headers,
+    )
+    meal_plan = await create_test_meal_plan(client, second_headers)
+
+    response = await client.post(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=second_headers,
+        json={
+            "recipe_id": another_users_recipe_id,
+            "planned_date": "2026-05-18",
+            "meal_type": "lunch",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Recipe not found"
+
+
+@pytest.mark.asyncio
 async def test_add_meal_plan_item_rejects_date_outside_range(
     client: AsyncClient,
 ) -> None:
@@ -536,6 +608,57 @@ async def test_update_and_delete_meal_plan_item(
     )
 
     assert delete_response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_update_meal_plan_item_to_another_users_recipe(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-update-item-user-{uuid4()}@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-update-item-user-{uuid4()}@example.com",
+    )
+
+    another_users_recipe_id = await create_test_recipe(
+        client,
+        headers=first_headers,
+        title="Another User Recipe",
+    )
+    own_recipe_id = await create_test_recipe(
+        client,
+        headers=second_headers,
+        title="Own Recipe",
+    )
+    meal_plan = await create_test_meal_plan(client, second_headers)
+
+    create_item_response = await client.post(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items",
+        headers=second_headers,
+        json={
+            "recipe_id": own_recipe_id,
+            "planned_date": "2026-05-18",
+            "meal_type": "lunch",
+        },
+    )
+
+    assert create_item_response.status_code == 201
+
+    item_id = create_item_response.json()["id"]
+
+    response = await client.patch(
+        f"{MEAL_PLANS_URL}/{meal_plan['id']}/items/{item_id}",
+        headers=second_headers,
+        json={
+            "recipe_id": another_users_recipe_id,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Recipe not found"
 
 
 @pytest.mark.asyncio
