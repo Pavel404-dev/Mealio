@@ -3,9 +3,9 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.repositories.exceptions import DuplicateResourceError
 from app.repositories.ingredients import IngredientsRepository
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
-from app.repositories.exceptions import DuplicateResourceError
 
 
 class IngredientsService:
@@ -79,4 +79,14 @@ class IngredientsService:
 
     async def delete_ingredient(self, ingredient_id: uuid.UUID) -> None:
         await self.get_ingredient(ingredient_id)
+
+        is_used_in_recipes = await self.repository.is_used_in_recipes(ingredient_id)
+        is_used_in_pantry = await self.repository.is_used_in_pantry(ingredient_id)
+
+        if is_used_in_recipes or is_used_in_pantry:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ingredient is used and cannot be deleted",
+            )
+
         await self.repository.delete(ingredient_id)
