@@ -34,19 +34,34 @@ class MealPlansRepository:
 
         return result.scalar_one_or_none()
 
-    async def get_recipe(self, recipe_id: uuid.UUID) -> Recipe | None:
-        result = await self.db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    async def get_recipe(
+        self,
+        *,
+        user_id: uuid.UUID,
+        recipe_id: uuid.UUID,
+    ) -> Recipe | None:
+        result = await self.db.execute(
+            select(Recipe).where(
+                Recipe.id == recipe_id,
+                Recipe.created_by_user_id == user_id,
+            )
+        )
 
         return result.scalar_one_or_none()
 
     async def get_recipes_by_ids(
         self,
+        *,
+        user_id: uuid.UUID,
         recipe_ids: list[uuid.UUID],
     ) -> list[Recipe]:
         if not recipe_ids:
             return []
 
-        stmt = select(Recipe).where(Recipe.id.in_(recipe_ids))
+        stmt = select(Recipe).where(
+            Recipe.id.in_(recipe_ids),
+            Recipe.created_by_user_id == user_id,
+        )
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())

@@ -65,7 +65,10 @@ class MealPlansService:
         data: MealPlanCreate,
     ):
         await self._validate_user_exists(user_id)
-        await self._validate_items(data.items)
+        await self._validate_items(
+            user_id=user_id,
+            items=data.items,
+        )
         self._validate_unique_slots(data.items)
 
         for item in data.items:
@@ -153,7 +156,10 @@ class MealPlansService:
 
         normalized_meal_type = normalize_meal_type(data.meal_type)
 
-        await self._validate_recipe_exists(data.recipe_id)
+        await self._validate_recipe_exists(
+            user_id=user_id,
+            recipe_id=data.recipe_id,
+        )
 
         self._validate_planned_date_inside_meal_plan(
             meal_plan=meal_plan,
@@ -202,7 +208,10 @@ class MealPlansService:
             )
 
         if data.recipe_id is not None:
-            await self._validate_recipe_exists(data.recipe_id)
+            await self._validate_recipe_exists(
+                user_id=user_id,
+                recipe_id=data.recipe_id,
+            )
 
         planned_date = (
             data.planned_date if data.planned_date is not None else item.planned_date
@@ -271,8 +280,16 @@ class MealPlansService:
                 detail="User not found",
             )
 
-    async def _validate_recipe_exists(self, recipe_id: uuid.UUID) -> None:
-        recipe = await self.repository.get_recipe(recipe_id)
+    async def _validate_recipe_exists(
+        self,
+        *,
+        user_id: uuid.UUID,
+        recipe_id: uuid.UUID,
+    ) -> None:
+        recipe = await self.repository.get_recipe(
+            user_id=user_id,
+            recipe_id=recipe_id,
+        )
 
         if recipe is None:
             raise HTTPException(
@@ -282,6 +299,8 @@ class MealPlansService:
 
     async def _validate_items(
         self,
+        *,
+        user_id: uuid.UUID,
         items: list[MealPlanItemCreate],
     ) -> None:
         recipe_ids = list({item.recipe_id for item in items})
@@ -289,7 +308,10 @@ class MealPlansService:
         if not recipe_ids:
             return
 
-        existing_recipes = await self.repository.get_recipes_by_ids(recipe_ids)
+        existing_recipes = await self.repository.get_recipes_by_ids(
+            user_id=user_id,
+            recipe_ids=recipe_ids,
+        )
         existing_ids = {recipe.id for recipe in existing_recipes}
 
         missing_ids = [
