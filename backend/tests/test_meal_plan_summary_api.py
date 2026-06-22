@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -7,6 +8,7 @@ from httpx import AsyncClient
 REGISTER_URL = "/api/v1/auth/register"
 LOGIN_URL = "/api/v1/auth/login"
 MEAL_PLANS_URL = "/api/v1/meal-plans"
+INGREDIENTS_URL = "/api/v1/ingredients"
 
 MEAL_PLAN_SUMMARY_PATHS = (
     "summary",
@@ -69,15 +71,43 @@ async def create_test_recipe(
     total_carbs_g: str | None = "50.00",
     total_fat_g: str | None = "15.00",
 ) -> str:
-    payload = {
+    payload: dict[str, Any] = {
         "title": title,
         "instructions": "Cook and serve.",
         "diet_type": "balanced",
-        "total_calories": total_calories,
-        "total_protein_g": total_protein_g,
-        "total_carbs_g": total_carbs_g,
-        "total_fat_g": total_fat_g,
     }
+
+    if (
+        total_calories is not None
+        and total_protein_g is not None
+        and total_carbs_g is not None
+        and total_fat_g is not None
+    ):
+        ingredient_response = await client.post(
+            INGREDIENTS_URL,
+            json={
+                "name": f"{title} Ingredient {uuid4()}",
+                "category": "test",
+                "nutrition_value": {
+                    "calories": total_calories,
+                    "protein_g": total_protein_g,
+                    "carbs_g": total_carbs_g,
+                    "fat_g": total_fat_g,
+                    "portion_g": "100",
+                },
+            },
+        )
+
+        assert ingredient_response.status_code == 201
+
+        ingredient_id = ingredient_response.json()["id"]
+
+        payload["ingredients"] = [
+            {
+                "ingredient_id": ingredient_id,
+                "quantity_g": "100",
+            }
+        ]
 
     response = await client.post(
         "/api/v1/recipes",

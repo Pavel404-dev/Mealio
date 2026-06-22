@@ -1,8 +1,10 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.ingredient import Ingredient
 from app.repositories.recipes import RecipesRepository
 from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate, RecipeUpdate
 
@@ -53,7 +55,16 @@ class RecipesService:
         user_id: uuid.UUID,
         data: RecipeCreate,
     ):
-        await self._validate_ingredients_exist(data.ingredients)
+        ingredients_by_id = await self._get_existing_ingredients_by_id(data.ingredients)
+        self._validate_all_ingredients_exist(
+            ingredients=data.ingredients,
+            ingredients_by_id=ingredients_by_id,
+        )
+
+        data = self._with_calculated_totals(
+            data=data,
+            ingredients_by_id=ingredients_by_id,
+        )
 
         return await self.repository.create(
             created_by_user_id=user_id,
@@ -73,7 +84,18 @@ class RecipesService:
         )
 
         if data.ingredients is not None:
-            await self._validate_ingredients_exist(data.ingredients)
+            ingredients_by_id = await self._get_existing_ingredients_by_id(
+                data.ingredients
+            )
+            self._validate_all_ingredients_exist(
+                ingredients=data.ingredients,
+                ingredients_by_id=ingredients_by_id,
+            )
+
+            data = self._with_calculated_totals(
+                data=data,
+                ingredients_by_id=ingredients_by_id,
+            )
 
         return await self.repository.update(
             recipe=recipe,
@@ -99,24 +121,31 @@ class RecipesService:
 
         await self.repository.delete(recipe.id)
 
-    async def _validate_ingredients_exist(
+    async def _get_existing_ingredients_by_id(
         self,
         ingredients: list[RecipeIngredientCreate],
-    ) -> None:
+    ) -> dict[uuid.UUID, Ingredient]:
         ingredient_ids = [item.ingredient_id for item in ingredients]
 
         if not ingredient_ids:
-            return
+            return {}
 
         existing_ingredients = await self.repository.get_ingredients_by_ids(
             ingredient_ids
         )
-        existing_ids = {ingredient.id for ingredient in existing_ingredients}
 
+        return {ingredient.id: ingredient for ingredient in existing_ingredients}
+
+    def _validate_all_ingredients_exist(
+        self,
+        *,
+        ingredients: list[RecipeIngredientCreate],
+        ingredients_by_id: dict[uuid.UUID, Ingredient],
+    ) -> None:
         missing_ids = [
-            str(ingredient_id)
-            for ingredient_id in ingredient_ids
-            if ingredient_id not in existing_ids
+            str(item.ingredient_id)
+            for item in ingredients
+            if item.ingredient_id not in ingredients_by_id
         ]
 
         if missing_ids:
@@ -124,3 +153,43 @@ class RecipesService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Ingredients not found: {', '.join(missing_ids)}",
             )
+
+    def _with_calculated_totals(
+        self,
+        *,
+        data: RecipeCreate | RecipeUpdate,
+        ingredients_by_id: dict[uuid.UUID, Ingredient],
+    ) -> RecipeCreate | RecipeUpdate:
+        total_calories = Decimal("0")
+        total_protein_g = Decimal("0")
+        total_carbs_g = Decimal("0")
+        total_fat_g = Decimal("0")
+
+        ingredients = data.ingredients or []
+
+        for recipe_ingredient in ingredients:
+            ingredient = ingredients_by_id.get(recipe_ingredient.ingredient_id)
+
+            if ingredient is None or ingredient.nutrition_value is None:
+                continue
+
+            nutrition_value = ingredient.nutrition_value
+
+            if nutrition_value.portion_g <= 0:
+                continue
+
+            factor = recipe_ingredient.quantity_g / nutrition_value.portion_g
+
+            total_calories += nutrition_value.calories * factor
+            total_protein_g += nutrition_value.protein_g * factor
+            total_carbs_g += nutrition_value.carbs_g * factor
+            total_fat_g += nutrition_value.fat_g * factor
+
+        return data.model_copy(
+            update={
+                "total_calories": total_calories,
+                "total_protein_g": total_protein_g,
+                "total_carbs_g": total_carbs_g,
+                "total_fat_g": total_fat_g,
+            }
+        )
