@@ -8,6 +8,7 @@ from httpx import AsyncClient
 REGISTER_URL = "/api/v1/auth/register"
 LOGIN_URL = "/api/v1/auth/login"
 PANTRY_URL = "/api/v1/pantry"
+PANTRY_SUMMARY_URL = f"{PANTRY_URL}/summary"
 
 
 async def create_authenticated_user(
@@ -44,25 +45,70 @@ async def create_authenticated_user(
     }
 
 
-async def create_test_ingredient(client: AsyncClient) -> dict:
+async def create_test_ingredient(
+    client: AsyncClient,
+    *,
+    name: str = "Oats",
+    category: str = "grain",
+    nutrition_value: dict[str, str] | None = None,
+    include_nutrition: bool = True,
+) -> dict:
+    payload = {
+        "name": name,
+        "category": category,
+    }
+
+    if include_nutrition:
+        payload["nutrition_value"] = nutrition_value or {
+            "calories": "389",
+            "protein_g": "16.9",
+            "carbs_g": "66.3",
+            "fat_g": "6.9",
+            "portion_g": "100",
+        }
+
+    response = await client.post("/api/v1/ingredients", json=payload)
+
+    assert response.status_code == 201
+
+    return response.json()
+
+
+async def add_pantry_item(
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    ingredient_id: str,
+    quantity_g: str,
+) -> dict:
     response = await client.post(
-        "/api/v1/ingredients",
+        PANTRY_URL,
+        headers=headers,
         json={
-            "name": "Oats",
-            "category": "grain",
-            "nutrition_value": {
-                "calories": "389",
-                "protein_g": "16.9",
-                "carbs_g": "66.3",
-                "fat_g": "6.9",
-                "portion_g": "100",
-            },
+            "ingredient_id": ingredient_id,
+            "quantity_g": quantity_g,
         },
     )
 
     assert response.status_code == 201
 
     return response.json()
+
+
+def assert_summary_totals(
+    summary: dict,
+    *,
+    items_count: int,
+    total_calories: str,
+    total_protein_g: str,
+    total_carbs_g: str,
+    total_fat_g: str,
+) -> None:
+    assert summary["items_count"] == items_count
+    assert Decimal(str(summary["total_calories"])) == Decimal(total_calories)
+    assert Decimal(str(summary["total_protein_g"])) == Decimal(total_protein_g)
+    assert Decimal(str(summary["total_carbs_g"])) == Decimal(total_carbs_g)
+    assert Decimal(str(summary["total_fat_g"])) == Decimal(total_fat_g)
 
 
 @pytest.mark.asyncio
@@ -148,6 +194,290 @@ async def test_pantry_rejects_invalid_token(
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"
+
+
+@pytest.mark.asyncio
+async def test_pantry_summary_requires_authentication(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(PANTRY_SUMMARY_URL)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_pantry_summary_rejects_invalid_token(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(
+        PANTRY_SUMMARY_URL,
+        headers={
+            "Authorization": "Bearer invalid-token",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Could not validate credentials"
+
+
+@pytest.mark.asyncio
+async def test_empty_pantry_summary_returns_zero_totals(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=0,
+        total_calories="0",
+        total_protein_g="0",
+        total_carbs_g="0",
+        total_fat_g="0",
+    )
+
+
+@pytest.mark.asyncio
+async def test_pantry_summary_calculates_totals_from_one_ingredient(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient = await create_test_ingredient(client)
+
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="250",
+    )
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=1,
+        total_calories="972.5",
+        total_protein_g="42.25",
+        total_carbs_g="165.75",
+        total_fat_g="17.25",
+    )
+
+
+@pytest.mark.asyncio
+async def test_pantry_summary_calculates_totals_from_multiple_ingredients(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    chicken = await create_test_ingredient(
+        client,
+        name="Chicken Pantry Summary",
+        nutrition_value={
+            "calories": "165",
+            "protein_g": "31",
+            "carbs_g": "0",
+            "fat_g": "3.6",
+            "portion_g": "100",
+        },
+    )
+    rice = await create_test_ingredient(
+        client,
+        name="Rice Pantry Summary",
+        nutrition_value={
+            "calories": "130",
+            "protein_g": "2.7",
+            "carbs_g": "28",
+            "fat_g": "0.3",
+            "portion_g": "100",
+        },
+    )
+
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=chicken["id"],
+        quantity_g="200",
+    )
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=rice["id"],
+        quantity_g="300",
+    )
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=2,
+        total_calories="720",
+        total_protein_g="70.1",
+        total_carbs_g="84",
+        total_fat_g="8.1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_pantry_item_without_nutrition_value_contributes_zero(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient = await create_test_ingredient(
+        client,
+        name="Ingredient Without Nutrition",
+        include_nutrition=False,
+    )
+
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="100",
+    )
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=1,
+        total_calories="0",
+        total_protein_g="0",
+        total_carbs_g="0",
+        total_fat_g="0",
+    )
+
+
+@pytest.mark.asyncio
+async def test_pantry_summary_uses_current_authenticated_user_only(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email="summary-first-user@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email="summary-second-user@example.com",
+    )
+    ingredient = await create_test_ingredient(client)
+
+    await add_pantry_item(
+        client,
+        headers=first_headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="100",
+    )
+    await add_pantry_item(
+        client,
+        headers=second_headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="300",
+    )
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=first_headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=1,
+        total_calories="389",
+        total_protein_g="16.9",
+        total_carbs_g="66.3",
+        total_fat_g="6.9",
+    )
+
+
+@pytest.mark.asyncio
+async def test_updating_pantry_item_quantity_changes_pantry_summary(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient = await create_test_ingredient(client)
+
+    pantry_item = await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="100",
+    )
+
+    update_response = await client.patch(
+        f"{PANTRY_URL}/{pantry_item['id']}",
+        headers=headers,
+        json={
+            "quantity_g": "200",
+        },
+    )
+
+    assert update_response.status_code == 200
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=1,
+        total_calories="778",
+        total_protein_g="33.8",
+        total_carbs_g="132.6",
+        total_fat_g="13.8",
+    )
+
+
+@pytest.mark.asyncio
+async def test_updating_ingredient_nutrition_value_is_reflected_in_pantry_summary(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient = await create_test_ingredient(
+        client,
+        name="Dynamic Nutrition Ingredient",
+        nutrition_value={
+            "calories": "100",
+            "protein_g": "10",
+            "carbs_g": "5",
+            "fat_g": "2",
+            "portion_g": "100",
+        },
+    )
+
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient["id"],
+        quantity_g="150",
+    )
+
+    update_response = await client.patch(
+        f"/api/v1/ingredients/{ingredient['id']}",
+        json={
+            "nutrition_value": {
+                "calories": "200",
+                "protein_g": "20",
+                "carbs_g": "10",
+                "fat_g": "4",
+                "portion_g": "100",
+            },
+        },
+    )
+
+    assert update_response.status_code == 200
+
+    response = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+
+    assert response.status_code == 200
+    assert_summary_totals(
+        response.json(),
+        items_count=1,
+        total_calories="300",
+        total_protein_g="30",
+        total_carbs_g="15",
+        total_fat_g="6",
+    )
 
 
 @pytest.mark.asyncio
