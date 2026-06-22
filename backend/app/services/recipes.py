@@ -1,5 +1,4 @@
 import uuid
-from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,11 +11,13 @@ from app.schemas.recipe import (
     RecipeNutritionTotals,
     RecipeUpdate,
 )
+from app.services.recipe_nutrition import RecipeNutritionCalculator
 
 
 class RecipesService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = RecipesRepository(db)
+        self.nutrition_calculator = RecipeNutritionCalculator()
 
     async def list_user_recipes(
         self,
@@ -66,7 +67,7 @@ class RecipesService:
             ingredients_by_id=ingredients_by_id,
         )
 
-        nutrition_totals = self._calculate_nutrition_totals(
+        nutrition_totals = self.nutrition_calculator.calculate_from_ingredient_inputs(
             ingredients=data.ingredients,
             ingredients_by_id=ingredients_by_id,
         )
@@ -100,9 +101,11 @@ class RecipesService:
                 ingredients_by_id=ingredients_by_id,
             )
 
-            nutrition_totals = self._calculate_nutrition_totals(
-                ingredients=data.ingredients,
-                ingredients_by_id=ingredients_by_id,
+            nutrition_totals = (
+                self.nutrition_calculator.calculate_from_ingredient_inputs(
+                    ingredients=data.ingredients,
+                    ingredients_by_id=ingredients_by_id,
+                )
             )
 
         return await self.repository.update(
@@ -162,39 +165,3 @@ class RecipesService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Ingredients not found: {', '.join(missing_ids)}",
             )
-
-    def _calculate_nutrition_totals(
-        self,
-        *,
-        ingredients: list[RecipeIngredientCreate],
-        ingredients_by_id: dict[uuid.UUID, Ingredient],
-    ) -> RecipeNutritionTotals:
-        total_calories = Decimal("0")
-        total_protein_g = Decimal("0")
-        total_carbs_g = Decimal("0")
-        total_fat_g = Decimal("0")
-
-        for recipe_ingredient in ingredients:
-            ingredient = ingredients_by_id.get(recipe_ingredient.ingredient_id)
-
-            if ingredient is None or ingredient.nutrition_value is None:
-                continue
-
-            nutrition_value = ingredient.nutrition_value
-
-            if nutrition_value.portion_g <= 0:
-                continue
-
-            factor = recipe_ingredient.quantity_g / nutrition_value.portion_g
-
-            total_calories += nutrition_value.calories * factor
-            total_protein_g += nutrition_value.protein_g * factor
-            total_carbs_g += nutrition_value.carbs_g * factor
-            total_fat_g += nutrition_value.fat_g * factor
-
-        return RecipeNutritionTotals(
-            total_calories=total_calories,
-            total_protein_g=total_protein_g,
-            total_carbs_g=total_carbs_g,
-            total_fat_g=total_fat_g,
-        )
