@@ -5,9 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.ingredient import Ingredient, NutritionValue
-from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.models.ingredient import Ingredient, NutritionValue, UserIngredient
+from app.models.recipe import RecipeIngredient
 from app.repositories.exceptions import DuplicateResourceError
+from app.schemas.ingredient import IngredientCreate, IngredientUpdate
 
 
 class IngredientsRepository:
@@ -123,11 +124,32 @@ class IngredientsRepository:
             raise DuplicateResourceError(
                 "Ingredient with this name already exists"
             ) from exc
+
         updated = await self.get_by_id(ingredient.id)
         if updated is None:
             raise RuntimeError("Updated ingredient was not found")
 
         return updated
+
+    async def is_used_in_recipes(self, ingredient_id: uuid.UUID) -> bool:
+        stmt = (
+            select(RecipeIngredient.id)
+            .where(RecipeIngredient.ingredient_id == ingredient_id)
+            .limit(1)
+        )
+
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    async def is_used_in_pantry(self, ingredient_id: uuid.UUID) -> bool:
+        stmt = (
+            select(UserIngredient.id)
+            .where(UserIngredient.ingredient_id == ingredient_id)
+            .limit(1)
+        )
+
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
     async def delete(self, ingredient_id: uuid.UUID) -> None:
         stmt = delete(Ingredient).where(Ingredient.id == ingredient_id)
