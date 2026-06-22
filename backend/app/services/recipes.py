@@ -91,6 +91,12 @@ class RecipesService:
             recipe_id=recipe_id,
         )
 
+        if await self.repository.is_used_in_meal_plan_items(recipe.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Recipe is used in meal plans and cannot be deleted",
+            )
+
         await self.repository.delete(recipe.id)
 
     async def _validate_ingredients_exist(

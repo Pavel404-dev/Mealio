@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient
+from app.models.meal_plan import MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.schemas.recipe import RecipeCreate, RecipeUpdate
 
@@ -166,6 +167,14 @@ class RecipesRepository:
             raise RuntimeError("Updated recipe was not found")
 
         return updated
+
+    async def is_used_in_meal_plan_items(self, recipe_id: uuid.UUID) -> bool:
+        stmt = (
+            select(MealPlanItem.id).where(MealPlanItem.recipe_id == recipe_id).limit(1)
+        )
+        result = await self.db.execute(stmt)
+
+        return result.scalar_one_or_none() is not None
 
     async def delete(self, recipe_id: uuid.UUID) -> None:
         stmt = delete(Recipe).where(Recipe.id == recipe_id)

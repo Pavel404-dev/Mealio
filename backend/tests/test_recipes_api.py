@@ -8,6 +8,7 @@ from httpx import AsyncClient
 REGISTER_URL = "/api/v1/auth/register"
 LOGIN_URL = "/api/v1/auth/login"
 RECIPES_URL = "/api/v1/recipes"
+MEAL_PLANS_URL = "/api/v1/meal-plans"
 
 
 async def create_authenticated_user(
@@ -560,6 +561,54 @@ async def test_get_update_and_delete_recipe(client: AsyncClient) -> None:
     )
 
     assert missing_response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_delete_own_recipe_used_in_meal_plan(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    recipe = await create_test_recipe(
+        client,
+        headers=headers,
+        title="Meal Plan Recipe",
+    )
+
+    meal_plan_response = await client.post(
+        MEAL_PLANS_URL,
+        headers=headers,
+        json={
+            "title": "Weekly Meal Plan",
+            "start_date": "2026-05-18",
+            "end_date": "2026-05-24",
+            "items": [
+                {
+                    "recipe_id": recipe["id"],
+                    "planned_date": "2026-05-18",
+                    "meal_type": "breakfast",
+                }
+            ],
+        },
+    )
+
+    assert meal_plan_response.status_code == 201
+
+    delete_response = await client.delete(
+        f"{RECIPES_URL}/{recipe['id']}",
+        headers=headers,
+    )
+
+    assert delete_response.status_code == 409
+    assert delete_response.json()["detail"] == (
+        "Recipe is used in meal plans and cannot be deleted"
+    )
+
+    get_response = await client.get(
+        f"{RECIPES_URL}/{recipe['id']}",
+        headers=headers,
+    )
+
+    assert get_response.status_code == 200
 
 
 @pytest.mark.asyncio
