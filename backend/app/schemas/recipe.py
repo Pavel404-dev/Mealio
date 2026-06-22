@@ -1,8 +1,17 @@
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+@dataclass(frozen=True)
+class RecipeNutritionTotals:
+    total_calories: Decimal
+    total_protein_g: Decimal
+    total_carbs_g: Decimal
+    total_fat_g: Decimal
 
 
 class RecipeIngredientBase(BaseModel):
@@ -26,10 +35,6 @@ class RecipeBase(BaseModel):
     description: str | None = None
     instructions: str = Field(..., min_length=1)
     diet_type: str | None = Field(default=None, max_length=100)
-    total_calories: Decimal | None = Field(default=None, ge=0)
-    total_protein_g: Decimal | None = Field(default=None, ge=0)
-    total_carbs_g: Decimal | None = Field(default=None, ge=0)
-    total_fat_g: Decimal | None = Field(default=None, ge=0)
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -75,10 +80,6 @@ class RecipeUpdate(BaseModel):
     description: str | None = None
     instructions: str | None = Field(default=None, min_length=1)
     diet_type: str | None = Field(default=None, max_length=100)
-    total_calories: Decimal | None = Field(default=None, ge=0)
-    total_protein_g: Decimal | None = Field(default=None, ge=0)
-    total_carbs_g: Decimal | None = Field(default=None, ge=0)
-    total_fat_g: Decimal | None = Field(default=None, ge=0)
     ingredients: list[RecipeIngredientCreate] | None = None
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
@@ -134,6 +135,10 @@ class RecipeUpdate(BaseModel):
 class RecipeRead(RecipeBase):
     id: uuid.UUID
     created_by_user_id: uuid.UUID | None
+    total_calories: Decimal | None = Field(default=None, ge=0)
+    total_protein_g: Decimal | None = Field(default=None, ge=0)
+    total_carbs_g: Decimal | None = Field(default=None, ge=0)
+    total_fat_g: Decimal | None = Field(default=None, ge=0)
     created_at: datetime
     updated_at: datetime
     recipe_ingredients: list[RecipeIngredientRead] = Field(default_factory=list)

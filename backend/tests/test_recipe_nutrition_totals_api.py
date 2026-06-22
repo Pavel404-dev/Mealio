@@ -113,6 +113,10 @@ async def test_recipe_nutrition_totals_are_calculated_from_one_ingredient(
 
     data = response.json()
 
+    assert "total_calories" in data
+    assert "total_protein_g" in data
+    assert "total_carbs_g" in data
+    assert "total_fat_g" in data
     assert_decimal(data["total_calories"], "330")
     assert_decimal(data["total_protein_g"], "62")
     assert_decimal(data["total_carbs_g"], "0")
@@ -286,7 +290,7 @@ async def test_ingredient_without_nutrition_value_contributes_zero(
 
 
 @pytest.mark.asyncio
-async def test_client_provided_nutrition_totals_are_ignored_when_ingredients_are_provided(
+async def test_client_provided_nutrition_totals_are_rejected_when_ingredients_are_provided(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
@@ -322,14 +326,7 @@ async def test_client_provided_nutrition_totals_are_ignored_when_ingredients_are
         },
     )
 
-    assert response.status_code == 201
-
-    data = response.json()
-
-    assert_decimal(data["total_calories"], "50")
-    assert_decimal(data["total_protein_g"], "5")
-    assert_decimal(data["total_carbs_g"], "10")
-    assert_decimal(data["total_fat_g"], "2.50")
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio

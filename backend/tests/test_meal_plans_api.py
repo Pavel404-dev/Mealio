@@ -59,7 +59,6 @@ async def create_test_recipe(
             "title": title,
             "instructions": "Cook and serve.",
             "diet_type": "high-protein",
-            "total_calories": "550",
         },
     )
 

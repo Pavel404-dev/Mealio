@@ -10,6 +10,13 @@ LOGIN_URL = "/api/v1/auth/login"
 RECIPES_URL = "/api/v1/recipes"
 MEAL_PLANS_URL = "/api/v1/meal-plans"
 
+NUTRITION_TOTAL_FIELDS = (
+    "total_calories",
+    "total_protein_g",
+    "total_carbs_g",
+    "total_fat_g",
+)
+
 
 async def create_authenticated_user(
     client: AsyncClient,
@@ -110,10 +117,6 @@ async def test_create_recipe_success(
             "description": "Simple protein meal",
             "instructions": "Cook chicken and serve with rice.",
             "diet_type": "high-protein",
-            "total_calories": "550",
-            "total_protein_g": "45",
-            "total_carbs_g": "55",
-            "total_fat_g": "12",
             "ingredients": [
                 {
                     "ingredient_id": ingredient_id,
@@ -269,9 +272,11 @@ async def test_create_recipe_rejects_non_positive_ingredient_quantity(
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("field_name", NUTRITION_TOTAL_FIELDS)
 @pytest.mark.asyncio
-async def test_create_recipe_rejects_negative_nutrition_total(
+async def test_create_recipe_rejects_client_provided_nutrition_total(
     client: AsyncClient,
+    field_name: str,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -279,9 +284,9 @@ async def test_create_recipe_rejects_negative_nutrition_total(
         RECIPES_URL,
         headers=headers,
         json={
-            "title": "Invalid Nutrition Recipe",
+            "title": "Client Nutrition Recipe",
             "instructions": "Cook something.",
-            "total_calories": "-100",
+            field_name: "100",
         },
     )
 
@@ -326,6 +331,30 @@ async def test_update_recipe_rejects_null_required_fields(
     )
 
     assert instructions_response.status_code == 422
+
+
+@pytest.mark.parametrize("field_name", NUTRITION_TOTAL_FIELDS)
+@pytest.mark.asyncio
+async def test_update_recipe_rejects_client_provided_nutrition_total(
+    client: AsyncClient,
+    field_name: str,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    recipe = await create_test_recipe(
+        client,
+        headers=headers,
+        title="Read Only Nutrition Recipe",
+    )
+
+    response = await client.patch(
+        f"{RECIPES_URL}/{recipe['id']}",
+        headers=headers,
+        json={
+            field_name: "100",
+        },
+    )
+
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -538,7 +567,6 @@ async def test_get_update_and_delete_recipe(client: AsyncClient) -> None:
             "title": "Updated Recipe",
             "instructions": "Updated instructions.",
             "diet_type": "high-protein",
-            "total_calories": "700",
         },
     )
 
@@ -549,7 +577,10 @@ async def test_get_update_and_delete_recipe(client: AsyncClient) -> None:
     assert updated_data["title"] == "Updated Recipe"
     assert updated_data["instructions"] == "Updated instructions."
     assert updated_data["diet_type"] == "high-protein"
-    assert Decimal(str(updated_data["total_calories"])) == Decimal("700")
+    assert Decimal(str(updated_data["total_calories"])) == Decimal("0")
+    assert Decimal(str(updated_data["total_protein_g"])) == Decimal("0")
+    assert Decimal(str(updated_data["total_carbs_g"])) == Decimal("0")
+    assert Decimal(str(updated_data["total_fat_g"])) == Decimal("0")
 
     delete_response = await client.delete(
         f"{RECIPES_URL}/{recipe_id}",
