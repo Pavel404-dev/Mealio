@@ -588,3 +588,107 @@ async def test_user_cannot_access_another_users_meal_plan_summary(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Meal plan not found"
+
+
+@pytest.mark.asyncio
+async def test_meal_plan_summary_reflects_recalculated_recipe_totals_after_ingredient_update(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    ingredient_response = await client.post(
+        INGREDIENTS_URL,
+        json={
+            "name": f"Summary Recalc Ingredient {uuid4()}",
+            "category": "test",
+            "nutrition_value": {
+                "calories": "100",
+                "protein_g": "10",
+                "carbs_g": "20",
+                "fat_g": "5",
+                "portion_g": "100",
+            },
+        },
+    )
+
+    assert ingredient_response.status_code == 201
+
+    ingredient_id = ingredient_response.json()["id"]
+
+    recipe_response = await client.post(
+        "/api/v1/recipes",
+        headers=headers,
+        json={
+            "title": "Summary Recalc Recipe",
+            "instructions": "Cook.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient_id,
+                    "quantity_g": "100",
+                }
+            ],
+        },
+    )
+
+    assert recipe_response.status_code == 201
+
+    recipe_id = recipe_response.json()["id"]
+
+    meal_plan = await create_test_meal_plan(
+        client,
+        headers=headers,
+    )
+
+    await add_meal_plan_item(
+        client,
+        headers=headers,
+        meal_plan_id=meal_plan["id"],
+        recipe_id=recipe_id,
+        planned_date="2026-05-18",
+        meal_type="breakfast",
+    )
+
+    before_response = await client.get(
+        meal_plan_summary_url(meal_plan["id"]),
+        headers=headers,
+    )
+
+    assert before_response.status_code == 200
+
+    before_data = before_response.json()
+
+    assert before_data["items_count"] == 1
+    assert before_data["total_calories"] == "100.00"
+    assert before_data["total_protein_g"] == "10.00"
+    assert before_data["total_carbs_g"] == "20.00"
+    assert before_data["total_fat_g"] == "5.00"
+
+    update_ingredient_response = await client.patch(
+        f"{INGREDIENTS_URL}/{ingredient_id}",
+        json={
+            "nutrition_value": {
+                "calories": "250",
+                "protein_g": "25",
+                "carbs_g": "30",
+                "fat_g": "8",
+                "portion_g": "100",
+            }
+        },
+    )
+
+    assert update_ingredient_response.status_code == 200
+
+    after_response = await client.get(
+        meal_plan_summary_url(meal_plan["id"]),
+        headers=headers,
+    )
+
+    assert after_response.status_code == 200
+
+    after_data = after_response.json()
+
+    assert after_data["items_count"] == 1
+    assert after_data["total_calories"] == "250.00"
+    assert after_data["total_protein_g"] == "25.00"
+    assert after_data["total_carbs_g"] == "30.00"
+    assert after_data["total_fat_g"] == "8.00"

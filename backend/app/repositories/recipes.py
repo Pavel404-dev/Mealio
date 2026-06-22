@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 
 from sqlalchemy import delete, select
@@ -78,6 +80,25 @@ class RecipesRepository:
         result = await self.db.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    async def list_by_ingredient_id(
+        self,
+        ingredient_id: uuid.UUID,
+    ) -> list[Recipe]:
+        stmt = (
+            select(Recipe)
+            .join(RecipeIngredient)
+            .options(
+                selectinload(Recipe.recipe_ingredients)
+                .selectinload(RecipeIngredient.ingredient)
+                .selectinload(Ingredient.nutrition_value)
+            )
+            .where(RecipeIngredient.ingredient_id == ingredient_id)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().unique().all())
 
     async def create(
         self,
@@ -167,6 +188,28 @@ class RecipesRepository:
             raise RuntimeError("Updated recipe was not found")
 
         return updated
+
+    async def update_nutrition_totals_for_loaded_recipes(
+        self,
+        *,
+        recipes: list[Recipe],
+        recipe_totals: dict[uuid.UUID, RecipeNutritionTotals],
+    ) -> None:
+        if not recipes:
+            return
+
+        for recipe in recipes:
+            nutrition_totals = recipe_totals.get(recipe.id)
+
+            if nutrition_totals is None:
+                continue
+
+            recipe.total_calories = nutrition_totals.total_calories
+            recipe.total_protein_g = nutrition_totals.total_protein_g
+            recipe.total_carbs_g = nutrition_totals.total_carbs_g
+            recipe.total_fat_g = nutrition_totals.total_fat_g
+
+        await self.db.commit()
 
     async def is_used_in_meal_plan_items(self, recipe_id: uuid.UUID) -> bool:
         stmt = (

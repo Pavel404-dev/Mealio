@@ -352,3 +352,278 @@ async def test_recipe_created_without_ingredients_has_zero_nutrition_totals(
     assert_decimal(data["total_protein_g"], "0")
     assert_decimal(data["total_carbs_g"], "0")
     assert_decimal(data["total_fat_g"], "0")
+
+
+@pytest.mark.asyncio
+async def test_recipe_nutrition_totals_are_recalculated_when_ingredient_nutrition_value_is_updated(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    ingredient = await create_test_ingredient(
+        client,
+        name=f"Recalc Chicken {uuid4()}",
+        nutrition_value={
+            "calories": "100",
+            "protein_g": "10",
+            "carbs_g": "5",
+            "fat_g": "2",
+            "portion_g": "100",
+        },
+    )
+
+    create_response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "Recipe Using Updated Ingredient",
+            "instructions": "Cook.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient["id"],
+                    "quantity_g": "200",
+                }
+            ],
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    recipe_id = create_response.json()["id"]
+
+    assert_decimal(create_response.json()["total_calories"], "200")
+    assert_decimal(create_response.json()["total_protein_g"], "20")
+    assert_decimal(create_response.json()["total_carbs_g"], "10")
+    assert_decimal(create_response.json()["total_fat_g"], "4")
+
+    update_ingredient_response = await client.patch(
+        f"{INGREDIENTS_URL}/{ingredient['id']}",
+        json={
+            "nutrition_value": {
+                "calories": "150",
+                "protein_g": "20",
+                "carbs_g": "10",
+                "fat_g": "4",
+                "portion_g": "100",
+            }
+        },
+    )
+
+    assert update_ingredient_response.status_code == 200
+
+    recipe_response = await client.get(
+        f"{RECIPES_URL}/{recipe_id}",
+        headers=headers,
+    )
+
+    assert recipe_response.status_code == 200
+
+    data = recipe_response.json()
+
+    assert_decimal(data["total_calories"], "300")
+    assert_decimal(data["total_protein_g"], "40")
+    assert_decimal(data["total_carbs_g"], "20")
+    assert_decimal(data["total_fat_g"], "8")
+
+
+@pytest.mark.asyncio
+async def test_ingredient_nutrition_update_recalculates_multiple_recipes_using_this_ingredient(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    ingredient = await create_test_ingredient(
+        client,
+        name=f"Shared Ingredient {uuid4()}",
+        nutrition_value={
+            "calories": "100",
+            "protein_g": "10",
+            "carbs_g": "5",
+            "fat_g": "2",
+            "portion_g": "100",
+        },
+    )
+
+    first_recipe_response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "First Recipe With Shared Ingredient",
+            "instructions": "Cook first recipe.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient["id"],
+                    "quantity_g": "100",
+                }
+            ],
+        },
+    )
+
+    assert first_recipe_response.status_code == 201
+
+    second_recipe_response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "Second Recipe With Shared Ingredient",
+            "instructions": "Cook second recipe.",
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient["id"],
+                    "quantity_g": "300",
+                }
+            ],
+        },
+    )
+
+    assert second_recipe_response.status_code == 201
+
+    first_recipe_id = first_recipe_response.json()["id"]
+    second_recipe_id = second_recipe_response.json()["id"]
+
+    update_ingredient_response = await client.patch(
+        f"{INGREDIENTS_URL}/{ingredient['id']}",
+        json={
+            "nutrition_value": {
+                "calories": "200",
+                "protein_g": "30",
+                "carbs_g": "10",
+                "fat_g": "5",
+                "portion_g": "100",
+            }
+        },
+    )
+
+    assert update_ingredient_response.status_code == 200
+
+    first_recipe_get_response = await client.get(
+        f"{RECIPES_URL}/{first_recipe_id}",
+        headers=headers,
+    )
+    second_recipe_get_response = await client.get(
+        f"{RECIPES_URL}/{second_recipe_id}",
+        headers=headers,
+    )
+
+    assert first_recipe_get_response.status_code == 200
+    assert second_recipe_get_response.status_code == 200
+
+    first_recipe = first_recipe_get_response.json()
+    second_recipe = second_recipe_get_response.json()
+
+    assert_decimal(first_recipe["total_calories"], "200")
+    assert_decimal(first_recipe["total_protein_g"], "30")
+    assert_decimal(first_recipe["total_carbs_g"], "10")
+    assert_decimal(first_recipe["total_fat_g"], "5")
+
+    assert_decimal(second_recipe["total_calories"], "600")
+    assert_decimal(second_recipe["total_protein_g"], "90")
+    assert_decimal(second_recipe["total_carbs_g"], "30")
+    assert_decimal(second_recipe["total_fat_g"], "15")
+
+
+@pytest.mark.asyncio
+async def test_ingredient_nutrition_update_does_not_affect_recipes_without_this_ingredient(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    updated_ingredient = await create_test_ingredient(
+        client,
+        name=f"Updated Ingredient {uuid4()}",
+        nutrition_value={
+            "calories": "100",
+            "protein_g": "10",
+            "carbs_g": "5",
+            "fat_g": "2",
+            "portion_g": "100",
+        },
+    )
+    untouched_ingredient = await create_test_ingredient(
+        client,
+        name=f"Untouched Ingredient {uuid4()}",
+        nutrition_value={
+            "calories": "50",
+            "protein_g": "5",
+            "carbs_g": "10",
+            "fat_g": "1",
+            "portion_g": "100",
+        },
+    )
+
+    affected_recipe_response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "Affected Recipe",
+            "instructions": "Cook affected recipe.",
+            "ingredients": [
+                {
+                    "ingredient_id": updated_ingredient["id"],
+                    "quantity_g": "100",
+                }
+            ],
+        },
+    )
+
+    assert affected_recipe_response.status_code == 201
+
+    unaffected_recipe_response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "Unaffected Recipe",
+            "instructions": "Cook unaffected recipe.",
+            "ingredients": [
+                {
+                    "ingredient_id": untouched_ingredient["id"],
+                    "quantity_g": "100",
+                }
+            ],
+        },
+    )
+
+    assert unaffected_recipe_response.status_code == 201
+
+    affected_recipe_id = affected_recipe_response.json()["id"]
+    unaffected_recipe_id = unaffected_recipe_response.json()["id"]
+
+    update_ingredient_response = await client.patch(
+        f"{INGREDIENTS_URL}/{updated_ingredient['id']}",
+        json={
+            "nutrition_value": {
+                "calories": "300",
+                "protein_g": "40",
+                "carbs_g": "15",
+                "fat_g": "8",
+                "portion_g": "100",
+            }
+        },
+    )
+
+    assert update_ingredient_response.status_code == 200
+
+    affected_recipe_get_response = await client.get(
+        f"{RECIPES_URL}/{affected_recipe_id}",
+        headers=headers,
+    )
+    unaffected_recipe_get_response = await client.get(
+        f"{RECIPES_URL}/{unaffected_recipe_id}",
+        headers=headers,
+    )
+
+    assert affected_recipe_get_response.status_code == 200
+    assert unaffected_recipe_get_response.status_code == 200
+
+    affected_recipe = affected_recipe_get_response.json()
+    unaffected_recipe = unaffected_recipe_get_response.json()
+
+    assert_decimal(affected_recipe["total_calories"], "300")
+    assert_decimal(affected_recipe["total_protein_g"], "40")
+    assert_decimal(affected_recipe["total_carbs_g"], "15")
+    assert_decimal(affected_recipe["total_fat_g"], "8")
+
+    assert_decimal(unaffected_recipe["total_calories"], "50")
+    assert_decimal(unaffected_recipe["total_protein_g"], "5")
+    assert_decimal(unaffected_recipe["total_carbs_g"], "10")
+    assert_decimal(unaffected_recipe["total_fat_g"], "1")

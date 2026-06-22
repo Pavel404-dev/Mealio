@@ -5,12 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.exceptions import DuplicateResourceError
 from app.repositories.ingredients import IngredientsRepository
+from app.repositories.recipes import RecipesRepository
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.services.recipe_nutrition import RecipeNutritionCalculator
 
 
 class IngredientsService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = IngredientsRepository(db)
+        self.recipes_repository = RecipesRepository(db)
+        self.nutrition_calculator = RecipeNutritionCalculator()
 
     async def list_ingredients(
         self,
@@ -70,12 +74,17 @@ class IngredientsService:
                 )
 
         try:
-            return await self.repository.update(ingredient, data)
+            updated_ingredient = await self.repository.update(ingredient, data)
         except DuplicateResourceError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
+        if data.nutrition_value is not None:
+            await self._recalculate_recipes_using_ingredient(ingredient_id)
+
+        return updated_ingredient
 
     async def delete_ingredient(self, ingredient_id: uuid.UUID) -> None:
         await self.get_ingredient(ingredient_id)
@@ -90,3 +99,19 @@ class IngredientsService:
             )
 
         await self.repository.delete(ingredient_id)
+
+    async def _recalculate_recipes_using_ingredient(
+        self,
+        ingredient_id: uuid.UUID,
+    ) -> None:
+        recipes = await self.recipes_repository.list_by_ingredient_id(ingredient_id)
+
+        recipe_totals = {
+            recipe.id: self.nutrition_calculator.calculate_from_recipe(recipe)
+            for recipe in recipes
+        }
+
+        await self.recipes_repository.update_nutrition_totals_for_loaded_recipes(
+            recipes=recipes,
+            recipe_totals=recipe_totals,
+        )
