@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,26 +38,39 @@ class RecipesRepository:
         *,
         search: str | None = None,
         diet_type: str | None = None,
+        min_calories: Decimal | None = None,
+        max_calories: Decimal | None = None,
         created_by_user_id: uuid.UUID | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Recipe]:
-        stmt = (
-            select(Recipe)
-            .options(selectinload(Recipe.recipe_ingredients))
-            .order_by(Recipe.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = select(Recipe).options(selectinload(Recipe.recipe_ingredients))
+
+        if created_by_user_id is not None:
+            stmt = stmt.where(Recipe.created_by_user_id == created_by_user_id)
 
         if search:
-            stmt = stmt.where(Recipe.title.ilike(f"%{search}%"))
+            search_term = search.strip()
+
+            if search_term:
+                search_pattern = f"%{search_term}%"
+                stmt = stmt.where(
+                    or_(
+                        Recipe.title.ilike(search_pattern),
+                        func.coalesce(Recipe.description, "").ilike(search_pattern),
+                    )
+                )
 
         if diet_type:
             stmt = stmt.where(Recipe.diet_type == diet_type)
 
-        if created_by_user_id:
-            stmt = stmt.where(Recipe.created_by_user_id == created_by_user_id)
+        if min_calories is not None:
+            stmt = stmt.where(Recipe.total_calories >= min_calories)
+
+        if max_calories is not None:
+            stmt = stmt.where(Recipe.total_calories <= max_calories)
+
+        stmt = stmt.order_by(Recipe.created_at.desc()).limit(limit).offset(offset)
 
         result = await self.db.execute(stmt)
 

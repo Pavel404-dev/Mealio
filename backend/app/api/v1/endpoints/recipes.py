@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +15,10 @@ router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
 @router.get("", response_model=list[RecipeRead])
 async def list_current_user_recipes(
-    search: str | None = Query(default=None, min_length=1),
-    diet_type: str | None = Query(default=None, min_length=1),
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    diet_type: str | None = Query(default=None, min_length=1, max_length=100),
+    min_calories: Decimal | None = Query(default=None, ge=0),
+    max_calories: Decimal | None = Query(default=None, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -27,6 +30,8 @@ async def list_current_user_recipes(
         user_id=current_user.id,
         search=search,
         diet_type=diet_type,
+        min_calories=min_calories,
+        max_calories=max_calories,
         limit=limit,
         offset=offset,
     )
