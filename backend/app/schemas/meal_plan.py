@@ -69,6 +69,16 @@ class MealPlanItemRead(MealPlanItemBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MealPlanItemCalendarRead(BaseModel):
+    id: uuid.UUID
+    meal_plan_id: uuid.UUID
+    meal_plan_title: str
+    recipe_id: uuid.UUID
+    recipe_title: str
+    planned_date: date
+    meal_type: str
+
+
 class MealPlanBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     start_date: date

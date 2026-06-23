@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -108,6 +108,55 @@ class MealPlansRepository:
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def list_items_for_user_calendar(
+        self,
+        *,
+        user_id: uuid.UUID,
+        from_date: date,
+        to_date: date,
+        meal_type: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[dict]:
+        stmt = (
+            select(
+                MealPlanItem.id.label("id"),
+                MealPlanItem.meal_plan_id.label("meal_plan_id"),
+                MealPlan.title.label("meal_plan_title"),
+                MealPlanItem.recipe_id.label("recipe_id"),
+                Recipe.title.label("recipe_title"),
+                MealPlanItem.planned_date.label("planned_date"),
+                MealPlanItem.meal_type.label("meal_type"),
+            )
+            .select_from(MealPlanItem)
+            .join(MealPlan, MealPlan.id == MealPlanItem.meal_plan_id)
+            .join(Recipe, Recipe.id == MealPlanItem.recipe_id)
+            .where(
+                MealPlan.user_id == user_id,
+                MealPlanItem.planned_date >= from_date,
+                MealPlanItem.planned_date <= to_date,
+            )
+        )
+
+        if meal_type is not None:
+            stmt = stmt.where(
+                func.lower(MealPlanItem.meal_type) == normalize_meal_type(meal_type)
+            )
+
+        stmt = (
+            stmt.order_by(
+                MealPlanItem.planned_date.asc(),
+                MealPlanItem.meal_type.asc(),
+                MealPlanItem.id.asc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return [dict(row._mapping) for row in result.all()]
 
     async def get_by_id(
         self,

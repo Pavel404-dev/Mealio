@@ -12,6 +12,7 @@ from app.repositories.meal_plans import (
 )
 from app.schemas.meal_plan import (
     MealPlanCreate,
+    MealPlanItemCalendarRead,
     MealPlanItemCreate,
     MealPlanItemUpdate,
     MealPlanUpdate,
@@ -46,6 +47,44 @@ class MealPlansService:
             limit=limit,
             offset=offset,
         )
+
+    async def list_user_meal_plan_items_calendar(
+        self,
+        *,
+        user_id: uuid.UUID,
+        from_date: date,
+        to_date: date,
+        meal_type: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[MealPlanItemCalendarRead]:
+        await self._validate_user_exists(user_id)
+        self._validate_date_filters(
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+        normalized_meal_type = None
+
+        if meal_type is not None:
+            normalized_meal_type = normalize_meal_type(meal_type)
+
+            if normalized_meal_type == "":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Meal type cannot be empty",
+                )
+
+        items = await self.repository.list_items_for_user_calendar(
+            user_id=user_id,
+            from_date=from_date,
+            to_date=to_date,
+            meal_type=normalized_meal_type,
+            limit=limit,
+            offset=offset,
+        )
+
+        return [MealPlanItemCalendarRead(**item) for item in items]
 
     async def get_meal_plan(
         self,
