@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,12 +26,26 @@ class RecipesService:
         user_id: uuid.UUID,
         search: str | None = None,
         diet_type: str | None = None,
+        min_calories: Decimal | None = None,
+        max_calories: Decimal | None = None,
         limit: int = 50,
         offset: int = 0,
     ):
+        if (
+            min_calories is not None
+            and max_calories is not None
+            and min_calories > max_calories
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="min_calories must be less than or equal to max_calories",
+            )
+
         return await self.repository.list(
             search=search,
             diet_type=diet_type,
+            min_calories=min_calories,
+            max_calories=max_calories,
             created_by_user_id=user_id,
             limit=limit,
             offset=offset,
