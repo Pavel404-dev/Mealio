@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -70,6 +70,9 @@ class MealPlansRepository:
         self,
         *,
         user_id: uuid.UUID,
+        search: str | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[MealPlan]:
@@ -77,7 +80,27 @@ class MealPlansRepository:
             select(MealPlan)
             .options(selectinload(MealPlan.items))
             .where(MealPlan.user_id == user_id)
-            .order_by(MealPlan.start_date.desc(), MealPlan.created_at.desc())
+        )
+
+        if search:
+            search_term = search.strip()
+
+            if search_term:
+                stmt = stmt.where(MealPlan.title.ilike(f"%{search_term}%"))
+
+        if from_date is not None:
+            stmt = stmt.where(
+                or_(
+                    MealPlan.end_date.is_(None),
+                    MealPlan.end_date >= from_date,
+                )
+            )
+
+        if to_date is not None:
+            stmt = stmt.where(MealPlan.start_date <= to_date)
+
+        stmt = (
+            stmt.order_by(MealPlan.start_date.desc(), MealPlan.created_at.desc())
             .limit(limit)
             .offset(offset)
         )

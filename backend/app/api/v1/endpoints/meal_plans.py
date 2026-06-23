@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,9 @@ router = APIRouter(
 
 @router.get("", response_model=list[MealPlanRead])
 async def list_current_user_meal_plans(
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -33,6 +37,9 @@ async def list_current_user_meal_plans(
 
     return await service.list_user_meal_plans(
         user_id=current_user.id,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
         limit=limit,
         offset=offset,
     )
