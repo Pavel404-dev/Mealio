@@ -26,13 +26,23 @@ class MealPlansService:
         self,
         *,
         user_id: uuid.UUID,
+        search: str | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
     ):
         await self._validate_user_exists(user_id)
+        self._validate_date_filters(
+            from_date=from_date,
+            to_date=to_date,
+        )
 
         return await self.repository.list_for_user(
             user_id=user_id,
+            search=search,
+            from_date=from_date,
+            to_date=to_date,
             limit=limit,
             offset=offset,
         )
@@ -270,6 +280,18 @@ class MealPlansService:
             )
 
         await self.repository.delete_item(item.id)
+
+    def _validate_date_filters(
+        self,
+        *,
+        from_date: date | None,
+        to_date: date | None,
+    ) -> None:
+        if from_date is not None and to_date is not None and from_date > to_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="from_date must be less than or equal to to_date",
+            )
 
     async def _validate_user_exists(self, user_id: uuid.UUID) -> None:
         user = await self.repository.get_user(user_id)

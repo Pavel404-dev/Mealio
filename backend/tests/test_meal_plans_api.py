@@ -70,15 +70,23 @@ async def create_test_recipe(
 async def create_test_meal_plan(
     client: AsyncClient,
     headers: dict[str, str],
+    *,
+    title: str = "Weekly Meal Plan",
+    start_date: str = "2026-05-18",
+    end_date: str | None = "2026-05-24",
 ) -> dict:
+    payload = {
+        "title": title,
+        "start_date": start_date,
+    }
+
+    if end_date is not None:
+        payload["end_date"] = end_date
+
     response = await client.post(
         MEAL_PLANS_URL,
         headers=headers,
-        json={
-            "title": "Weekly Meal Plan",
-            "start_date": "2026-05-18",
-            "end_date": "2026-05-24",
-        },
+        json=payload,
     )
 
     assert response.status_code == 201
@@ -371,6 +379,469 @@ async def test_list_get_update_and_delete_meal_plan(
 
     assert missing_response.status_code == 404
     assert missing_response.json()["detail"] == "Meal plan not found"
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_searches_by_title(client: AsyncClient) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Fitness Weekly Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Study Meal Plan",
+        start_date="2026-05-25",
+        end_date="2026-05-31",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "search": "Fitness",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "Fitness Weekly Plan"
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_search_is_case_insensitive(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Fitness Weekly Plan",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Study Meal Plan",
+        start_date="2026-05-25",
+        end_date="2026-05-31",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "search": "fItNeSs",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "Fitness Weekly Plan"
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_search_returns_empty_list(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Fitness Weekly Plan",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "search": "missing-plan",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_filters_by_from_date_only(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Past Plan",
+        start_date="2026-05-01",
+        end_date="2026-05-07",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Future Plan",
+        start_date="2026-05-25",
+        end_date="2026-05-31",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "from_date": "2026-05-21",
+        },
+    )
+
+    assert response.status_code == 200
+
+    titles = {item["title"] for item in response.json()}
+
+    assert titles == {"Future Plan"}
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_filters_by_to_date_only(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Past Plan",
+        start_date="2026-05-01",
+        end_date="2026-05-07",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Current Plan",
+        start_date="2026-05-10",
+        end_date="2026-05-20",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "to_date": "2026-05-09",
+        },
+    )
+
+    assert response.status_code == 200
+
+    titles = {item["title"] for item in response.json()}
+
+    assert titles == {"Past Plan"}
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_filters_by_overlapping_date_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Past Plan",
+        start_date="2026-05-01",
+        end_date="2026-05-07",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Current Plan",
+        start_date="2026-05-10",
+        end_date="2026-05-20",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Future Plan",
+        start_date="2026-05-25",
+        end_date="2026-05-31",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "from_date": "2026-05-06",
+            "to_date": "2026-05-12",
+        },
+    )
+
+    assert response.status_code == 200
+
+    titles = {item["title"] for item in response.json()}
+
+    assert titles == {"Past Plan", "Current Plan"}
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_date_filter_returns_empty_list_when_no_overlap(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="May Plan",
+        start_date="2026-05-01",
+        end_date="2026-05-07",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "from_date": "2026-06-01",
+            "to_date": "2026-06-05",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_combines_search_and_date_filters(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Fitness May Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Fitness June Plan",
+        start_date="2026-06-01",
+        end_date="2026-06-07",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Study May Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "search": "Fitness",
+            "from_date": "2026-05-20",
+            "to_date": "2026-05-21",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "Fitness May Plan"
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_pagination_with_limit_and_offset(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Old Plan",
+        start_date="2026-05-01",
+        end_date="2026-05-07",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="Middle Plan",
+        start_date="2026-05-08",
+        end_date="2026-05-14",
+    )
+    await create_test_meal_plan(
+        client,
+        headers,
+        title="New Plan",
+        start_date="2026-05-15",
+        end_date="2026-05-21",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "limit": 1,
+            "offset": 1,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "Middle Plan"
+
+
+@pytest.mark.asyncio
+async def test_current_user_sees_only_own_filtered_meal_plans(
+    client: AsyncClient,
+) -> None:
+    first_user, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-filter-user-{uuid4()}@example.com",
+    )
+    second_user, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-filter-user-{uuid4()}@example.com",
+    )
+
+    await create_test_meal_plan(
+        client,
+        first_headers,
+        title="Shared Title Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+    await create_test_meal_plan(
+        client,
+        second_headers,
+        title="Shared Title Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=second_headers,
+        params={
+            "search": "Shared",
+            "from_date": "2026-05-20",
+            "to_date": "2026-05-21",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["user_id"] == second_user["id"]
+    assert data[0]["user_id"] != first_user["id"]
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_find_another_users_meal_plan_through_search(
+    client: AsyncClient,
+) -> None:
+    _, first_headers = await create_authenticated_user(
+        client,
+        email=f"first-search-user-{uuid4()}@example.com",
+    )
+    _, second_headers = await create_authenticated_user(
+        client,
+        email=f"second-search-user-{uuid4()}@example.com",
+    )
+
+    await create_test_meal_plan(
+        client,
+        first_headers,
+        title="Secret Other User Plan",
+        start_date="2026-05-18",
+        end_date="2026-05-24",
+    )
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=second_headers,
+        params={
+            "search": "Secret",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_rejects_invalid_limit(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "limit": 0,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_rejects_invalid_offset(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "offset": -1,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_meal_plans_rejects_from_date_greater_than_to_date(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(
+        MEAL_PLANS_URL,
+        headers=headers,
+        params={
+            "from_date": "2026-06-10",
+            "to_date": "2026-06-01",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "from_date must be less than or equal to to_date"
+    )
 
 
 @pytest.mark.asyncio
