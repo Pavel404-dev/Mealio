@@ -1,0 +1,37 @@
+from datetime import date
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.models.user import User
+from app.schemas.meal_plan import MealPlanItemCalendarRead
+from app.services.meal_plans import MealPlansService
+
+router = APIRouter(
+    prefix="/meal-plan-items",
+    tags=["Meal Plan Items"],
+)
+
+
+@router.get("", response_model=list[MealPlanItemCalendarRead])
+async def list_current_user_meal_plan_items_calendar(
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    meal_type: str | None = Query(default=None, min_length=1, max_length=50),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = MealPlansService(db)
+
+    return await service.list_user_meal_plan_items_calendar(
+        user_id=current_user.id,
+        from_date=from_date,
+        to_date=to_date,
+        meal_type=meal_type,
+        limit=limit,
+        offset=offset,
+    )
