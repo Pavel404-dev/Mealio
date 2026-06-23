@@ -13,6 +13,7 @@ from app.schemas.meal_plan import (
     MealPlanItemRead,
     MealPlanItemUpdate,
     MealPlanRead,
+    MealPlanShoppingListItemRead,
     MealPlanUpdate,
 )
 from app.services.meal_plans import MealPlansService
@@ -74,6 +75,31 @@ async def get_meal_plan(
     return await service.get_meal_plan(
         user_id=current_user.id,
         meal_plan_id=meal_plan_id,
+    )
+
+
+@router.get(
+    "/{meal_plan_id}/shopping-list",
+    response_model=list[MealPlanShoppingListItemRead],
+)
+async def get_meal_plan_shopping_list(
+    meal_plan_id: uuid.UUID,
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    meal_type: str | None = Query(default=None, min_length=1, max_length=50),
+    subtract_pantry: bool = Query(default=False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = MealPlansService(db)
+
+    return await service.get_meal_plan_shopping_list(
+        user_id=current_user.id,
+        meal_plan_id=meal_plan_id,
+        from_date=from_date,
+        to_date=to_date,
+        meal_type=meal_type,
+        subtract_pantry=subtract_pantry,
     )
 
 
