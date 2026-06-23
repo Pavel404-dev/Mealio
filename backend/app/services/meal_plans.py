@@ -15,6 +15,7 @@ from app.schemas.meal_plan import (
     MealPlanItemCalendarRead,
     MealPlanItemCreate,
     MealPlanItemUpdate,
+    MealPlanShoppingListItemRead,
     MealPlanUpdate,
 )
 
@@ -85,6 +86,55 @@ class MealPlansService:
         )
 
         return [MealPlanItemCalendarRead(**item) for item in items]
+
+    async def get_meal_plan_shopping_list(
+        self,
+        *,
+        user_id: uuid.UUID,
+        meal_plan_id: uuid.UUID,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        meal_type: str | None = None,
+        subtract_pantry: bool = False,
+    ) -> list[MealPlanShoppingListItemRead]:
+        await self._validate_user_exists(user_id)
+        self._validate_date_filters(
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+        normalized_meal_type = None
+
+        if meal_type is not None:
+            normalized_meal_type = normalize_meal_type(meal_type)
+
+            if normalized_meal_type == "":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Meal type cannot be empty",
+                )
+
+        meal_plan = await self.repository.get_by_id(
+            user_id=user_id,
+            meal_plan_id=meal_plan_id,
+        )
+
+        if meal_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Meal plan not found",
+            )
+
+        items = await self.repository.list_shopping_list_for_meal_plan(
+            user_id=user_id,
+            meal_plan_id=meal_plan.id,
+            from_date=from_date,
+            to_date=to_date,
+            meal_type=normalized_meal_type,
+            subtract_pantry=subtract_pantry,
+        )
+
+        return [MealPlanShoppingListItemRead(**item) for item in items]
 
     async def get_meal_plan(
         self,
