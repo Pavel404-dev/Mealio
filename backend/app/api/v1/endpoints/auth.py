@@ -9,8 +9,9 @@ from app.schemas.auth import (
     UserLogin,
     UserRegister,
 )
-from app.schemas.user import UserRead
+from app.schemas.user import UserRead, UserUpdate
 from app.services.auth import AuthService
+from app.services.users import UsersService
 
 
 router = APIRouter(
@@ -54,3 +55,20 @@ async def read_current_user(
     current_user: User = Depends(get_current_user),
 ):
     return current_user
+
+
+@router.patch(
+    "/me",
+    response_model=UserRead,
+)
+async def update_current_user(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = UsersService(db)
+
+    return await service.update_user(
+        user_id=current_user.id,
+        data=payload,
+    )

@@ -1,8 +1,10 @@
 import jwt
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.models.user import User
 
 
 REGISTER_URL = "/api/v1/auth/register"
@@ -104,16 +106,16 @@ async def test_login_with_unknown_email_returns_401(
 @pytest.mark.asyncio
 async def test_login_user_without_password_hash_returns_401(
     client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
-    create_user_response = await client.post(
-        "/api/v1/users",
-        json={
-            "email": "profile-only@example.com",
-            "full_name": "Profile Only User",
-        },
+    user = User(
+        email="profile-only@example.com",
+        full_name="Profile Only User",
+        password_hash=None,
     )
 
-    assert create_user_response.status_code == 201
+    db_session.add(user)
+    await db_session.commit()
 
     login_response = await client.post(
         LOGIN_URL,

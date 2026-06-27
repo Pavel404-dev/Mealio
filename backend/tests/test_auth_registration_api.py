@@ -194,7 +194,7 @@ async def test_register_allows_null_full_name(
 
 
 @pytest.mark.asyncio
-async def test_existing_users_endpoint_still_works_without_password(
+async def test_legacy_users_endpoint_no_longer_creates_passwordless_users(
     client: AsyncClient,
 ) -> None:
     response = await client.post(
@@ -205,5 +205,4 @@ async def test_existing_users_endpoint_still_works_without_password(
         },
     )
 
-    assert response.status_code == 201
-    assert response.json()["email"] == "profile@example.com"
+    assert response.status_code == 404
