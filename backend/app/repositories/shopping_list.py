@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import and_, case, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ingredient import Ingredient, UserIngredient
@@ -99,3 +100,75 @@ class ShoppingListRepository:
         result = await self.db.execute(stmt)
 
         return [dict(row._mapping) for row in result.all()]
+
+    async def add_missing_items_to_pantry(
+        self,
+        *,
+        user_id: uuid.UUID,
+        items: list[dict],
+    ) -> list[dict]:
+        if not items:
+            return []
+
+        ingredient_ids = [item["ingredient_id"] for item in items]
+
+        existing_result = await self.db.execute(
+            select(UserIngredient.ingredient_id).where(
+                UserIngredient.user_id == user_id,
+                UserIngredient.ingredient_id.in_(ingredient_ids),
+            )
+        )
+        existing_ingredient_ids = set(existing_result.scalars().all())
+
+        updated_items: list[dict] = []
+
+        try:
+            for item in items:
+                added_quantity_g = self._to_decimal(item["missing_quantity_g"])
+
+                insert_stmt = pg_insert(UserIngredient).values(
+                    user_id=user_id,
+                    ingredient_id=item["ingredient_id"],
+                    quantity_g=added_quantity_g,
+                )
+
+                upsert_stmt = insert_stmt.on_conflict_do_update(
+                    constraint="uq_user_ingredient",
+                    set_={
+                        "quantity_g": (
+                            UserIngredient.quantity_g + insert_stmt.excluded.quantity_g
+                        ),
+                        "updated_at": func.now(),
+                    },
+                ).returning(
+                    UserIngredient.ingredient_id.label("ingredient_id"),
+                    UserIngredient.quantity_g.label("quantity_g"),
+                )
+
+                result = await self.db.execute(upsert_stmt)
+                row = result.one()
+
+                updated_items.append(
+                    {
+                        "ingredient_id": row.ingredient_id,
+                        "ingredient_name": item["ingredient_name"],
+                        "added_quantity_g": added_quantity_g,
+                        "new_pantry_quantity_g": row.quantity_g,
+                        "was_existing": item["ingredient_id"]
+                        in existing_ingredient_ids,
+                    }
+                )
+
+            await self.db.commit()
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+        return updated_items
+
+    def _to_decimal(self, value) -> Decimal:
+        if isinstance(value, Decimal):
+            return value
+
+        return Decimal(str(value))
