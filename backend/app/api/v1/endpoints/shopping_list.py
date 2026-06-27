@@ -17,12 +17,12 @@ router = APIRouter(
 
 @router.get("", response_model=list[ShoppingListItemRead])
 async def get_current_user_combined_shopping_list(
-        from_date: date = Query(...),
-        to_date: date = Query(...),
-        meal_type: str | None = Query(default=None, min_length=1, max_length=50),
-        subtract_pantry: bool = Query(default=False),
-        current_user: User = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db),
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    meal_type: str | None = Query(default=None, min_length=1, max_length=50),
+    subtract_pantry: bool = Query(default=False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     service = ShoppingListService(db)
 

@@ -14,13 +14,13 @@ class ShoppingListService:
         self.repository = ShoppingListRepository(db)
 
     async def get_current_user_combined_shopping_list(
-            self,
-            *,
-            user_id: uuid.UUID,
-            from_date: date,
-            to_date: date,
-            meal_type: str | None = None,
-            subtract_pantry: bool = False,
+        self,
+        *,
+        user_id: uuid.UUID,
+        from_date: date,
+        to_date: date,
+        meal_type: str | None = None,
+        subtract_pantry: bool = False,
     ) -> list[ShoppingListItemRead]:
         self._validate_date_range(
             from_date=from_date,
@@ -49,10 +49,10 @@ class ShoppingListService:
         return [ShoppingListItemRead(**item) for item in items]
 
     def _validate_date_range(
-            self,
-            *,
-            from_date: date,
-            to_date: date,
+        self,
+        *,
+        from_date: date,
+        to_date: date,
     ) -> None:
         if from_date > to_date:
             raise HTTPException(

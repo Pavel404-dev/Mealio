@@ -16,13 +16,13 @@ class ShoppingListRepository:
         self.db = db
 
     async def list_combined_for_user(
-            self,
-            *,
-            user_id: uuid.UUID,
-            from_date: date,
-            to_date: date,
-            meal_type: str | None = None,
-            subtract_pantry: bool = False,
+        self,
+        *,
+        user_id: uuid.UUID,
+        from_date: date,
+        to_date: date,
+        meal_type: str | None = None,
+        subtract_pantry: bool = False,
     ) -> list[dict]:
         required_quantity = func.coalesce(
             func.sum(RecipeIngredient.quantity_g),
@@ -42,7 +42,7 @@ class ShoppingListRepository:
                 MealPlan.user_id == user_id,
                 MealPlanItem.planned_date >= from_date,
                 MealPlanItem.planned_date <= to_date,
-                )
+            )
         )
 
         if meal_type is not None:
@@ -88,7 +88,7 @@ class ShoppingListRepository:
                 and_(
                     UserIngredient.user_id == user_id,
                     UserIngredient.ingredient_id == Ingredient.id,
-                    ),
+                ),
             )
 
         stmt = stmt.order_by(

@@ -15,10 +15,10 @@ SHOPPING_LIST_URL = "/api/v1/shopping-list"
 
 
 async def create_authenticated_user(
-        client: AsyncClient,
-        *,
-        email: str | None = None,
-        password: str = "Mealio-password-123",
+    client: AsyncClient,
+    *,
+    email: str | None = None,
+    password: str = "Mealio-password-123",
 ) -> tuple[dict, dict[str, str]]:
     if email is None:
         email = f"combined-shopping-user-{uuid4()}@example.com"
@@ -52,10 +52,10 @@ async def create_authenticated_user(
 
 
 async def create_test_ingredient(
-        client: AsyncClient,
-        *,
-        name: str,
-        category: str | None = None,
+    client: AsyncClient,
+    *,
+    name: str,
+    category: str | None = None,
 ) -> dict:
     response = await client.post(
         INGREDIENTS_URL,
@@ -78,11 +78,11 @@ async def create_test_ingredient(
 
 
 async def create_test_recipe(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        title: str,
-        ingredients: list[dict[str, str]],
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    title: str,
+    ingredients: list[dict[str, str]],
 ) -> dict:
     response = await client.post(
         RECIPES_URL,
@@ -101,12 +101,12 @@ async def create_test_recipe(
 
 
 async def create_test_meal_plan(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        title: str = "Combined Weekly Plan",
-        start_date: str = "2026-05-18",
-        end_date: str | None = "2026-05-24",
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    title: str = "Combined Weekly Plan",
+    start_date: str = "2026-05-18",
+    end_date: str | None = "2026-05-24",
 ) -> dict:
     payload = {
         "title": title,
@@ -128,13 +128,13 @@ async def create_test_meal_plan(
 
 
 async def add_meal_plan_item(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        meal_plan_id: str,
-        recipe_id: str,
-        planned_date: str,
-        meal_type: str,
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    meal_plan_id: str,
+    recipe_id: str,
+    planned_date: str,
+    meal_type: str,
 ) -> dict:
     response = await client.post(
         f"{MEAL_PLANS_URL}/{meal_plan_id}/items",
@@ -152,11 +152,11 @@ async def add_meal_plan_item(
 
 
 async def add_pantry_item(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        ingredient_id: str,
-        quantity_g: str,
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    ingredient_id: str,
+    quantity_g: str,
 ) -> dict:
     response = await client.post(
         PANTRY_URL,
@@ -177,8 +177,8 @@ def decimal_value(value) -> Decimal:
 
 
 def get_shopping_list_item_by_ingredient_id(
-        data: list[dict],
-        ingredient_id: str,
+    data: list[dict],
+    ingredient_id: str,
 ) -> dict:
     for item in data:
         if item["ingredient_id"] == ingredient_id:
@@ -189,7 +189,7 @@ def get_shopping_list_item_by_ingredient_id(
 
 @pytest.mark.asyncio
 async def test_get_current_user_combined_shopping_list_success(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -265,7 +265,7 @@ async def test_get_current_user_combined_shopping_list_success(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_groups_same_ingredient_from_multiple_meal_plans(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -335,7 +335,7 @@ async def test_get_combined_shopping_list_groups_same_ingredient_from_multiple_m
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_groups_same_ingredient_from_multiple_recipes(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -406,7 +406,7 @@ async def test_get_combined_shopping_list_groups_same_ingredient_from_multiple_r
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_filters_by_date_range(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -482,7 +482,7 @@ async def test_get_combined_shopping_list_filters_by_date_range(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_filters_by_meal_type_case_insensitive(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -559,7 +559,7 @@ async def test_get_combined_shopping_list_filters_by_meal_type_case_insensitive(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_empty_date_range_returns_empty_list(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -578,7 +578,7 @@ async def test_get_combined_shopping_list_empty_date_range_returns_empty_list(
 
 @pytest.mark.asyncio
 async def test_current_user_sees_only_own_combined_shopping_list(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, first_headers = await create_authenticated_user(
         client,
@@ -666,7 +666,7 @@ async def test_current_user_sees_only_own_combined_shopping_list(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_requires_authentication(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(
         SHOPPING_LIST_URL,
@@ -681,7 +681,7 @@ async def test_get_combined_shopping_list_requires_authentication(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_rejects_invalid_token(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(
         SHOPPING_LIST_URL,
@@ -700,7 +700,7 @@ async def test_get_combined_shopping_list_rejects_invalid_token(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_rejects_invalid_date_range(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -721,7 +721,7 @@ async def test_get_combined_shopping_list_rejects_invalid_date_range(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_requires_from_date(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -738,7 +738,7 @@ async def test_get_combined_shopping_list_requires_from_date(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_requires_to_date(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -755,7 +755,7 @@ async def test_get_combined_shopping_list_requires_to_date(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_rejects_blank_meal_type(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -775,7 +775,7 @@ async def test_get_combined_shopping_list_rejects_blank_meal_type(
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_subtract_pantry_false_returns_required_only(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -834,7 +834,7 @@ async def test_get_combined_shopping_list_subtract_pantry_false_returns_required
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_subtract_pantry_true_subtracts_current_pantry(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -893,7 +893,7 @@ async def test_get_combined_shopping_list_subtract_pantry_true_subtracts_current
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_subtract_pantry_does_not_use_another_users_pantry(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, first_headers = await create_authenticated_user(
         client,
@@ -959,7 +959,7 @@ async def test_get_combined_shopping_list_subtract_pantry_does_not_use_another_u
 
 @pytest.mark.asyncio
 async def test_get_combined_shopping_list_missing_quantity_never_goes_below_zero(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
