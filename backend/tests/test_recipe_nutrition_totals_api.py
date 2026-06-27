@@ -53,7 +53,11 @@ async def create_test_ingredient(
     *,
     name: str,
     nutrition_value: dict | None,
+    headers: dict[str, str] | None = None,
 ) -> dict:
+    if headers is None:
+        _, headers = await create_authenticated_user(client)
+
     payload = {
         "name": name,
         "category": "test",
@@ -64,6 +68,7 @@ async def create_test_ingredient(
 
     response = await client.post(
         INGREDIENTS_URL,
+        headers=headers,
         json=payload,
     )
 
@@ -398,6 +403,7 @@ async def test_recipe_nutrition_totals_are_recalculated_when_ingredient_nutritio
 
     update_ingredient_response = await client.patch(
         f"{INGREDIENTS_URL}/{ingredient['id']}",
+        headers=headers,
         json={
             "nutrition_value": {
                 "calories": "150",
@@ -483,6 +489,7 @@ async def test_ingredient_nutrition_update_recalculates_multiple_recipes_using_t
 
     update_ingredient_response = await client.patch(
         f"{INGREDIENTS_URL}/{ingredient['id']}",
+        headers=headers,
         json={
             "nutrition_value": {
                 "calories": "200",
@@ -590,6 +597,7 @@ async def test_ingredient_nutrition_update_does_not_affect_recipes_without_this_
 
     update_ingredient_response = await client.patch(
         f"{INGREDIENTS_URL}/{updated_ingredient['id']}",
+        headers=headers,
         json={
             "nutrition_value": {
                 "calories": "300",

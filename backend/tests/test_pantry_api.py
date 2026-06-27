@@ -52,7 +52,14 @@ async def create_test_ingredient(
     category: str = "grain",
     nutrition_value: dict[str, str] | None = None,
     include_nutrition: bool = True,
+    headers: dict[str, str] | None = None,
 ) -> dict:
+    if headers is None:
+        _, headers = await create_authenticated_user(
+            client,
+            email=f"pantry-ingredient-owner-{uuid4()}@example.com",
+        )
+
     payload = {
         "name": name,
         "category": category,
@@ -67,7 +74,11 @@ async def create_test_ingredient(
             "portion_g": "100",
         }
 
-    response = await client.post("/api/v1/ingredients", json=payload)
+    response = await client.post(
+        "/api/v1/ingredients",
+        headers=headers,
+        json=payload,
+    )
 
     assert response.status_code == 201
 
@@ -454,6 +465,7 @@ async def test_updating_ingredient_nutrition_value_is_reflected_in_pantry_summar
 
     update_response = await client.patch(
         f"/api/v1/ingredients/{ingredient['id']}",
+        headers=headers,
         json={
             "nutrition_value": {
                 "calories": "200",
