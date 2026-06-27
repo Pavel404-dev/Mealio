@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     pantry,
     recipes,
     shopping_list,
+    user_preferences,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -21,3 +22,4 @@ api_router.include_router(meal_plan_items.router)
 api_router.include_router(meal_plans.router)
 api_router.include_router(meal_plan_summaries.router)
 api_router.include_router(shopping_list.router)
+api_router.include_router(user_preferences.router)

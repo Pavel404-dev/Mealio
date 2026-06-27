@@ -64,6 +64,13 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    nutrition_profile = relationship(
+        "UserNutritionProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
     ai_requests = relationship(
         "RecipeAIRequest",
         back_populates="user",
