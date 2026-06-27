@@ -14,6 +14,17 @@ NutritionGapsOverallStatus = Literal[
     "over_target",
     "on_track",
 ]
+NutritionGapsMainIssue = Literal[
+    "calories_under",
+    "calories_over",
+    "protein_under",
+    "protein_over",
+    "carbs_under",
+    "carbs_over",
+    "fat_under",
+    "fat_over",
+    "missing_targets",
+]
 
 
 class MealPlanItemBase(BaseModel):
@@ -140,6 +151,48 @@ class MealPlanNutritionGapsDayRead(BaseModel):
 
     overall_status: NutritionGapsOverallStatus
     missing_targets: list[str] = Field(default_factory=list)
+
+
+class NutritionGapsOverallStatusCountsRead(BaseModel):
+    unknown: int = Field(default=0, ge=0)
+    needs_attention: int = Field(default=0, ge=0)
+    over_target: int = Field(default=0, ge=0)
+    on_track: int = Field(default=0, ge=0)
+
+
+class NutritionGapStatusCountsRead(BaseModel):
+    under: int = Field(default=0, ge=0)
+    met: int = Field(default=0, ge=0)
+    over: int = Field(default=0, ge=0)
+    unknown: int = Field(default=0, ge=0)
+
+
+class NutritionGapsMacroStatusCountsRead(BaseModel):
+    calories: NutritionGapStatusCountsRead
+    protein: NutritionGapStatusCountsRead
+    carbs: NutritionGapStatusCountsRead
+    fat: NutritionGapStatusCountsRead
+
+
+class NutritionGapsAverageRead(BaseModel):
+    calories_gap: Decimal | None = None
+    protein_gap_g: Decimal | None = None
+    carbs_gap_g: Decimal | None = None
+    fat_gap_g: Decimal | None = None
+
+
+class MealPlanNutritionGapsSummaryRead(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+
+    days_count: int = Field(..., ge=0)
+
+    overall_status_counts: NutritionGapsOverallStatusCountsRead
+    macro_status_counts: NutritionGapsMacroStatusCountsRead
+    average_gaps: NutritionGapsAverageRead
+
+    missing_targets: list[str] = Field(default_factory=list)
+    main_issues: list[NutritionGapsMainIssue] = Field(default_factory=list)
 
 
 MealPlanShoppingListItemRead = ShoppingListItemRead
