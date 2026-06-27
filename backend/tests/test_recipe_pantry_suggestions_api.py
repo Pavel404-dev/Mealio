@@ -14,10 +14,10 @@ SUGGESTIONS_URL = f"{RECIPES_URL}/suggestions/from-pantry"
 
 
 async def create_authenticated_user(
-        client: AsyncClient,
-        *,
-        email: str | None = None,
-        password: str = "Mealio-password-123",
+    client: AsyncClient,
+    *,
+    email: str | None = None,
+    password: str = "Mealio-password-123",
 ) -> tuple[dict, dict[str, str]]:
     if email is None:
         email = f"recipe-suggestion-user-{uuid4()}@example.com"
@@ -51,10 +51,10 @@ async def create_authenticated_user(
 
 
 async def create_test_ingredient(
-        client: AsyncClient,
-        *,
-        name: str,
-        category: str | None = None,
+    client: AsyncClient,
+    *,
+    name: str,
+    category: str | None = None,
 ) -> dict:
     response = await client.post(
         INGREDIENTS_URL,
@@ -77,12 +77,12 @@ async def create_test_ingredient(
 
 
 async def create_test_recipe(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        title: str,
-        ingredients: list[dict[str, str]],
-        diet_type: str | None = "balanced",
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    title: str,
+    ingredients: list[dict[str, str]],
+    diet_type: str | None = "balanced",
 ) -> dict:
     payload = {
         "title": title,
@@ -105,11 +105,11 @@ async def create_test_recipe(
 
 
 async def add_pantry_item(
-        client: AsyncClient,
-        *,
-        headers: dict[str, str],
-        ingredient_id: str,
-        quantity_g: str,
+    client: AsyncClient,
+    *,
+    headers: dict[str, str],
+    ingredient_id: str,
+    quantity_g: str,
 ) -> dict:
     response = await client.post(
         PANTRY_URL,
@@ -130,8 +130,8 @@ def decimal_value(value) -> Decimal:
 
 
 def get_suggestion_by_recipe_id(
-        data: list[dict],
-        recipe_id: str,
+    data: list[dict],
+    recipe_id: str,
 ) -> dict:
     for suggestion in data:
         if suggestion["recipe_id"] == recipe_id:
@@ -141,8 +141,8 @@ def get_suggestion_by_recipe_id(
 
 
 def get_missing_ingredient_by_id(
-        data: list[dict],
-        ingredient_id: str,
+    data: list[dict],
+    ingredient_id: str,
 ) -> dict:
     for ingredient in data:
         if ingredient["ingredient_id"] == ingredient_id:
@@ -153,7 +153,7 @@ def get_missing_ingredient_by_id(
 
 @pytest.mark.asyncio
 async def test_get_recipe_suggestions_from_current_user_pantry_success(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -229,7 +229,7 @@ async def test_get_recipe_suggestions_from_current_user_pantry_success(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestion_with_all_ingredients_available_has_100_match(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -286,7 +286,7 @@ async def test_recipe_suggestion_with_all_ingredients_available_has_100_match(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestion_partially_missing_ingredient_returns_difference(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -331,7 +331,7 @@ async def test_recipe_suggestion_partially_missing_ingredient_returns_difference
 
 @pytest.mark.asyncio
 async def test_recipe_suggestion_ingredient_not_in_pantry_returns_full_missing_quantity(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -369,7 +369,7 @@ async def test_recipe_suggestion_ingredient_not_in_pantry_returns_full_missing_q
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_are_sorted_by_best_match_first(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -446,7 +446,7 @@ async def test_recipe_suggestions_are_sorted_by_best_match_first(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_limit_and_offset_work(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -515,7 +515,7 @@ async def test_recipe_suggestions_limit_and_offset_work(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_diet_type_filter_works(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -575,7 +575,7 @@ async def test_recipe_suggestions_diet_type_filter_works(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_min_match_percent_filter_works(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -637,7 +637,7 @@ async def test_recipe_suggestions_min_match_percent_filter_works(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_max_missing_ingredients_filter_works(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -711,7 +711,7 @@ async def test_recipe_suggestions_max_missing_ingredients_filter_works(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_empty_pantry_returns_missing_ingredients(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -755,7 +755,7 @@ async def test_recipe_suggestions_empty_pantry_returns_missing_ingredients(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_current_user_sees_only_own_recipes(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, first_headers = await create_authenticated_user(
         client,
@@ -807,7 +807,7 @@ async def test_recipe_suggestions_current_user_sees_only_own_recipes(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_do_not_use_another_users_pantry(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, first_headers = await create_authenticated_user(
         client,
@@ -862,7 +862,7 @@ async def test_recipe_suggestions_do_not_use_another_users_pantry(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_require_authentication(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(SUGGESTIONS_URL)
 
@@ -871,7 +871,7 @@ async def test_recipe_suggestions_require_authentication(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_reject_invalid_token(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     response = await client.get(
         SUGGESTIONS_URL,
@@ -886,7 +886,7 @@ async def test_recipe_suggestions_reject_invalid_token(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_reject_invalid_limit(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -903,7 +903,7 @@ async def test_recipe_suggestions_reject_invalid_limit(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_reject_invalid_offset(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -920,7 +920,7 @@ async def test_recipe_suggestions_reject_invalid_offset(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_reject_invalid_min_match_percent(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -937,7 +937,7 @@ async def test_recipe_suggestions_reject_invalid_min_match_percent(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_reject_invalid_max_missing_ingredients(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
@@ -954,7 +954,7 @@ async def test_recipe_suggestions_reject_invalid_max_missing_ingredients(
 
 @pytest.mark.asyncio
 async def test_recipe_suggestions_skip_recipes_without_ingredients(
-        client: AsyncClient,
+    client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
