@@ -63,9 +63,14 @@ async def create_test_ingredient(
     carbs_g: str = "0",
     fat_g: str = "3.6",
     portion_g: str = "100",
+    headers: dict[str, str] | None = None,
 ) -> str:
+    if headers is None:
+        _, headers = await create_authenticated_user(client)
+
     response = await client.post(
         "/api/v1/ingredients",
+        headers=headers,
         json={
             "name": name,
             "category": "protein",

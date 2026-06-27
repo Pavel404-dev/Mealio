@@ -85,6 +85,7 @@ async def create_test_recipe(
     ):
         ingredient_response = await client.post(
             INGREDIENTS_URL,
+            headers=headers,
             json={
                 "name": f"{title} Ingredient {uuid4()}",
                 "category": "test",
@@ -598,6 +599,7 @@ async def test_meal_plan_summary_reflects_recalculated_recipe_totals_after_ingre
 
     ingredient_response = await client.post(
         INGREDIENTS_URL,
+        headers=headers,
         json={
             "name": f"Summary Recalc Ingredient {uuid4()}",
             "category": "test",
@@ -665,6 +667,7 @@ async def test_meal_plan_summary_reflects_recalculated_recipe_totals_after_ingre
 
     update_ingredient_response = await client.patch(
         f"{INGREDIENTS_URL}/{ingredient_id}",
+        headers=headers,
         json={
             "nutrition_value": {
                 "calories": "250",

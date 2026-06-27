@@ -56,9 +56,14 @@ async def create_test_ingredient(
     *,
     name: str,
     category: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> dict:
+    if headers is None:
+        _, headers = await create_authenticated_user(client)
+
     response = await client.post(
         INGREDIENTS_URL,
+        headers=headers,
         json={
             "name": name,
             "category": category,

@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.ingredient import IngredientCreate, IngredientRead, IngredientUpdate
 from app.services.ingredients import IngredientsService
 
@@ -33,6 +35,7 @@ async def list_ingredients(
 )
 async def create_ingredient(
     payload: IngredientCreate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = IngredientsService(db)
@@ -52,6 +55,7 @@ async def get_ingredient(
 async def update_ingredient(
     ingredient_id: uuid.UUID,
     payload: IngredientUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = IngredientsService(db)
@@ -64,6 +68,7 @@ async def update_ingredient(
 )
 async def delete_ingredient(
     ingredient_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = IngredientsService(db)
