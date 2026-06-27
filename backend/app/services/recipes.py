@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.ingredient import Ingredient, UserIngredient
 from app.models.recipe import Recipe
 from app.repositories.recipes import RecipesRepository
+from app.repositories.user_nutrition_profiles import UserNutritionProfilesRepository
 from app.schemas.recipe import (
     RecipeCreate,
     RecipeIngredientCreate,
@@ -15,13 +16,20 @@ from app.schemas.recipe import (
     RecipePantrySuggestionRead,
     RecipeUpdate,
 )
+from app.schemas.user_nutrition_profile import UserNutritionProfileRead
 from app.services.recipe_nutrition import RecipeNutritionCalculator
+from app.services.recipe_suggestion_personalization import (
+    RecipeSuggestionPersonalization,
+    RecipeSuggestionSortData,
+)
 
 
 class RecipesService:
     def __init__(self, db: AsyncSession) -> None:
         self.repository = RecipesRepository(db)
+        self.user_nutrition_profiles_repository = UserNutritionProfilesRepository(db)
         self.nutrition_calculator = RecipeNutritionCalculator()
+        self.suggestion_personalization = RecipeSuggestionPersonalization()
 
     async def list_user_recipes(
         self,
@@ -73,12 +81,30 @@ class RecipesService:
                 user_id=user_id,
             )
         )
+        nutrition_profile = (
+            await self.user_nutrition_profiles_repository.get_by_user_id(
+                user_id,
+            )
+        )
+
+        if nutrition_profile is None:
+            nutrition_profile = UserNutritionProfileRead.default()
 
         suggestions_with_sort_data: list[
-            tuple[RecipePantrySuggestionRead, Decimal]
+            tuple[
+                RecipePantrySuggestionRead,
+                Decimal,
+                RecipeSuggestionSortData,
+            ]
         ] = []
 
         for recipe in recipes:
+            if self.suggestion_personalization.should_exclude_recipe(
+                recipe=recipe,
+                nutrition_profile=nutrition_profile,
+            ):
+                continue
+
             suggestion = self._build_pantry_suggestion(
                 recipe=recipe,
                 pantry_by_ingredient_id=pantry_by_ingredient_id,
@@ -103,17 +129,25 @@ class RecipesService:
                 ),
                 Decimal("0"),
             )
+            personalized_sort_data = self.suggestion_personalization.build_sort_data(
+                recipe=recipe,
+                nutrition_profile=nutrition_profile,
+            )
 
             suggestions_with_sort_data.append(
                 (
                     suggestion,
                     total_missing_quantity_g,
+                    personalized_sort_data,
                 )
             )
 
         suggestions_with_sort_data.sort(
             key=lambda item: (
+                item[2].diet_type_priority,
                 -item[0].match_percent,
+                item[2].calories_distance_missing,
+                item[2].calories_distance,
                 item[0].missing_ingredients_count,
                 item[1],
                 item[0].recipe_title.lower(),
@@ -123,7 +157,7 @@ class RecipesService:
 
         paginated_suggestions = suggestions_with_sort_data[offset : offset + limit]
 
-        return [suggestion for suggestion, _ in paginated_suggestions]
+        return [suggestion for suggestion, _, _ in paginated_suggestions]
 
     async def get_recipe(
         self,
@@ -219,7 +253,6 @@ class RecipesService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Recipe is used in meal plans and cannot be deleted",
             )
-
         await self.repository.delete(recipe.id)
 
     async def _get_existing_ingredients_by_id(
