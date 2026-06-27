@@ -7,7 +7,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.ingredient import Ingredient
+from app.models.ingredient import Ingredient, UserIngredient
 from app.models.meal_plan import MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.schemas.recipe import RecipeCreate, RecipeNutritionTotals, RecipeUpdate
@@ -75,6 +75,48 @@ class RecipesRepository:
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def list_for_pantry_suggestions(
+        self,
+        *,
+        created_by_user_id: uuid.UUID,
+        diet_type: str | None = None,
+    ) -> list[Recipe]:
+        stmt = (
+            select(Recipe)
+            .options(
+                selectinload(Recipe.recipe_ingredients).selectinload(
+                    RecipeIngredient.ingredient
+                )
+            )
+            .where(Recipe.created_by_user_id == created_by_user_id)
+        )
+
+        if diet_type:
+            stmt = stmt.where(Recipe.diet_type == diet_type)
+
+        stmt = stmt.order_by(
+            Recipe.title.asc(),
+            Recipe.id.asc(),
+        )
+
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().unique().all())
+
+    async def list_user_pantry_by_ingredient_id(
+        self,
+        *,
+        user_id: uuid.UUID,
+    ) -> dict[uuid.UUID, UserIngredient]:
+        stmt = select(UserIngredient).where(UserIngredient.user_id == user_id)
+
+        result = await self.db.execute(stmt)
+
+        return {
+            pantry_item.ingredient_id: pantry_item
+            for pantry_item in result.scalars().all()
+        }
 
     async def get_by_id(
         self,

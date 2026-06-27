@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.recipe import RecipeCreate, RecipeRead, RecipeUpdate
+from app.schemas.recipe import (
+    RecipeCreate,
+    RecipePantrySuggestionRead,
+    RecipeRead,
+    RecipeUpdate,
+)
 from app.services.recipes import RecipesService
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
@@ -32,6 +37,31 @@ async def list_current_user_recipes(
         diet_type=diet_type,
         min_calories=min_calories,
         max_calories=max_calories,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/suggestions/from-pantry",
+    response_model=list[RecipePantrySuggestionRead],
+)
+async def suggest_current_user_recipes_from_pantry(
+    limit: int = Query(default=10, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    diet_type: str | None = Query(default=None, min_length=1, max_length=100),
+    min_match_percent: Decimal = Query(default=Decimal("0"), ge=0, le=100),
+    max_missing_ingredients: int | None = Query(default=None, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = RecipesService(db)
+
+    return await service.suggest_recipes_from_pantry(
+        user_id=current_user.id,
+        diet_type=diet_type,
+        min_match_percent=min_match_percent,
+        max_missing_ingredients=max_missing_ingredients,
         limit=limit,
         offset=offset,
     )
