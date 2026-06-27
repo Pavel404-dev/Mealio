@@ -9,11 +9,45 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.meal_plans import MealPlansRepository
 from app.schemas.meal_plan import (
     MealPlanNutritionGapsDayRead,
+    MealPlanNutritionGapsSummaryRead,
     MealPlanNutritionProgressDayRead,
     NutritionGapStatus,
+    NutritionGapStatusCountsRead,
+    NutritionGapsAverageRead,
+    NutritionGapsMacroStatusCountsRead,
     NutritionGapsOverallStatus,
+    NutritionGapsOverallStatusCountsRead,
 )
 from app.services.user_nutrition_profiles import UserNutritionProfilesService
+
+OVERALL_STATUSES: tuple[NutritionGapsOverallStatus, ...] = (
+    "unknown",
+    "needs_attention",
+    "over_target",
+    "on_track",
+)
+MACRO_STATUSES: tuple[NutritionGapStatus, ...] = (
+    "under",
+    "met",
+    "over",
+    "unknown",
+)
+MACRO_STATUS_FIELDS: tuple[tuple[str, str, str], ...] = (
+    ("calories", "calories_status", "calories_gap"),
+    ("protein", "protein_status", "protein_gap_g"),
+    ("carbs", "carbs_status", "carbs_gap_g"),
+    ("fat", "fat_status", "fat_gap_g"),
+)
+ISSUE_MACRO_PRIORITY = {
+    "protein": 0,
+    "calories": 1,
+    "carbs": 2,
+    "fat": 3,
+}
+ISSUE_STATUS_PRIORITY = {
+    "under": 0,
+    "over": 1,
+}
 
 
 class NutritionProfileLike(Protocol):
@@ -129,6 +163,81 @@ class MealPlanNutritionProgressCalculator:
             missing_targets=self._build_missing_targets(profile=profile),
         )
 
+    def build_gaps_summary(
+        self,
+        *,
+        start_date: date | None,
+        end_date: date | None,
+        daily_gaps: list[MealPlanNutritionGapsDayRead],
+    ) -> MealPlanNutritionGapsSummaryRead:
+        overall_status_counts = {status: 0 for status in OVERALL_STATUSES}
+        macro_status_counts = {
+            macro: {status: 0 for status in MACRO_STATUSES}
+            for macro, _, _ in MACRO_STATUS_FIELDS
+        }
+        gap_sums = {gap_field: Decimal("0") for _, _, gap_field in MACRO_STATUS_FIELDS}
+        gap_counts = {gap_field: 0 for _, _, gap_field in MACRO_STATUS_FIELDS}
+        missing_targets: set[str] = set()
+
+        for day in daily_gaps:
+            overall_status_counts[day.overall_status] += 1
+            missing_targets.update(day.missing_targets)
+
+            for macro, status_field, gap_field in MACRO_STATUS_FIELDS:
+                macro_status = getattr(day, status_field)
+                macro_status_counts[macro][macro_status] += 1
+
+                gap_value = getattr(day, gap_field)
+                if gap_value is not None:
+                    gap_sums[gap_field] += gap_value
+                    gap_counts[gap_field] += 1
+
+        return MealPlanNutritionGapsSummaryRead(
+            start_date=start_date,
+            end_date=end_date,
+            days_count=len(daily_gaps),
+            overall_status_counts=NutritionGapsOverallStatusCountsRead(
+                **overall_status_counts,
+            ),
+            macro_status_counts=NutritionGapsMacroStatusCountsRead(
+                calories=NutritionGapStatusCountsRead(
+                    **macro_status_counts["calories"],
+                ),
+                protein=NutritionGapStatusCountsRead(
+                    **macro_status_counts["protein"],
+                ),
+                carbs=NutritionGapStatusCountsRead(
+                    **macro_status_counts["carbs"],
+                ),
+                fat=NutritionGapStatusCountsRead(
+                    **macro_status_counts["fat"],
+                ),
+            ),
+            average_gaps=NutritionGapsAverageRead(
+                calories_gap=self._average_gap(
+                    total=gap_sums["calories_gap"],
+                    count=gap_counts["calories_gap"],
+                ),
+                protein_gap_g=self._average_gap(
+                    total=gap_sums["protein_gap_g"],
+                    count=gap_counts["protein_gap_g"],
+                ),
+                carbs_gap_g=self._average_gap(
+                    total=gap_sums["carbs_gap_g"],
+                    count=gap_counts["carbs_gap_g"],
+                ),
+                fat_gap_g=self._average_gap(
+                    total=gap_sums["fat_gap_g"],
+                    count=gap_counts["fat_gap_g"],
+                ),
+            ),
+            missing_targets=sorted(missing_targets),
+            main_issues=self._build_main_issues(
+                macro_status_counts=macro_status_counts,
+                missing_targets=missing_targets,
+            ),
+        )
+
     def _calculate_progress(
         self,
         *,
@@ -209,6 +318,59 @@ class MealPlanNutritionProgressCalculator:
 
         return missing_targets
 
+    def _average_gap(
+        self,
+        *,
+        total: Decimal,
+        count: int,
+    ) -> Decimal | None:
+        if count == 0:
+            return None
+
+        return (total / Decimal(count)).quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
+
+    def _build_main_issues(
+        self,
+        *,
+        macro_status_counts: dict[str, dict[NutritionGapStatus, int]],
+        missing_targets: set[str],
+    ) -> list[str]:
+        issues: list[str] = []
+
+        if missing_targets:
+            issues.append("missing_targets")
+
+        scored_issues: list[tuple[int, str, str, str]] = []
+
+        for macro in ISSUE_MACRO_PRIORITY:
+            for status_name in ISSUE_STATUS_PRIORITY:
+                count = macro_status_counts[macro][status_name]
+
+                if count > 0:
+                    scored_issues.append(
+                        (
+                            count,
+                            macro,
+                            status_name,
+                            f"{macro}_{status_name}",
+                        )
+                    )
+
+        scored_issues.sort(
+            key=lambda item: (
+                -item[0],
+                ISSUE_MACRO_PRIORITY[item[1]],
+                ISSUE_STATUS_PRIORITY[item[2]],
+            )
+        )
+
+        issues.extend(issue_label for _, _, _, issue_label in scored_issues)
+
+        return issues
+
     def _to_decimal(self, value) -> Decimal:
         if value is None:
             return Decimal("0")
@@ -276,6 +438,48 @@ class MealPlanNutritionProgressService:
             end_date=end_date,
         )
 
+        return await self._list_current_user_nutrition_gaps_for_range(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    async def get_current_user_nutrition_gaps_summary(
+        self,
+        *,
+        user_id: uuid.UUID,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> MealPlanNutritionGapsSummaryRead:
+        self._validate_date_filters(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        start_date, end_date = self._apply_default_date_range(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        daily_gaps = await self._list_current_user_nutrition_gaps_for_range(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        return self.progress_calculator.build_gaps_summary(
+            start_date=start_date,
+            end_date=end_date,
+            daily_gaps=daily_gaps,
+        )
+
+    async def _list_current_user_nutrition_gaps_for_range(
+        self,
+        *,
+        user_id: uuid.UUID,
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[MealPlanNutritionGapsDayRead]:
         profile = await self.nutrition_profiles_service.get_current_user_profile(
             user_id,
         )
