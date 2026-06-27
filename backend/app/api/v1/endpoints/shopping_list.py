@@ -6,7 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.shopping_list import ShoppingListItemRead
+from app.schemas.shopping_list import (
+    ShoppingListAddMissingToPantryResponse,
+    ShoppingListItemRead,
+)
 from app.services.shopping_list import ShoppingListService
 
 router = APIRouter(
@@ -32,4 +35,25 @@ async def get_current_user_combined_shopping_list(
         to_date=to_date,
         meal_type=meal_type,
         subtract_pantry=subtract_pantry,
+    )
+
+
+@router.post(
+    "/add-missing-to-pantry",
+    response_model=ShoppingListAddMissingToPantryResponse,
+)
+async def add_missing_shopping_list_items_to_pantry(
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    meal_type: str | None = Query(default=None, min_length=1, max_length=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ShoppingListService(db)
+
+    return await service.add_missing_items_to_pantry(
+        user_id=current_user.id,
+        from_date=from_date,
+        to_date=to_date,
+        meal_type=meal_type,
     )
