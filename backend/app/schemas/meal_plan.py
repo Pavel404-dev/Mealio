@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -79,6 +80,30 @@ class MealPlanItemCalendarRead(BaseModel):
     recipe_title: str
     planned_date: date
     meal_type: str
+
+
+class MealPlanNutritionProgressDayRead(BaseModel):
+    date: date
+
+    total_calories: Decimal = Field(..., ge=0)
+    daily_calories_target: int | None = Field(default=None, gt=0)
+    remaining_calories: Decimal | None = None
+    calories_percent: Decimal | None = Field(default=None, ge=0)
+
+    total_protein_g: Decimal = Field(..., ge=0)
+    daily_protein_target_g: int | None = Field(default=None, gt=0)
+    remaining_protein_g: Decimal | None = None
+    protein_percent: Decimal | None = Field(default=None, ge=0)
+
+    total_carbs_g: Decimal = Field(..., ge=0)
+    daily_carbs_target_g: int | None = Field(default=None, gt=0)
+    remaining_carbs_g: Decimal | None = None
+    carbs_percent: Decimal | None = Field(default=None, ge=0)
+
+    total_fat_g: Decimal = Field(..., ge=0)
+    daily_fat_target_g: int | None = Field(default=None, gt=0)
+    remaining_fat_g: Decimal | None = None
+    fat_percent: Decimal | None = Field(default=None, ge=0)
 
 
 MealPlanShoppingListItemRead = ShoppingListItemRead

@@ -160,6 +160,61 @@ class MealPlansRepository:
 
         return [dict(row._mapping) for row in result.all()]
 
+    async def list_nutrition_progress_for_user_calendar(
+        self,
+        *,
+        user_id: uuid.UUID,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[dict]:
+        total_calories = func.coalesce(
+            func.sum(func.coalesce(Recipe.total_calories, Decimal("0"))),
+            Decimal("0"),
+        ).label("total_calories")
+        total_protein_g = func.coalesce(
+            func.sum(func.coalesce(Recipe.total_protein_g, Decimal("0"))),
+            Decimal("0"),
+        ).label("total_protein_g")
+        total_carbs_g = func.coalesce(
+            func.sum(func.coalesce(Recipe.total_carbs_g, Decimal("0"))),
+            Decimal("0"),
+        ).label("total_carbs_g")
+        total_fat_g = func.coalesce(
+            func.sum(func.coalesce(Recipe.total_fat_g, Decimal("0"))),
+            Decimal("0"),
+        ).label("total_fat_g")
+
+        stmt = (
+            select(
+                MealPlanItem.planned_date.label("date"),
+                total_calories,
+                total_protein_g,
+                total_carbs_g,
+                total_fat_g,
+            )
+            .select_from(MealPlanItem)
+            .join(MealPlan, MealPlan.id == MealPlanItem.meal_plan_id)
+            .join(Recipe, Recipe.id == MealPlanItem.recipe_id)
+            .where(
+                MealPlan.user_id == user_id,
+                Recipe.created_by_user_id == user_id,
+            )
+        )
+
+        if start_date is not None:
+            stmt = stmt.where(MealPlanItem.planned_date >= start_date)
+
+        if end_date is not None:
+            stmt = stmt.where(MealPlanItem.planned_date <= end_date)
+
+        stmt = stmt.group_by(MealPlanItem.planned_date).order_by(
+            MealPlanItem.planned_date.asc(),
+        )
+
+        result = await self.db.execute(stmt)
+
+        return [dict(row._mapping) for row in result.all()]
+
     async def list_shopping_list_for_meal_plan(
         self,
         *,

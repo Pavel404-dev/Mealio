@@ -6,13 +6,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.meal_plan import MealPlanItemCalendarRead
+from app.schemas.meal_plan import (
+    MealPlanItemCalendarRead,
+    MealPlanNutritionProgressDayRead,
+)
+from app.services.meal_plan_nutrition_progress import (
+    MealPlanNutritionProgressService,
+)
 from app.services.meal_plans import MealPlansService
 
 router = APIRouter(
     prefix="/meal-plan-items",
     tags=["Meal Plan Items"],
 )
+
+
+@router.get(
+    "/calendar/nutrition-progress",
+    response_model=list[MealPlanNutritionProgressDayRead],
+)
+async def list_current_user_meal_plan_items_nutrition_progress(
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = MealPlanNutritionProgressService(db)
+
+    return await service.list_current_user_nutrition_progress(
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
 @router.get("", response_model=list[MealPlanItemCalendarRead])
