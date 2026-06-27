@@ -1,10 +1,19 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.shopping_list import ShoppingListItemRead
+
+NutritionGapStatus = Literal["under", "met", "over", "unknown"]
+NutritionGapsOverallStatus = Literal[
+    "unknown",
+    "needs_attention",
+    "over_target",
+    "on_track",
+]
 
 
 class MealPlanItemBase(BaseModel):
@@ -104,6 +113,33 @@ class MealPlanNutritionProgressDayRead(BaseModel):
     daily_fat_target_g: int | None = Field(default=None, gt=0)
     remaining_fat_g: Decimal | None = None
     fat_percent: Decimal | None = Field(default=None, ge=0)
+
+
+class MealPlanNutritionGapsDayRead(BaseModel):
+    date: date
+
+    total_calories: Decimal = Field(..., ge=0)
+    daily_calories_target: int | None = Field(default=None, gt=0)
+    calories_gap: Decimal | None = None
+    calories_status: NutritionGapStatus
+
+    total_protein_g: Decimal = Field(..., ge=0)
+    daily_protein_target_g: int | None = Field(default=None, gt=0)
+    protein_gap_g: Decimal | None = None
+    protein_status: NutritionGapStatus
+
+    total_carbs_g: Decimal = Field(..., ge=0)
+    daily_carbs_target_g: int | None = Field(default=None, gt=0)
+    carbs_gap_g: Decimal | None = None
+    carbs_status: NutritionGapStatus
+
+    total_fat_g: Decimal = Field(..., ge=0)
+    daily_fat_target_g: int | None = Field(default=None, gt=0)
+    fat_gap_g: Decimal | None = None
+    fat_status: NutritionGapStatus
+
+    overall_status: NutritionGapsOverallStatus
+    missing_targets: list[str] = Field(default_factory=list)
 
 
 MealPlanShoppingListItemRead = ShoppingListItemRead
