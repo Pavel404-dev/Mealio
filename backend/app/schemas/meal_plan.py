@@ -1,8 +1,9 @@
 import uuid
 from datetime import date, datetime
-from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.shopping_list import ShoppingListItemRead
 
 
 class MealPlanItemBase(BaseModel):
@@ -80,13 +81,7 @@ class MealPlanItemCalendarRead(BaseModel):
     meal_type: str
 
 
-class MealPlanShoppingListItemRead(BaseModel):
-    ingredient_id: uuid.UUID
-    ingredient_name: str
-    ingredient_category: str | None
-    required_quantity_g: Decimal
-    pantry_quantity_g: Decimal | None = None
-    missing_quantity_g: Decimal | None = None
+MealPlanShoppingListItemRead = ShoppingListItemRead
 
 
 class MealPlanBase(BaseModel):
