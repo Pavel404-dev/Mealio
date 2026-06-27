@@ -144,3 +144,25 @@ class RecipeRead(RecipeBase):
     recipe_ingredients: list[RecipeIngredientRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RecipePantrySuggestionMissingIngredientRead(BaseModel):
+    ingredient_id: uuid.UUID
+    ingredient_name: str
+    required_quantity_g: Decimal = Field(..., ge=0)
+    pantry_quantity_g: Decimal = Field(..., ge=0)
+    missing_quantity_g: Decimal = Field(..., ge=0)
+
+
+class RecipePantrySuggestionRead(BaseModel):
+    recipe_id: uuid.UUID
+    recipe_title: str
+    diet_type: str | None = None
+    total_calories: Decimal | None = Field(default=None, ge=0)
+    match_percent: Decimal = Field(..., ge=0, le=100)
+    matched_ingredients_count: int = Field(..., ge=0)
+    missing_ingredients_count: int = Field(..., ge=0)
+    total_ingredients_count: int = Field(..., ge=0)
+    missing_ingredients: list[RecipePantrySuggestionMissingIngredientRead] = Field(
+        default_factory=list
+    )
