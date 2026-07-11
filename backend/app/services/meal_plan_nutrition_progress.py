@@ -8,9 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.meal_plans import MealPlansRepository
 from app.schemas.meal_plan import (
+    MealPlanNutritionGapRecommendationRead,
+    MealPlanNutritionGapRecommendationsRead,
     MealPlanNutritionGapsDayRead,
     MealPlanNutritionGapsSummaryRead,
     MealPlanNutritionProgressDayRead,
+    NutritionGapRecommendationAction,
+    NutritionGapRecommendationDirection,
+    NutritionGapRecommendationMacro,
+    NutritionGapRecommendationPriority,
     NutritionGapStatus,
     NutritionGapStatusCountsRead,
     NutritionGapsAverageRead,
@@ -32,13 +38,16 @@ MACRO_STATUSES: tuple[NutritionGapStatus, ...] = (
     "over",
     "unknown",
 )
-MACRO_STATUS_FIELDS: tuple[tuple[str, str, str], ...] = (
+MACRO_STATUS_FIELDS: tuple[
+    tuple[NutritionGapRecommendationMacro, str, str],
+    ...,
+] = (
     ("calories", "calories_status", "calories_gap"),
     ("protein", "protein_status", "protein_gap_g"),
     ("carbs", "carbs_status", "carbs_gap_g"),
     ("fat", "fat_status", "fat_gap_g"),
 )
-ISSUE_MACRO_PRIORITY = {
+ISSUE_MACRO_PRIORITY: dict[NutritionGapRecommendationMacro, int] = {
     "protein": 0,
     "calories": 1,
     "carbs": 2,
@@ -47,6 +56,35 @@ ISSUE_MACRO_PRIORITY = {
 ISSUE_STATUS_PRIORITY = {
     "under": 0,
     "over": 1,
+}
+RECOMMENDATION_STATUSES: tuple[NutritionGapStatus, ...] = (
+    "under",
+    "over",
+)
+RECOMMENDATION_ACTIONS: dict[
+    tuple[NutritionGapRecommendationMacro, NutritionGapStatus],
+    NutritionGapRecommendationAction,
+] = {
+    ("calories", "under"): "increase_calories",
+    ("calories", "over"): "decrease_calories",
+    ("protein", "under"): "increase_protein",
+    ("protein", "over"): "decrease_protein",
+    ("carbs", "under"): "increase_carbs",
+    ("carbs", "over"): "decrease_carbs",
+    ("fat", "under"): "increase_fat",
+    ("fat", "over"): "decrease_fat",
+}
+RECOMMENDATION_PRIORITY_ORDER: dict[NutritionGapRecommendationPriority, int] = {
+    "high": 0,
+    "medium": 1,
+    "low": 2,
+}
+RECOMMENDATION_DIRECTION_PRIORITY: dict[
+    NutritionGapRecommendationDirection,
+    int,
+] = {
+    "increase": 0,
+    "decrease": 1,
 }
 
 
@@ -238,6 +276,109 @@ class MealPlanNutritionProgressCalculator:
             ),
         )
 
+    def build_gap_recommendations(
+        self,
+        *,
+        start_date: date | None,
+        end_date: date | None,
+        daily_gaps: list[MealPlanNutritionGapsDayRead],
+    ) -> MealPlanNutritionGapRecommendationsRead:
+        days_count = len(daily_gaps)
+
+        if days_count == 0:
+            return MealPlanNutritionGapRecommendationsRead(
+                start_date=start_date,
+                end_date=end_date,
+                days_count=0,
+                recommendations=[],
+            )
+
+        recommendations: list[MealPlanNutritionGapRecommendationRead] = []
+        missing_targets = {
+            target for day in daily_gaps for target in day.missing_targets
+        }
+        missing_targets_affected_days = sum(
+            bool(day.missing_targets) for day in daily_gaps
+        )
+
+        if missing_targets:
+            recommendations.append(
+                MealPlanNutritionGapRecommendationRead(
+                    action="set_missing_targets",
+                    macro=None,
+                    direction=None,
+                    priority="high",
+                    affected_days=missing_targets_affected_days,
+                    average_adjustment=None,
+                    missing_targets=sorted(missing_targets),
+                )
+            )
+
+        macro_recommendations: list[MealPlanNutritionGapRecommendationRead] = []
+
+        for macro, status_field, gap_field in MACRO_STATUS_FIELDS:
+            for macro_status in RECOMMENDATION_STATUSES:
+                affected_days = 0
+                adjustment_values: list[Decimal] = []
+
+                for day in daily_gaps:
+                    if getattr(day, status_field) != macro_status:
+                        continue
+
+                    affected_days += 1
+                    gap_value = getattr(day, gap_field)
+
+                    if gap_value is None:
+                        continue
+
+                    if macro_status == "over":
+                        gap_value = abs(gap_value)
+
+                    adjustment_values.append(gap_value)
+
+                if affected_days == 0:
+                    continue
+
+                direction: NutritionGapRecommendationDirection = (
+                    "increase" if macro_status == "under" else "decrease"
+                )
+                average_adjustment = self._average_gap(
+                    total=sum(adjustment_values, Decimal("0")),
+                    count=len(adjustment_values),
+                )
+
+                macro_recommendations.append(
+                    MealPlanNutritionGapRecommendationRead(
+                        action=RECOMMENDATION_ACTIONS[(macro, macro_status)],
+                        macro=macro,
+                        direction=direction,
+                        priority=self._calculate_recommendation_priority(
+                            affected_days=affected_days,
+                            days_count=days_count,
+                        ),
+                        affected_days=affected_days,
+                        average_adjustment=average_adjustment,
+                        missing_targets=[],
+                    )
+                )
+
+        macro_recommendations.sort(
+            key=lambda recommendation: (
+                RECOMMENDATION_PRIORITY_ORDER[recommendation.priority],
+                -recommendation.affected_days,
+                ISSUE_MACRO_PRIORITY[recommendation.macro],
+                RECOMMENDATION_DIRECTION_PRIORITY[recommendation.direction],
+            )
+        )
+        recommendations.extend(macro_recommendations)
+
+        return MealPlanNutritionGapRecommendationsRead(
+            start_date=start_date,
+            end_date=end_date,
+            days_count=days_count,
+            recommendations=recommendations,
+        )
+
     def _calculate_progress(
         self,
         *,
@@ -331,6 +472,22 @@ class MealPlanNutritionProgressCalculator:
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
+
+    def _calculate_recommendation_priority(
+        self,
+        *,
+        affected_days: int,
+        days_count: int,
+    ) -> NutritionGapRecommendationPriority:
+        affected_ratio = Decimal(affected_days) / Decimal(days_count)
+
+        if affected_ratio >= Decimal("0.5"):
+            return "high"
+
+        if affected_ratio >= Decimal("0.25"):
+            return "medium"
+
+        return "low"
 
     def _build_main_issues(
         self,
@@ -468,6 +625,35 @@ class MealPlanNutritionProgressService:
         )
 
         return self.progress_calculator.build_gaps_summary(
+            start_date=start_date,
+            end_date=end_date,
+            daily_gaps=daily_gaps,
+        )
+
+    async def get_current_user_nutrition_gap_recommendations(
+        self,
+        *,
+        user_id: uuid.UUID,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> MealPlanNutritionGapRecommendationsRead:
+        self._validate_date_filters(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        start_date, end_date = self._apply_default_date_range(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        daily_gaps = await self._list_current_user_nutrition_gaps_for_range(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        return self.progress_calculator.build_gap_recommendations(
             start_date=start_date,
             end_date=end_date,
             daily_gaps=daily_gaps,
