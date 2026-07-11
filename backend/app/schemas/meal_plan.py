@@ -25,6 +25,25 @@ NutritionGapsMainIssue = Literal[
     "fat_over",
     "missing_targets",
 ]
+NutritionGapRecommendationPriority = Literal["high", "medium", "low"]
+NutritionGapRecommendationMacro = Literal[
+    "calories",
+    "protein",
+    "carbs",
+    "fat",
+]
+NutritionGapRecommendationDirection = Literal["increase", "decrease"]
+NutritionGapRecommendationAction = Literal[
+    "set_missing_targets",
+    "increase_calories",
+    "decrease_calories",
+    "increase_protein",
+    "decrease_protein",
+    "increase_carbs",
+    "decrease_carbs",
+    "increase_fat",
+    "decrease_fat",
+]
 
 
 class MealPlanItemBase(BaseModel):
@@ -193,6 +212,25 @@ class MealPlanNutritionGapsSummaryRead(BaseModel):
 
     missing_targets: list[str] = Field(default_factory=list)
     main_issues: list[NutritionGapsMainIssue] = Field(default_factory=list)
+
+
+class MealPlanNutritionGapRecommendationRead(BaseModel):
+    action: NutritionGapRecommendationAction
+    macro: NutritionGapRecommendationMacro | None = None
+    direction: NutritionGapRecommendationDirection | None = None
+    priority: NutritionGapRecommendationPriority
+    affected_days: int = Field(..., ge=1)
+    average_adjustment: Decimal | None = Field(default=None, gt=0)
+    missing_targets: list[str] = Field(default_factory=list)
+
+
+class MealPlanNutritionGapRecommendationsRead(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+    days_count: int = Field(..., ge=0)
+    recommendations: list[MealPlanNutritionGapRecommendationRead] = Field(
+        default_factory=list,
+    )
 
 
 MealPlanShoppingListItemRead = ShoppingListItemRead

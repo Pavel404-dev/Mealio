@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.meal_plan import (
     MealPlanItemCalendarRead,
+    MealPlanNutritionGapRecommendationsRead,
     MealPlanNutritionGapsDayRead,
     MealPlanNutritionGapsSummaryRead,
     MealPlanNutritionProgressDayRead,
@@ -74,6 +75,25 @@ async def get_current_user_meal_plan_items_nutrition_gaps_summary(
     service = MealPlanNutritionProgressService(db)
 
     return await service.get_current_user_nutrition_gaps_summary(
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+@router.get(
+    "/calendar/nutrition-gaps/recommendations",
+    response_model=MealPlanNutritionGapRecommendationsRead,
+)
+async def get_current_user_meal_plan_items_nutrition_gap_recommendations(
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = MealPlanNutritionProgressService(db)
+
+    return await service.get_current_user_nutrition_gap_recommendations(
         user_id=current_user.id,
         start_date=start_date,
         end_date=end_date,
