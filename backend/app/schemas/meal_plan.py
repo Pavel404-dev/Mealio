@@ -233,6 +233,44 @@ class MealPlanNutritionGapRecommendationsRead(BaseModel):
     )
 
 
+class NutritionGapRecipeSuggestionRecommendationRead(BaseModel):
+    action: NutritionGapRecommendationAction
+    priority: NutritionGapRecommendationPriority
+    average_adjustment: Decimal = Field(..., gt=0)
+
+
+class NutritionGapRecipeSuggestionNutritionRead(BaseModel):
+    calories: Decimal = Field(..., ge=0)
+    protein_g: Decimal = Field(..., ge=0)
+    carbs_g: Decimal = Field(..., ge=0)
+    fat_g: Decimal = Field(..., ge=0)
+
+
+class NutritionGapRecipeSuggestionRead(BaseModel):
+    recipe_id: uuid.UUID
+    recipe_title: str
+    diet_type: str | None = None
+    score: Decimal = Field(..., ge=0)
+    matched_actions: list[NutritionGapRecommendationAction] = Field(
+        default_factory=list,
+    )
+    nutrition: NutritionGapRecipeSuggestionNutritionRead
+
+
+class MealPlanNutritionGapRecipeSuggestionsRead(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+    recommendations_used: list[NutritionGapRecipeSuggestionRecommendationRead] = Field(
+        default_factory=list
+    )
+    unresolved_actions: list[NutritionGapRecommendationAction] = Field(
+        default_factory=list,
+    )
+    suggestions: list[NutritionGapRecipeSuggestionRead] = Field(
+        default_factory=list,
+    )
+
+
 MealPlanShoppingListItemRead = ShoppingListItemRead
 
 

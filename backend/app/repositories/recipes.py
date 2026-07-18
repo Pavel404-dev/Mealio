@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import delete, func, or_, select
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient, UserIngredient
-from app.models.meal_plan import MealPlanItem
+from app.models.meal_plan import MealPlan, MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.schemas.recipe import RecipeCreate, RecipeNutritionTotals, RecipeUpdate
 
@@ -98,6 +99,54 @@ class RecipesRepository:
         stmt = stmt.order_by(
             Recipe.title.asc(),
             Recipe.id.asc(),
+        )
+
+        result = await self.db.execute(stmt)
+
+        return list(result.scalars().unique().all())
+
+    async def list_for_nutrition_gap_suggestions(
+        self,
+        *,
+        created_by_user_id: uuid.UUID,
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[Recipe]:
+        used_recipe_ids = (
+            select(MealPlanItem.recipe_id)
+            .join(MealPlan, MealPlan.id == MealPlanItem.meal_plan_id)
+            .where(MealPlan.user_id == created_by_user_id)
+        )
+
+        if start_date is not None:
+            used_recipe_ids = used_recipe_ids.where(
+                MealPlanItem.planned_date >= start_date,
+            )
+
+        if end_date is not None:
+            used_recipe_ids = used_recipe_ids.where(
+                MealPlanItem.planned_date <= end_date,
+            )
+
+        stmt = (
+            select(Recipe)
+            .options(
+                selectinload(Recipe.recipe_ingredients).selectinload(
+                    RecipeIngredient.ingredient
+                )
+            )
+            .where(
+                Recipe.created_by_user_id == created_by_user_id,
+                Recipe.total_calories.is_not(None),
+                Recipe.total_protein_g.is_not(None),
+                Recipe.total_carbs_g.is_not(None),
+                Recipe.total_fat_g.is_not(None),
+                ~Recipe.id.in_(used_recipe_ids),
+            )
+            .order_by(
+                Recipe.title.asc(),
+                Recipe.id.asc(),
+            )
         )
 
         result = await self.db.execute(stmt)
