@@ -529,7 +529,7 @@ async def test_recipe_suggestions_sort_by_score_title_and_id_deterministically(
     alpha = await create_test_recipe_with_totals(
         client,
         headers=headers,
-        title="Alpha Equal Score",
+        title="alpha Equal Score",
         calories="50",
         protein_g="50",
         carbs_g="50",

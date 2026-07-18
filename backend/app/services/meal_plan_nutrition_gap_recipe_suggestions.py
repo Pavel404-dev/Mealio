@@ -202,7 +202,7 @@ class MealPlanNutritionGapRecipeSuggestionsService:
         suggestions.sort(
             key=lambda suggestion: (
                 -suggestion.score,
-                suggestion.recipe_title,
+                suggestion.recipe_title.lower(),
                 str(suggestion.recipe_id),
             )
         )
