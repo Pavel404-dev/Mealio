@@ -791,3 +791,125 @@ async def test_nutrition_gaps_requires_authentication(
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_nutrition_gaps_include_filled_and_empty_days(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "daily_calories_target": 1000,
+            "daily_protein_target_g": 100,
+            "daily_carbs_target_g": 200,
+            "daily_fat_target_g": 60,
+        },
+    )
+    recipe = await create_test_recipe_with_totals(
+        client,
+        headers=headers,
+        title="Mixed Gaps Range Recipe",
+        calories="600",
+        protein_g="70",
+        carbs_g="150",
+        fat_g="40",
+    )
+    meal_plan = await create_test_meal_plan(
+        client,
+        headers=headers,
+        start_date="2026-07-06",
+        end_date="2026-07-08",
+    )
+    await add_meal_plan_item(
+        client,
+        headers=headers,
+        meal_plan_id=meal_plan["id"],
+        recipe_id=recipe["id"],
+        planned_date="2026-07-07",
+        meal_type="dinner",
+    )
+
+    response = await client.get(
+        NUTRITION_GAPS_URL,
+        headers=headers,
+        params={
+            "start_date": "2026-07-06",
+            "end_date": "2026-07-08",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert [day["date"] for day in data] == [
+        "2026-07-06",
+        "2026-07-07",
+        "2026-07-08",
+    ]
+
+    for day in (data[0], data[2]):
+        assert day["overall_status"] == "needs_attention"
+        assert day["missing_targets"] == []
+        assert day["calories_status"] == "under"
+        assert day["protein_status"] == "under"
+        assert day["carbs_status"] == "under"
+        assert day["fat_status"] == "under"
+        assert_decimal(day["calories_gap"], "1000")
+        assert_decimal(day["protein_gap_g"], "100")
+        assert_decimal(day["carbs_gap_g"], "200")
+        assert_decimal(day["fat_gap_g"], "60")
+
+    assert_decimal(data[1]["total_calories"], "600")
+    assert_decimal(data[1]["calories_gap"], "400")
+    assert_decimal(data[1]["protein_gap_g"], "30")
+    assert_decimal(data[1]["carbs_gap_g"], "50")
+    assert_decimal(data[1]["fat_gap_g"], "20")
+
+
+@pytest.mark.asyncio
+async def test_nutrition_gaps_empty_day_preserves_missing_targets(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "daily_calories_target": 1800,
+            "daily_protein_target_g": 120,
+        },
+    )
+
+    response = await client.get(
+        NUTRITION_GAPS_URL,
+        headers=headers,
+        params={
+            "start_date": "2026-07-06",
+            "end_date": "2026-07-06",
+        },
+    )
+
+    assert response.status_code == 200
+
+    day = response.json()[0]
+
+    assert_decimal(day["total_calories"], "0")
+    assert_decimal(day["total_protein_g"], "0")
+    assert day["calories_status"] == "under"
+    assert day["protein_status"] == "under"
+    assert_decimal(day["calories_gap"], "1800")
+    assert_decimal(day["protein_gap_g"], "120")
+    assert day["carbs_status"] == "unknown"
+    assert day["carbs_gap_g"] is None
+    assert day["fat_status"] == "unknown"
+    assert day["fat_gap_g"] is None
+    assert day["missing_targets"] == [
+        "daily_carbs_target_g",
+        "daily_fat_target_g",
+    ]

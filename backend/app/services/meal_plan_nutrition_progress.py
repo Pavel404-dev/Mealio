@@ -26,6 +26,8 @@ from app.schemas.meal_plan import (
 )
 from app.services.user_nutrition_profiles import UserNutritionProfilesService
 
+MAX_NUTRITION_ANALYTICS_RANGE_DAYS = 366
+
 OVERALL_STATUSES: tuple[NutritionGapsOverallStatus, ...] = (
     "unknown",
     "needs_attention",
@@ -569,6 +571,11 @@ class MealPlanNutritionProgressService:
             start_date=start_date,
             end_date=end_date,
         )
+        rows = self._fill_missing_dates(
+            rows=rows,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return [
             self.progress_calculator.build_day_progress(
@@ -674,6 +681,11 @@ class MealPlanNutritionProgressService:
             start_date=start_date,
             end_date=end_date,
         )
+        rows = self._fill_missing_dates(
+            rows=rows,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return [
             self.progress_calculator.build_day_gaps(
@@ -683,16 +695,61 @@ class MealPlanNutritionProgressService:
             for row in rows
         ]
 
+    def _fill_missing_dates(
+        self,
+        *,
+        rows: list[dict],
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[dict]:
+        if start_date is None or end_date is None:
+            return rows
+
+        rows_by_date = {row["date"]: row for row in rows}
+        normalized_rows: list[dict] = []
+        current_date = start_date
+
+        while current_date <= end_date:
+            normalized_rows.append(
+                rows_by_date.get(
+                    current_date,
+                    {
+                        "date": current_date,
+                        "total_calories": Decimal("0"),
+                        "total_protein_g": Decimal("0"),
+                        "total_carbs_g": Decimal("0"),
+                        "total_fat_g": Decimal("0"),
+                    },
+                )
+            )
+            current_date += timedelta(days=1)
+
+        return normalized_rows
+
     def _validate_date_filters(
         self,
         *,
         start_date: date | None,
         end_date: date | None,
     ) -> None:
-        if start_date is not None and end_date is not None and start_date > end_date:
+        if start_date is None or end_date is None:
+            return
+
+        if start_date > end_date:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="start_date must be less than or equal to end_date",
+            )
+
+        range_days = (end_date - start_date).days + 1
+
+        if range_days > MAX_NUTRITION_ANALYTICS_RANGE_DAYS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "nutrition analytics date range must not exceed "
+                    f"{MAX_NUTRITION_ANALYTICS_RANGE_DAYS} days"
+                ),
             )
 
     def _apply_default_date_range(
