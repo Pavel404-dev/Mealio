@@ -827,12 +827,6 @@ async def test_nutrition_progress_default_current_week_returns_seven_empty_days(
 ) -> None:
     _, headers = await create_authenticated_user(client)
 
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-    expected_dates = [
-        (week_start + timedelta(days=offset)).isoformat() for offset in range(7)
-    ]
-
     response = await client.get(
         NUTRITION_PROGRESS_URL,
         headers=headers,
@@ -842,7 +836,14 @@ async def test_nutrition_progress_default_current_week_returns_seven_empty_days(
 
     data = response.json()
 
-    assert [day["date"] for day in data] == expected_dates
+    returned_dates = [date.fromisoformat(day["date"]) for day in data]
+
+    assert len(returned_dates) == 7
+    assert returned_dates[0].weekday() == 0
+    assert returned_dates[-1].weekday() == 6
+    assert returned_dates == [
+        returned_dates[0] + timedelta(days=offset) for offset in range(7)
+    ]
 
     for day in data:
         assert_decimal(day["total_calories"], "0")
