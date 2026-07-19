@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    openai_api_key: SecretStr | None = None
+    openai_model: str = Field(
+        default="gpt-5.6-luna",
+        min_length=1,
+        max_length=100,
+    )
+    ai_request_timeout_seconds: float = Field(default=30, gt=0, le=120)
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
