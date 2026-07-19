@@ -530,10 +530,21 @@ async def test_recommendations_work_without_profile_and_only_set_missing_targets
 
 
 @pytest.mark.asyncio
-async def test_recommendations_return_empty_list_for_empty_period(
+async def test_recommendations_create_increases_for_completely_empty_period(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "daily_calories_target": 2000,
+            "daily_protein_target_g": 120,
+            "daily_carbs_target_g": 250,
+            "daily_fat_target_g": 70,
+        },
+    )
 
     response = await client.get(
         NUTRITION_GAP_RECOMMENDATIONS_URL,
@@ -545,12 +556,35 @@ async def test_recommendations_return_empty_list_for_empty_period(
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "start_date": "2026-06-22",
-        "end_date": "2026-06-28",
-        "days_count": 0,
-        "recommendations": [],
+
+    data = response.json()
+
+    assert data["start_date"] == "2026-06-22"
+    assert data["end_date"] == "2026-06-28"
+    assert data["days_count"] == 7
+
+    recommendations_by_action = {
+        recommendation["action"]: recommendation
+        for recommendation in data["recommendations"]
     }
+    expected_adjustments = {
+        "increase_calories": "2000",
+        "increase_protein": "120",
+        "increase_carbs": "250",
+        "increase_fat": "70",
+    }
+
+    assert set(recommendations_by_action) == set(expected_adjustments)
+
+    for action, expected_adjustment in expected_adjustments.items():
+        recommendation = recommendations_by_action[action]
+
+        assert recommendation["affected_days"] == 7
+        assert recommendation["priority"] == "high"
+        assert_decimal(
+            recommendation["average_adjustment"],
+            expected_adjustment,
+        )
 
 
 @pytest.mark.asyncio
@@ -801,7 +835,7 @@ async def test_recommendations_use_default_current_week_range(
 
     assert data["start_date"] == week_start.isoformat()
     assert data["end_date"] == week_end.isoformat()
-    assert data["days_count"] == 1
+    assert data["days_count"] == 7
 
 
 @pytest.mark.asyncio

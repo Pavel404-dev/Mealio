@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -747,3 +748,104 @@ async def test_nutrition_progress_requires_authentication(
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_nutrition_progress_includes_empty_days_for_bounded_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "daily_calories_target": 2000,
+            "daily_protein_target_g": 120,
+            "daily_carbs_target_g": 250,
+            "daily_fat_target_g": 70,
+        },
+    )
+    recipe = await create_test_recipe_with_totals(
+        client,
+        headers=headers,
+        title="Bounded Range Recipe",
+        calories="500",
+        protein_g="30",
+        carbs_g="60",
+        fat_g="15",
+    )
+    meal_plan = await create_test_meal_plan(
+        client,
+        headers=headers,
+        start_date="2026-07-06",
+        end_date="2026-07-08",
+    )
+    await add_meal_plan_item(
+        client,
+        headers=headers,
+        meal_plan_id=meal_plan["id"],
+        recipe_id=recipe["id"],
+        planned_date="2026-07-07",
+        meal_type="lunch",
+    )
+
+    response = await client.get(
+        NUTRITION_PROGRESS_URL,
+        headers=headers,
+        params={
+            "start_date": "2026-07-06",
+            "end_date": "2026-07-08",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert [day["date"] for day in data] == [
+        "2026-07-06",
+        "2026-07-07",
+        "2026-07-08",
+    ]
+
+    for day in (data[0], data[2]):
+        assert_decimal(day["total_calories"], "0")
+        assert_decimal(day["total_protein_g"], "0")
+        assert_decimal(day["total_carbs_g"], "0")
+        assert_decimal(day["total_fat_g"], "0")
+
+    assert_decimal(data[1]["total_calories"], "500")
+    assert_decimal(data[1]["total_protein_g"], "30")
+    assert_decimal(data[1]["total_carbs_g"], "60")
+    assert_decimal(data[1]["total_fat_g"], "15")
+
+
+@pytest.mark.asyncio
+async def test_nutrition_progress_default_current_week_returns_seven_empty_days(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    expected_dates = [
+        (week_start + timedelta(days=offset)).isoformat() for offset in range(7)
+    ]
+
+    response = await client.get(
+        NUTRITION_PROGRESS_URL,
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert [day["date"] for day in data] == expected_dates
+
+    for day in data:
+        assert_decimal(day["total_calories"], "0")
+        assert_decimal(day["total_protein_g"], "0")
+        assert_decimal(day["total_carbs_g"], "0")
+        assert_decimal(day["total_fat_g"], "0")

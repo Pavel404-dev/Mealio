@@ -569,6 +569,11 @@ class MealPlanNutritionProgressService:
             start_date=start_date,
             end_date=end_date,
         )
+        rows = self._fill_missing_dates(
+            rows=rows,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return [
             self.progress_calculator.build_day_progress(
@@ -674,6 +679,11 @@ class MealPlanNutritionProgressService:
             start_date=start_date,
             end_date=end_date,
         )
+        rows = self._fill_missing_dates(
+            rows=rows,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return [
             self.progress_calculator.build_day_gaps(
@@ -682,6 +692,37 @@ class MealPlanNutritionProgressService:
             )
             for row in rows
         ]
+
+    def _fill_missing_dates(
+        self,
+        *,
+        rows: list[dict],
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[dict]:
+        if start_date is None or end_date is None:
+            return rows
+
+        rows_by_date = {row["date"]: row for row in rows}
+        normalized_rows: list[dict] = []
+        current_date = start_date
+
+        while current_date <= end_date:
+            normalized_rows.append(
+                rows_by_date.get(
+                    current_date,
+                    {
+                        "date": current_date,
+                        "total_calories": Decimal("0"),
+                        "total_protein_g": Decimal("0"),
+                        "total_carbs_g": Decimal("0"),
+                        "total_fat_g": Decimal("0"),
+                    },
+                )
+            )
+            current_date += timedelta(days=1)
+
+        return normalized_rows
 
     def _validate_date_filters(
         self,

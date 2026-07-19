@@ -310,54 +310,55 @@ async def test_nutrition_gaps_summary_aggregates_daily_gaps(
 
     assert data["start_date"] == "2026-06-22"
     assert data["end_date"] == "2026-06-28"
-    assert data["days_count"] == 3
+    assert data["days_count"] == 7
 
     assert data["overall_status_counts"] == {
         "unknown": 0,
-        "needs_attention": 1,
+        "needs_attention": 5,
         "over_target": 1,
         "on_track": 1,
     }
 
     assert data["macro_status_counts"] == {
         "calories": {
-            "under": 1,
+            "under": 5,
             "met": 1,
             "over": 1,
             "unknown": 0,
         },
         "protein": {
-            "under": 1,
+            "under": 5,
             "met": 2,
             "over": 0,
             "unknown": 0,
         },
         "carbs": {
-            "under": 1,
+            "under": 5,
             "met": 2,
             "over": 0,
             "unknown": 0,
         },
         "fat": {
-            "under": 0,
+            "under": 4,
             "met": 1,
             "over": 2,
             "unknown": 0,
         },
     }
 
-    assert_decimal(data["average_gaps"]["calories_gap"], "100")
-    assert_decimal(data["average_gaps"]["protein_gap_g"], "6.67")
-    assert_decimal(data["average_gaps"]["carbs_gap_g"], "20")
-    assert_decimal(data["average_gaps"]["fat_gap_g"], "-10")
+    assert_decimal(data["average_gaps"]["calories_gap"], "1471.43")
+    assert_decimal(data["average_gaps"]["protein_gap_g"], "82.86")
+    assert_decimal(data["average_gaps"]["carbs_gap_g"], "180")
+    assert_decimal(data["average_gaps"]["fat_gap_g"], "41.43")
 
     assert data["missing_targets"] == []
     assert data["main_issues"] == [
-        "fat_over",
         "protein_under",
         "calories_under",
-        "calories_over",
         "carbs_under",
+        "fat_under",
+        "fat_over",
+        "calories_over",
     ]
 
 
@@ -710,3 +711,56 @@ async def test_nutrition_gaps_summary_requires_authentication(
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_nutrition_gaps_summary_handles_completely_empty_bounded_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "daily_calories_target": 2000,
+            "daily_protein_target_g": 120,
+            "daily_carbs_target_g": 250,
+            "daily_fat_target_g": 70,
+        },
+    )
+
+    response = await client.get(
+        NUTRITION_GAPS_SUMMARY_URL,
+        headers=headers,
+        params={
+            "start_date": "2026-07-06",
+            "end_date": "2026-07-08",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["days_count"] == 3
+    assert data["overall_status_counts"] == {
+        "unknown": 0,
+        "needs_attention": 3,
+        "over_target": 0,
+        "on_track": 0,
+    }
+
+    for macro in ("calories", "protein", "carbs", "fat"):
+        assert data["macro_status_counts"][macro] == {
+            "under": 3,
+            "met": 0,
+            "over": 0,
+            "unknown": 0,
+        }
+
+    assert_decimal(data["average_gaps"]["calories_gap"], "2000")
+    assert_decimal(data["average_gaps"]["protein_gap_g"], "120")
+    assert_decimal(data["average_gaps"]["carbs_gap_g"], "250")
+    assert_decimal(data["average_gaps"]["fat_gap_g"], "70")
+    assert data["missing_targets"] == []

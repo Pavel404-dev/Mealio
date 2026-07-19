@@ -954,7 +954,7 @@ async def test_set_missing_targets_is_unresolved_and_not_scored(
 
 
 @pytest.mark.asyncio
-async def test_empty_recommendations_return_empty_suggestions(
+async def test_missing_targets_return_empty_suggestions(
     client: AsyncClient,
 ) -> None:
     _, headers = await create_authenticated_user(client)
@@ -983,7 +983,7 @@ async def test_empty_recommendations_return_empty_suggestions(
         "start_date": "2026-07-06",
         "end_date": "2026-07-12",
         "recommendations_used": [],
-        "unresolved_actions": [],
+        "unresolved_actions": ["set_missing_targets"],
         "suggestions": [],
     }
 
@@ -1278,3 +1278,58 @@ async def test_recipe_suggestions_reject_invalid_date_range(
     assert response.json()["detail"] == (
         "start_date must be less than or equal to end_date"
     )
+
+
+@pytest.mark.asyncio
+async def test_recipe_suggestions_work_for_completely_empty_bounded_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    await patch_nutrition_profile(
+        client,
+        headers=headers,
+        payload={
+            "diet_type": "balanced",
+            "daily_calories_target": 500,
+            "daily_protein_target_g": 40,
+            "daily_carbs_target_g": 60,
+            "daily_fat_target_g": 20,
+        },
+    )
+    candidate = await create_test_recipe_with_totals(
+        client,
+        headers=headers,
+        title="Empty Range Candidate",
+        calories="500",
+        protein_g="40",
+        carbs_g="60",
+        fat_g="20",
+        diet_type="balanced",
+    )
+
+    response = await client.get(
+        RECIPE_SUGGESTIONS_URL,
+        headers=headers,
+        params={
+            "start_date": "2026-07-06",
+            "end_date": "2026-07-12",
+            "limit": 1,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["start_date"] == "2026-07-06"
+    assert data["end_date"] == "2026-07-12"
+    assert [item["action"] for item in data["recommendations_used"]] == [
+        "increase_protein",
+        "increase_calories",
+        "increase_carbs",
+        "increase_fat",
+    ]
+    assert data["unresolved_actions"] == []
+    assert suggestion_ids(data) == [candidate["id"]]
+    assert_decimal(data["suggestions"][0]["score"], "100")
