@@ -26,6 +26,8 @@ from app.schemas.meal_plan import (
 )
 from app.services.user_nutrition_profiles import UserNutritionProfilesService
 
+MAX_NUTRITION_ANALYTICS_RANGE_DAYS = 366
+
 OVERALL_STATUSES: tuple[NutritionGapsOverallStatus, ...] = (
     "unknown",
     "needs_attention",
@@ -730,10 +732,24 @@ class MealPlanNutritionProgressService:
         start_date: date | None,
         end_date: date | None,
     ) -> None:
-        if start_date is not None and end_date is not None and start_date > end_date:
+        if start_date is None or end_date is None:
+            return
+
+        if start_date > end_date:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="start_date must be less than or equal to end_date",
+            )
+
+        range_days = (end_date - start_date).days + 1
+
+        if range_days > MAX_NUTRITION_ANALYTICS_RANGE_DAYS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "nutrition analytics date range must not exceed "
+                    f"{MAX_NUTRITION_ANALYTICS_RANGE_DAYS} days"
+                ),
             )
 
     def _apply_default_date_range(

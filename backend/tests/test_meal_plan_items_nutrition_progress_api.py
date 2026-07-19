@@ -849,3 +849,43 @@ async def test_nutrition_progress_default_current_week_returns_seven_empty_days(
         assert_decimal(day["total_protein_g"], "0")
         assert_decimal(day["total_carbs_g"], "0")
         assert_decimal(day["total_fat_g"], "0")
+
+
+@pytest.mark.asyncio
+async def test_nutrition_progress_allows_maximum_bounded_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(
+        NUTRITION_PROGRESS_URL,
+        headers=headers,
+        params={
+            "start_date": "2025-01-01",
+            "end_date": "2026-01-01",
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 366
+
+
+@pytest.mark.asyncio
+async def test_nutrition_progress_rejects_excessive_bounded_range(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+
+    response = await client.get(
+        NUTRITION_PROGRESS_URL,
+        headers=headers,
+        params={
+            "start_date": "2025-01-01",
+            "end_date": "2026-01-02",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "nutrition analytics date range must not exceed 366 days"
+    )
