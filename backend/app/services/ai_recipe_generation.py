@@ -17,6 +17,7 @@ from app.schemas.ai_recipe import (
     AIRecipeGenerationRequest,
     AIRecipePantryItemContext,
     GeneratedRecipeData,
+    MAX_AI_PANTRY_ITEMS,
     MAX_AI_PROFILE_PREFERENCE_LENGTH,
     MAX_AI_PROFILE_PREFERENCES,
 )
@@ -42,6 +43,19 @@ class AIRecipeGenerationService:
         data: AIRecipeGenerationRequest,
     ) -> GeneratedRecipeData:
         pantry_items = await self.pantry_repository.list_user_pantry(user_id)
+        available_pantry_items_count = sum(
+            Decimal(str(item.quantity_g)) > 0 for item in pantry_items
+        )
+
+        if data.use_only_pantry and available_pantry_items_count > MAX_AI_PANTRY_ITEMS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Pantry contains too many available items for pantry-only "
+                    f"generation; maximum is {MAX_AI_PANTRY_ITEMS}"
+                ),
+            )
+
         nutrition_profile = await self.nutrition_profiles_repository.get_by_user_id(
             user_id
         )

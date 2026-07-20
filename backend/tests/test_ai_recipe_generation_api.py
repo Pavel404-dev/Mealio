@@ -1,5 +1,5 @@
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -14,12 +14,13 @@ from app.integrations.recipe_generation import (
     RecipeGenerationUnavailableError,
 )
 from app.main import app
-from app.models.ingredient import Ingredient
+from app.models.ingredient import Ingredient, UserIngredient
 from app.models.recipe import Recipe
 from app.schemas.ai_recipe import (
     AIRecipeProviderRequest,
     GeneratedRecipeData,
     GeneratedRecipeIngredient,
+    MAX_AI_PANTRY_ITEMS,
 )
 
 REGISTER_URL = "/api/v1/auth/register"
@@ -371,6 +372,48 @@ async def test_empty_pantry_with_use_only_pantry_returns_422(
     assert response.status_code == 422
     assert response.json()["detail"] == (
         "Pantry is empty; use_only_pantry cannot be true"
+    )
+    assert fake_provider.calls == []
+
+
+@pytest.mark.asyncio
+async def test_use_only_pantry_rejects_more_than_context_limit(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    fake_provider: FakeRecipeGenerationProvider,
+) -> None:
+    user, headers = await create_authenticated_user(client)
+    ingredients = [
+        Ingredient(
+            name=f"AI Pantry Limit Ingredient {index} {uuid4()}",
+            category="test",
+        )
+        for index in range(MAX_AI_PANTRY_ITEMS + 1)
+    ]
+    db_session.add_all(ingredients)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            UserIngredient(
+                user_id=UUID(user["id"]),
+                ingredient_id=ingredient.id,
+                quantity_g=Decimal("100"),
+            )
+            for ingredient in ingredients
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.post(
+        AI_RECIPE_PREVIEW_URL,
+        headers=headers,
+        json=generation_payload(use_only_pantry=True),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "Pantry contains too many available items for pantry-only "
+        f"generation; maximum is {MAX_AI_PANTRY_ITEMS}"
     )
     assert fake_provider.calls == []
 
