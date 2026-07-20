@@ -8,7 +8,11 @@ from app.api.deps import get_current_user, get_recipe_generation_provider
 from app.db.session import get_db
 from app.integrations.recipe_generation import RecipeGenerationProvider
 from app.models.user import User
-from app.schemas.ai_recipe import AIRecipeGenerationRequest, GeneratedRecipeData
+from app.schemas.ai_recipe import (
+    AIRecipeGenerationRequest,
+    AIRecipeSavePreviewRequest,
+    GeneratedRecipeData,
+)
 from app.schemas.recipe import (
     RecipeCreate,
     RecipePantrySuggestionRead,
@@ -85,6 +89,24 @@ async def generate_ai_recipe_preview(
     return await service.generate_preview(
         user_id=current_user.id,
         data=payload,
+    )
+
+
+@router.post(
+    "/ai/save-preview",
+    response_model=RecipeRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def save_ai_recipe_preview(
+    payload: AIRecipeSavePreviewRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = RecipesService(db)
+
+    return await service.create_recipe(
+        user_id=current_user.id,
+        data=payload.to_recipe_create(),
     )
 
 

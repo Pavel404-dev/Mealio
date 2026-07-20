@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate
 from app.schemas.user_nutrition_profile import NutritionGoal
 
 MAX_AI_PANTRY_ITEMS = 50
@@ -107,6 +108,84 @@ class GeneratedRecipeData(BaseModel):
             raise ValueError("Generated recipe cannot contain duplicate ingredients")
 
         return self
+
+
+def format_recipe_instruction_steps(instructions: list[str]) -> str:
+    return "\n".join(
+        f"{step_number}. {instruction}"
+        for step_number, instruction in enumerate(instructions, start=1)
+    )
+
+
+class AIRecipeSaveIngredient(RecipeIngredientCreate):
+    model_config = ConfigDict(extra="forbid")
+
+
+class AIRecipeSavePreviewRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    diet_type: str | None = Field(default=None, max_length=100)
+    instructions: list[str] = Field(..., min_length=1, max_length=30)
+    ingredients: list[AIRecipeSaveIngredient] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+    )
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )
+
+    @field_validator("description", "diet_type")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        if value == "":
+            return None
+
+        return value
+
+    @field_validator("instructions")
+    @classmethod
+    def validate_instructions(cls, values: list[str]) -> list[str]:
+        normalized_values: list[str] = []
+
+        for value in values:
+            normalized_value = value.strip()
+
+            if not normalized_value:
+                raise ValueError("Recipe instructions cannot contain blank steps")
+
+            if len(normalized_value) > 500:
+                raise ValueError("Recipe instruction step is too long")
+
+            normalized_values.append(normalized_value)
+
+        return normalized_values
+
+    @model_validator(mode="after")
+    def validate_unique_ingredients(self) -> "AIRecipeSavePreviewRequest":
+        ingredient_ids = [item.ingredient_id for item in self.ingredients]
+
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise ValueError("Recipe cannot contain duplicate ingredients")
+
+        return self
+
+    def to_recipe_create(self) -> RecipeCreate:
+        return RecipeCreate(
+            title=self.title,
+            description=self.description,
+            diet_type=self.diet_type,
+            instructions=format_recipe_instruction_steps(self.instructions),
+            ingredients=[
+                RecipeIngredientCreate(
+                    ingredient_id=item.ingredient_id,
+                    quantity_g=item.quantity_g,
+                )
+                for item in self.ingredients
+            ],
+        )
 
 
 class AIRecipePantryItemContext(BaseModel):
