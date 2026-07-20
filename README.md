@@ -17,7 +17,7 @@ Mealio aims to help users:
 * calculate meal plan nutrition summaries;
 * calculate daily nutrition summaries;
 * authenticate users with JWT access tokens;
-* receive AI-assisted recipe and nutrition recommendations in the future.
+* generate AI-assisted recipe previews from pantry and nutrition preferences.
 
 The project is currently under active development.
 
@@ -53,7 +53,8 @@ The backend currently includes:
 * Alembic migration checks;
 * pytest test suite;
 * backend test coverage report;
-* backend Docker image build check.
+* backend Docker image build check;
+* authenticated AI recipe generation preview with structured output.
 
 ### Planned
 
@@ -63,7 +64,7 @@ The following functionality is planned for future development:
 * logout flow;
 * password reset;
 * email verification;
-* AI recipe generation;
+* saving generated AI recipes;
 * AI recipe classification;
 * personalized nutrition recommendations;
 * Flutter mobile application integration;
@@ -78,13 +79,13 @@ flowchart LR
     Services["Service Layer"]
     Repositories["Repository Layer"]
     Database[("PostgreSQL 17")]
-    AI["AI Recipe Generation Service<br/>planned"]
+    AI["AI Recipe Generation Provider"]
 
     Mobile -->|"HTTPS / JSON"| API
     API --> Services
     Services --> Repositories
     Repositories --> Database
-    Services -.->|"future integration"| AI
+    Services -->|"structured recipe preview"| AI
 ```
 
 The backend follows a layered architecture:
@@ -114,6 +115,7 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 * Pydantic Settings
 * pwdlib with Argon2
 * PyJWT
+* OpenAI Python SDK
 
 ### Database
 

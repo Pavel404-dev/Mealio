@@ -4,15 +4,18 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_recipe_generation_provider
 from app.db.session import get_db
+from app.integrations.recipe_generation import RecipeGenerationProvider
 from app.models.user import User
+from app.schemas.ai_recipe import AIRecipeGenerationRequest, GeneratedRecipeData
 from app.schemas.recipe import (
     RecipeCreate,
     RecipePantrySuggestionRead,
     RecipeRead,
     RecipeUpdate,
 )
+from app.services.ai_recipe_generation import AIRecipeGenerationService
 from app.services.recipes import RecipesService
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
@@ -64,6 +67,24 @@ async def suggest_current_user_recipes_from_pantry(
         max_missing_ingredients=max_missing_ingredients,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.post(
+    "/ai/generate-preview",
+    response_model=GeneratedRecipeData,
+)
+async def generate_ai_recipe_preview(
+    payload: AIRecipeGenerationRequest,
+    current_user: User = Depends(get_current_user),
+    provider: RecipeGenerationProvider = Depends(get_recipe_generation_provider),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AIRecipeGenerationService(db, provider)
+
+    return await service.generate_preview(
+        user_id=current_user.id,
+        data=payload,
     )
 
 

@@ -28,6 +28,7 @@ os.environ.setdefault(
 )
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+os.environ.pop("OPENAI_API_KEY", None)
 
 from app.db.base import Base
 from app.db.session import get_db
