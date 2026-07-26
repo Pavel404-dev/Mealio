@@ -10,6 +10,8 @@ from app.integrations.recipe_generation import RecipeGenerationProvider
 from app.models.user import User
 from app.schemas.ai_recipe import (
     AIRecipeGenerationRequest,
+    AIRecipeIngredientMatchSuggestionsRequest,
+    AIRecipeIngredientMatchSuggestionsResponse,
     AIRecipeSavePreviewRequest,
     GeneratedRecipeData,
 )
@@ -20,6 +22,7 @@ from app.schemas.recipe import (
     RecipeUpdate,
 )
 from app.services.ai_recipe_generation import AIRecipeGenerationService
+from app.services.ingredients import IngredientsService
 from app.services.recipes import RecipesService
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
@@ -89,6 +92,22 @@ async def generate_ai_recipe_preview(
     return await service.generate_preview(
         user_id=current_user.id,
         data=payload,
+    )
+
+
+@router.post(
+    "/ai/ingredient-match-suggestions",
+    response_model=AIRecipeIngredientMatchSuggestionsResponse,
+)
+async def suggest_ai_recipe_ingredient_matches(
+    payload: AIRecipeIngredientMatchSuggestionsRequest,
+    _current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = IngredientsService(db)
+
+    return await service.suggest_exact_ingredient_matches(
+        ingredient_names=payload.ingredient_names,
     )
 
 

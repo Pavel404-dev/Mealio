@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.exceptions import DuplicateResourceError
 from app.repositories.ingredients import IngredientsRepository
 from app.repositories.recipes import RecipesRepository
+from app.schemas.ai_recipe import (
+    AIRecipeIngredientExactMatch,
+    AIRecipeIngredientMatchSuggestion,
+    AIRecipeIngredientMatchSuggestionsResponse,
+)
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
 from app.services.recipe_nutrition import RecipeNutritionCalculator
 
@@ -28,6 +33,39 @@ class IngredientsService:
             limit=limit,
             offset=offset,
         )
+
+    async def suggest_exact_ingredient_matches(
+        self,
+        ingredient_names: list[str],
+    ) -> AIRecipeIngredientMatchSuggestionsResponse:
+        ingredients = await self.repository.list_by_exact_names_case_insensitive(
+            ingredient_names
+        )
+        ingredients_by_name = {
+            ingredient.name.casefold(): ingredient for ingredient in ingredients
+        }
+
+        results: list[AIRecipeIngredientMatchSuggestion] = []
+
+        for generated_name in ingredient_names:
+            ingredient = ingredients_by_name.get(generated_name.casefold())
+            exact_match = None
+
+            if ingredient is not None:
+                exact_match = AIRecipeIngredientExactMatch(
+                    ingredient_id=ingredient.id,
+                    name=ingredient.name,
+                    category=ingredient.category,
+                )
+
+            results.append(
+                AIRecipeIngredientMatchSuggestion(
+                    generated_name=generated_name,
+                    exact_match=exact_match,
+                )
+            )
+
+        return AIRecipeIngredientMatchSuggestionsResponse(results=results)
 
     async def get_ingredient(self, ingredient_id: uuid.UUID):
         ingredient = await self.repository.get_by_id(ingredient_id)
