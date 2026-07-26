@@ -4,7 +4,7 @@
 
 Mealio is an AI-powered meal planning application designed to help users manage ingredients, generate recipes, organize meal plans, and calculate nutrition summaries.
 
-The project is being developed as part of a Bachelor's Thesis and is maintained as a monorepo containing the FastAPI backend, planned Flutter mobile client, and technical documentation.
+The project is being developed as part of a Bachelor's Thesis and is maintained as a monorepo containing the FastAPI backend, Flutter mobile client, and technical documentation.
 
 ## Overview
 
@@ -74,7 +74,7 @@ The following functionality is planned for future development:
 
 ```mermaid
 flowchart LR
-    Mobile["Flutter Mobile App<br/>planned / under development"]
+    Mobile["Flutter Mobile App<br/>initialized / under development"]
     API["FastAPI REST API"]
     Services["Service Layer"]
     Repositories["Repository Layer"]
@@ -146,7 +146,7 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 * Flutter
 * Dart
 
-The mobile application is planned / under development.
+The mobile application is initialized / under development.
 
 ## Repository Structure
 
@@ -179,7 +179,7 @@ Mealio/
 │   ├── README.md
 │   └── requirements.txt
 │
-├── mobile/
+├── frontend/
 │   └── Flutter mobile application
 │
 ├── docs/

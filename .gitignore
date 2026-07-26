@@ -202,3 +202,8 @@ Thumbs.db
 *.class
 .buildlog/
 .history
+# Required Flutter application files
+!frontend/pubspec.lock
+!frontend/android/gradlew
+!frontend/android/gradlew.bat
+!frontend/android/gradle/wrapper/gradle-wrapper.jar
