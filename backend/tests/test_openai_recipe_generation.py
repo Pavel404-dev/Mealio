@@ -1,3 +1,4 @@
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -73,8 +74,7 @@ async def test_openai_provider_uses_async_structured_output_without_retries(
             "ingredients": [
                 {
                     "name": "Rice",
-                    "quantity": "160",
-                    "unit": "g",
+                    "quantity_g": "160",
                 }
             ],
             "instructions": ["Cook the rice."],
@@ -97,6 +97,7 @@ async def test_openai_provider_uses_async_structured_output_without_retries(
     )
 
     assert result.title == "Rice Bowl"
+    assert result.ingredients[0].quantity_g == Decimal("160")
     assert FakeAsyncOpenAI.init_kwargs == {
         "api_key": "test-key",
         "timeout": 15,
@@ -120,6 +121,24 @@ async def test_openai_provider_uses_async_structured_output_without_retries(
                 "prep_time_minutes": 20,
                 "ingredients": [],
                 "instructions": [],
+            },
+        ),
+        SimpleNamespace(
+            status="completed",
+            output_parsed={
+                "title": "Legacy Rice Bowl",
+                "description": None,
+                "servings": 2,
+                "prep_time_minutes": 20,
+                "diet_type": "balanced",
+                "ingredients": [
+                    {
+                        "name": "Rice",
+                        "quantity": "160",
+                        "unit": "g",
+                    }
+                ],
+                "instructions": ["Cook the rice."],
             },
         ),
     ],
