@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal, InvalidOperation
 from typing import Literal
 
@@ -7,6 +8,7 @@ from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate
 from app.schemas.user_nutrition_profile import NutritionGoal
 
 MAX_AI_PANTRY_ITEMS = 50
+MAX_AI_INGREDIENT_MATCH_NAMES = 50
 MAX_AI_PROFILE_PREFERENCES = 25
 MAX_AI_PROFILE_PREFERENCE_LENGTH = 100
 
@@ -108,6 +110,56 @@ class GeneratedRecipeData(BaseModel):
             raise ValueError("Generated recipe cannot contain duplicate ingredients")
 
         return self
+
+
+class AIRecipeIngredientMatchSuggestionsRequest(BaseModel):
+    ingredient_names: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_AI_INGREDIENT_MATCH_NAMES,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("ingredient_names")
+    @classmethod
+    def normalize_and_validate_ingredient_names(cls, values: list[str]) -> list[str]:
+        normalized_names: list[str] = []
+        normalized_keys: set[str] = set()
+
+        for value in values:
+            normalized_name = value.strip()
+
+            if not normalized_name:
+                raise ValueError("Ingredient names cannot contain blank values")
+
+            if len(normalized_name) > 255:
+                raise ValueError("Ingredient name is too long")
+
+            normalized_key = normalized_name.casefold()
+
+            if normalized_key in normalized_keys:
+                raise ValueError("Ingredient names must be unique")
+
+            normalized_names.append(normalized_name)
+            normalized_keys.add(normalized_key)
+
+        return normalized_names
+
+
+class AIRecipeIngredientExactMatch(BaseModel):
+    ingredient_id: uuid.UUID
+    name: str
+    category: str | None = None
+
+
+class AIRecipeIngredientMatchSuggestion(BaseModel):
+    generated_name: str
+    exact_match: AIRecipeIngredientExactMatch | None
+
+
+class AIRecipeIngredientMatchSuggestionsResponse(BaseModel):
+    results: list[AIRecipeIngredientMatchSuggestion]
 
 
 def format_recipe_instruction_steps(instructions: list[str]) -> str:

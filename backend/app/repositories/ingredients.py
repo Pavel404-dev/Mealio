@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 
 from sqlalchemy import delete, func, select
@@ -55,6 +57,21 @@ class IngredientsRepository:
 
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def list_by_exact_names_case_insensitive(
+        self,
+        names: list[str],
+    ) -> list[Ingredient]:
+        if not names:
+            return []
+
+        normalized_names = [name.lower() for name in names]
+        stmt = select(Ingredient).where(
+            func.lower(Ingredient.name).in_(normalized_names)
+        )
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
 
     async def create(self, data: IngredientCreate) -> Ingredient:
         ingredient = Ingredient(
