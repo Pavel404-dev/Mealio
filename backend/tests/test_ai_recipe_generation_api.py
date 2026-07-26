@@ -41,13 +41,11 @@ class FakeRecipeGenerationProvider:
             ingredients=[
                 GeneratedRecipeIngredient(
                     name="Chicken breast",
-                    quantity="300",
-                    unit="g",
+                    quantity_g="300",
                 ),
                 GeneratedRecipeIngredient(
                     name="Rice",
-                    quantity="160",
-                    unit="g",
+                    quantity_g="160",
                 ),
             ],
             instructions=[
@@ -182,8 +180,20 @@ async def test_generate_ai_recipe_preview_success(
 
     assert response.status_code == 200
     parsed = GeneratedRecipeData.model_validate(response.json())
+    first_ingredient = response.json()["ingredients"][0]
     assert parsed == fake_provider.result
+    assert Decimal(str(first_ingredient["quantity_g"])) == Decimal("300")
+    assert "quantity" not in first_ingredient
+    assert "unit" not in first_ingredient
     assert len(fake_provider.calls) == 1
+    instructions = fake_provider.calls[0].instructions
+    assert "quantity_g" in instructions
+    assert "positive finite number of grams" in instructions
+    assert "Do not return quantity, unit, ingredient_id" in instructions
+    assert all(
+        set(item.model_dump()) == {"name", "quantity_g"}
+        for item in fake_provider.result.ingredients
+    )
 
 
 @pytest.mark.asyncio
@@ -337,8 +347,7 @@ async def test_use_only_pantry_is_passed_and_enforced(
         ingredients=[
             GeneratedRecipeIngredient(
                 name=ingredient_name,
-                quantity="200",
-                unit="g",
+                quantity_g="200",
             )
         ],
         instructions=["Cook and serve."],
@@ -354,6 +363,132 @@ async def test_use_only_pantry_is_passed_and_enforced(
     call = fake_provider.calls[-1]
     assert call.context.request.use_only_pantry is True
     assert "Use only pantry ingredients" in call.instructions
+    assert "quantity_g" in call.instructions
+    assert "available_quantity_g" in call.instructions
+
+
+@pytest.mark.asyncio
+async def test_use_only_pantry_allows_quantity_equal_to_available_quantity(
+    client: AsyncClient,
+    fake_provider: FakeRecipeGenerationProvider,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient_name = f"Exact Pantry Quantity {uuid4()}"
+    ingredient_id = await create_ingredient(
+        client,
+        headers=headers,
+        name=ingredient_name,
+    )
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient_id,
+        quantity_g="250.5",
+    )
+    fake_provider.result = GeneratedRecipeData(
+        title="Exact Pantry Quantity",
+        servings=2,
+        prep_time_minutes=20,
+        diet_type="balanced",
+        ingredients=[
+            GeneratedRecipeIngredient(
+                name=ingredient_name,
+                quantity_g="250.5",
+            )
+        ],
+        instructions=["Cook and serve."],
+    )
+
+    response = await client.post(
+        AI_RECIPE_PREVIEW_URL,
+        headers=headers,
+        json=generation_payload(use_only_pantry=True),
+    )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_use_only_pantry_rejects_quantity_above_available_quantity(
+    client: AsyncClient,
+    fake_provider: FakeRecipeGenerationProvider,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient_name = f"Limited Pantry Quantity {uuid4()}"
+    ingredient_id = await create_ingredient(
+        client,
+        headers=headers,
+        name=ingredient_name,
+    )
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient_id,
+        quantity_g="250",
+    )
+    fake_provider.result = GeneratedRecipeData(
+        title="Too Much Pantry Ingredient",
+        servings=2,
+        prep_time_minutes=20,
+        diet_type="balanced",
+        ingredients=[
+            GeneratedRecipeIngredient(
+                name=ingredient_name,
+                quantity_g="250.01",
+            )
+        ],
+        instructions=["Cook and serve."],
+    )
+
+    response = await client.post(
+        AI_RECIPE_PREVIEW_URL,
+        headers=headers,
+        json=generation_payload(use_only_pantry=True),
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "AI provider returned an invalid recipe"
+
+
+@pytest.mark.asyncio
+async def test_use_only_pantry_still_requires_exact_ingredient_name(
+    client: AsyncClient,
+    fake_provider: FakeRecipeGenerationProvider,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    ingredient_name = f"Exact Pantry Name {uuid4()}"
+    ingredient_id = await create_ingredient(
+        client,
+        headers=headers,
+        name=ingredient_name,
+    )
+    await add_pantry_item(
+        client,
+        headers=headers,
+        ingredient_id=ingredient_id,
+        quantity_g="250",
+    )
+    fake_provider.result = GeneratedRecipeData(
+        title="Wrong Pantry Name",
+        servings=2,
+        prep_time_minutes=20,
+        diet_type="balanced",
+        ingredients=[
+            GeneratedRecipeIngredient(
+                name=f"{ingredient_name} chopped",
+                quantity_g="100",
+            )
+        ],
+        instructions=["Cook and serve."],
+    )
+
+    response = await client.post(
+        AI_RECIPE_PREVIEW_URL,
+        headers=headers,
+        json=generation_payload(use_only_pantry=True),
+    )
+
+    assert response.status_code == 502
 
 
 @pytest.mark.asyncio
@@ -577,8 +712,7 @@ async def test_generated_recipe_cannot_directly_include_allergy(
             "ingredients": [
                 GeneratedRecipeIngredient(
                     name="Roasted peanuts",
-                    quantity="50",
-                    unit="g",
+                    quantity_g="50",
                 )
             ]
         }

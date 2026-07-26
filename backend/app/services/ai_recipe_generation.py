@@ -162,12 +162,10 @@ class AIRecipeGenerationService:
         for ingredient in generated_recipe.ingredients:
             pantry_item = pantry_by_name.get(self._normalize_name(ingredient.name))
 
-            if pantry_item is None or ingredient.unit.casefold() != "g":
+            if pantry_item is None:
                 raise RecipeGenerationInvalidResponseError
 
-            quantity = Decimal(ingredient.quantity)
-
-            if quantity > pantry_item.available_quantity_g:
+            if ingredient.quantity_g > pantry_item.available_quantity_g:
                 raise RecipeGenerationInvalidResponseError
 
     def _matches_any_restricted_name(

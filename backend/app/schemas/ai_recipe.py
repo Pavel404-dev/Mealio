@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -36,26 +36,12 @@ class AIRecipeGenerationRequest(BaseModel):
 
 class GeneratedRecipeIngredient(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    quantity: str = Field(..., min_length=1, max_length=30)
-    unit: str = Field(..., min_length=1, max_length=30)
+    quantity_g: Decimal = Field(..., gt=0, allow_inf_nan=False)
 
     model_config = ConfigDict(
         str_strip_whitespace=True,
         extra="forbid",
     )
-
-    @field_validator("quantity")
-    @classmethod
-    def validate_positive_quantity(cls, value: str) -> str:
-        try:
-            quantity = Decimal(value)
-        except InvalidOperation as exc:
-            raise ValueError("Ingredient quantity must be numeric") from exc
-
-        if not quantity.is_finite() or quantity <= 0:
-            raise ValueError("Ingredient quantity must be positive")
-
-        return value
 
 
 class GeneratedRecipeData(BaseModel):
