@@ -132,4 +132,3 @@ This PR does not implement:
 - nutrition analytics.
 
 Real backend authentication integration is planned for the next frontend PR.
-Real backend authentication integration is planned for the next frontend PR.

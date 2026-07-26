@@ -94,11 +94,17 @@ abstract final class AppTheme {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
+      cardTheme: const CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          side: BorderSide(color: AppColors.border),
+        ),
+      ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.forest,
-      ),
-      snackBarTheme: const SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
