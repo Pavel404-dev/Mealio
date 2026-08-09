@@ -1,6 +1,8 @@
 enum AuthFailureType {
   invalidCredentials,
   validation,
+  duplicateEmail,
+  registrationValidation,
   connection,
   invalidSession,
   unexpected,
@@ -20,6 +22,20 @@ class AuthFailure implements Exception {
     return const AuthFailure(
       type: AuthFailureType.validation,
       message: 'Please check the entered email and password.',
+    );
+  }
+
+  factory AuthFailure.duplicateEmail() {
+    return const AuthFailure(
+      type: AuthFailureType.duplicateEmail,
+      message: 'An account with this email already exists.',
+    );
+  }
+
+  factory AuthFailure.registrationValidation() {
+    return const AuthFailure(
+      type: AuthFailureType.registrationValidation,
+      message: 'Please check the registration details.',
     );
   }
 

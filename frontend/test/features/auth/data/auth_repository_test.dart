@@ -237,4 +237,162 @@ void main() {
     expect(storage.deleteCount, 1);
     expect(storage.token, isNull);
   });
+
+  test(
+    'successful registration posts normalized data without changing storage',
+    () async {
+      storage = FakeSecureStorageService(token: 'existing-token');
+      repository = AuthRepository(
+        apiClient: ApiClient(createFakeDio(adapter)),
+        storage: storage,
+      );
+      adapter.enqueue(const FakeHttpResponse(statusCode: 201, body: userJson));
+
+      final user = await repository.register(
+        email: '  Pavel@Example.COM  ',
+        fullName: '  Pavel Potapenko  ',
+        password: '  Mealio-password  ',
+      );
+
+      expect(adapter.requests, hasLength(1));
+      expect(adapter.requests.single.path, '/auth/register');
+      expect(adapter.requests.single.data, {
+        'email': 'pavel@example.com',
+        'full_name': 'Pavel Potapenko',
+        'password': '  Mealio-password  ',
+      });
+      expect(user, testAuthUser);
+      expect(storage.readCount, 0);
+      expect(storage.writeCount, 0);
+      expect(storage.deleteCount, 0);
+      expect(storage.lastWrittenToken, isNull);
+      expect(storage.token, 'existing-token');
+    },
+  );
+
+  test('registration sends empty full name as null', () async {
+    adapter.enqueue(const FakeHttpResponse(statusCode: 201, body: userJson));
+
+    await repository.register(
+      email: 'pavel@example.com',
+      fullName: '   ',
+      password: 'Mealio-password-123',
+    );
+
+    expect(adapter.requests.single.data, {
+      'email': 'pavel@example.com',
+      'full_name': null,
+      'password': 'Mealio-password-123',
+    });
+  });
+
+  test('registration 409 maps to duplicate email', () async {
+    adapter.enqueue(
+      const FakeHttpResponse(
+        statusCode: 409,
+        body: {'detail': 'User with this email already exists'},
+      ),
+    );
+
+    await expectLater(
+      repository.register(
+        email: 'pavel@example.com',
+        password: 'Mealio-password-123',
+      ),
+      throwsA(
+        isA<AuthFailure>()
+            .having(
+              (failure) => failure.type,
+              'type',
+              AuthFailureType.duplicateEmail,
+            )
+            .having(
+              (failure) => failure.message,
+              'message',
+              'An account with this email already exists.',
+            ),
+      ),
+    );
+  });
+
+  test('registration 422 maps to safe validation error', () async {
+    adapter.enqueue(
+      const FakeHttpResponse(statusCode: 422, body: {'detail': []}),
+    );
+
+    await expectLater(
+      repository.register(email: 'invalid', password: 'Mealio-password-123'),
+      throwsA(
+        isA<AuthFailure>().having(
+          (failure) => failure.type,
+          'type',
+          AuthFailureType.registrationValidation,
+        ),
+      ),
+    );
+  });
+
+  test(
+    'registration connection failure maps to safe connection error',
+    () async {
+      adapter.enqueue(
+        const FakeHttpResponse.error(DioExceptionType.connectionError),
+      );
+
+      await expectLater(
+        repository.register(
+          email: 'pavel@example.com',
+          password: 'Mealio-password-123',
+        ),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.type,
+            'type',
+            AuthFailureType.connection,
+          ),
+        ),
+      );
+    },
+  );
+
+  test('malformed registration response is handled safely', () async {
+    adapter.enqueue(
+      const FakeHttpResponse(
+        statusCode: 201,
+        body: {'email': 'pavel@example.com'},
+      ),
+    );
+
+    await expectLater(
+      repository.register(
+        email: 'pavel@example.com',
+        password: 'Mealio-password-123',
+      ),
+      throwsA(
+        isA<AuthFailure>().having(
+          (failure) => failure.type,
+          'type',
+          AuthFailureType.unexpected,
+        ),
+      ),
+    );
+  });
+
+  test('unexpected registration success status is rejected safely', () async {
+    adapter.enqueue(const FakeHttpResponse(statusCode: 200, body: userJson));
+
+    await expectLater(
+      repository.register(
+        email: 'pavel@example.com',
+        password: 'Mealio-password-123',
+      ),
+      throwsA(
+        isA<AuthFailure>().having(
+          (failure) => failure.type,
+          'type',
+          AuthFailureType.unexpected,
+        ),
+      ),
+    );
+  });
 }

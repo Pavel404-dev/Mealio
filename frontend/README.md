@@ -30,7 +30,7 @@ flutter pub get
 
 - The backend origin is supplied through `API_BASE_URL`.
 - `AppConfig` adds the `/api/v1` prefix centrally.
-- Feature repositories use paths relative to that prefix, for example `/auth/login` and `/auth/me`.
+- Feature repositories use paths relative to that prefix, for example `/auth/register`, `/auth/login` and `/auth/me`.
 
 ### Android Emulator
 
@@ -74,6 +74,14 @@ restore access token
     ├── valid token → GET /auth/me → Home
     └── no/invalid token → Login
 
+Register
+    ↓
+POST /auth/register
+    ↓
+201 Created
+    ↓
+Login with registered email prefilled
+
 Login
     ↓
 POST /auth/login
@@ -93,11 +101,14 @@ Login
 
 Authentication details:
 
+- `POST /auth/register` creates a user and returns `UserRead`; it does not create a session or return an access token.
+- Registration validates email, optional full name, a 15–128 character password, and password confirmation before sending the request.
+- Successful registration returns to Login, shows a success message, and prefills the normalized registered email.
 - `POST /auth/login` accepts the user's email and password.
 - `GET /auth/me` restores and verifies the current user.
 - The access token is stored with `flutter_secure_storage` under `mealio_access_token`.
 - A Dio interceptor asynchronously adds `Authorization: Bearer <token>` to authenticated requests.
-- Login requests do not attach an existing bearer token.
+- Login and registration requests do not attach an existing bearer token.
 - Invalid or expired stored tokens are removed during session restoration.
 - If `/auth/me` fails after a successful login token was saved, the token is removed to avoid an inconsistent session.
 - Logout is local because the backend currently has no logout endpoint.
@@ -105,7 +116,6 @@ Authentication details:
 
 Not implemented yet:
 
-- frontend registration;
 - refresh tokens;
 - automatic token refresh;
 - password reset;
@@ -169,6 +179,7 @@ The frontend contains:
 - Dio configuration with bearer authentication;
 - secure access-token storage;
 - session restoration;
+- real registration flow;
 - real login flow;
 - local logout;
 - authenticated Home dashboard;
@@ -178,7 +189,6 @@ The frontend contains:
 
 This authentication feature does not implement:
 
-- registration UI/API integration;
 - refresh tokens;
 - automatic token refresh;
 - backend logout;

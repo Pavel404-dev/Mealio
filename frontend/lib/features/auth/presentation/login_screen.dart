@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.registrationSuccessEmail});
+
+  final String? registrationSuccessEmail;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -15,10 +18,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
 
   bool _obscurePassword = true;
+  bool _showRegistrationSuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(
+      text: widget.registrationSuccessEmail ?? '',
+    );
+    _passwordController = TextEditingController();
+    _showRegistrationSuccess = widget.registrationSuccessEmail != null;
+  }
+
+  @override
+  void didUpdateWidget(covariant LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final registrationSuccessEmail = widget.registrationSuccessEmail;
+
+    if (registrationSuccessEmail != oldWidget.registrationSuccessEmail) {
+      _showRegistrationSuccess = registrationSuccessEmail != null;
+
+      if (registrationSuccessEmail != null) {
+        _emailController.text = registrationSuccessEmail;
+        _passwordController.clear();
+        _obscurePassword = true;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -60,6 +91,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    if (_showRegistrationSuccess) {
+      setState(() {
+        _showRegistrationSuccess = false;
+      });
+    }
+
     ref
         .read(authControllerProvider.notifier)
         .login(
@@ -73,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authControllerProvider);
     final session = authState.asData?.value;
     final isLoginInProgress = session?.isLoginInProgress ?? false;
-    final failure = session?.failure;
+    final failure = _showRegistrationSuccess ? null : session?.failure;
 
     return Scaffold(
       key: const Key('login-screen'),
@@ -109,6 +146,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 'Sign in to manage your pantry, recipes and meal plans.',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
+              if (_showRegistrationSuccess) ...[
+                const SizedBox(height: 20),
+                Container(
+                  key: const Key('registration-success-message'),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.sage.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.sage),
+                  ),
+                  child: const Text(
+                    'Account created successfully. You can now sign in.',
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               TextFormField(
                 key: const Key('login-email-field'),
@@ -175,13 +227,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 24),
               TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Registration will be added later.'),
-                    ),
-                  );
-                },
+                key: const Key('open-register-button'),
+                onPressed: isLoginInProgress
+                    ? null
+                    : () => context.push('/register'),
                 child: const Text('New to Mealio? Create an account'),
               ),
             ],

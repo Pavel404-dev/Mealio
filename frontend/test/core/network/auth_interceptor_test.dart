@@ -104,4 +104,27 @@ void main() {
       isFalse,
     );
   });
+
+  test('register request never requires or attaches stored token', () async {
+    storage = FakeSecureStorageService(token: 'stale-token');
+    final dio = createFakeDio(adapter)
+      ..interceptors.add(AuthInterceptor(storage));
+
+    adapter.enqueue(const FakeHttpResponse(statusCode: 201, body: {}));
+
+    await dio.post<Object?>(
+      '/auth/register',
+      data: {
+        'email': 'pavel@example.com',
+        'full_name': 'Pavel Potapenko',
+        'password': 'Mealio-password-123',
+      },
+    );
+
+    expect(storage.readCount, 0);
+    expect(
+      adapter.requests.single.headers.containsKey('Authorization'),
+      isFalse,
+    );
+  });
 }

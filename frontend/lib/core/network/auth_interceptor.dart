@@ -5,6 +5,8 @@ import '../storage/secure_storage_provider.dart';
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._storage);
 
+  static const Set<String> _publicAuthPaths = {'/auth/login', '/auth/register'};
+
   final SecureStorageService _storage;
 
   @override
@@ -12,7 +14,7 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    if (options.path == '/auth/login') {
+    if (_publicAuthPaths.contains(options.path)) {
       handler.next(options);
       return;
     }
