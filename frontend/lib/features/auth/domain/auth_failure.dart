@@ -1,0 +1,52 @@
+enum AuthFailureType {
+  invalidCredentials,
+  validation,
+  connection,
+  invalidSession,
+  unexpected,
+}
+
+class AuthFailure implements Exception {
+  const AuthFailure({required this.type, required this.message});
+
+  factory AuthFailure.invalidCredentials() {
+    return const AuthFailure(
+      type: AuthFailureType.invalidCredentials,
+      message: 'Invalid email or password.',
+    );
+  }
+
+  factory AuthFailure.validation() {
+    return const AuthFailure(
+      type: AuthFailureType.validation,
+      message: 'Please check the entered email and password.',
+    );
+  }
+
+  factory AuthFailure.connection() {
+    return const AuthFailure(
+      type: AuthFailureType.connection,
+      message: 'Unable to connect to the server. Please try again.',
+    );
+  }
+
+  factory AuthFailure.invalidSession() {
+    return const AuthFailure(
+      type: AuthFailureType.invalidSession,
+      message: 'Something went wrong. Please try again.',
+    );
+  }
+
+  factory AuthFailure.unexpected() {
+    return const AuthFailure(
+      type: AuthFailureType.unexpected,
+      message: 'Something went wrong. Please try again.',
+    );
+  }
+
+  final AuthFailureType type;
+  final String message;
+
+  @override
+  String toString() => 'AuthFailure($type)';
+}
