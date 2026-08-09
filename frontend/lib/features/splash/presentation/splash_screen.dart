@@ -1,36 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  Timer? _navigationTimer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _navigationTimer = Timer(const Duration(milliseconds: 900), () {
-      if (mounted) {
-        context.go('/login');
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _navigationTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

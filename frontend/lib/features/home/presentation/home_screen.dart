@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../auth/presentation/auth_controller.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   void _showPlaceholder(BuildContext context, String feature) {
@@ -13,16 +14,24 @@ class HomeScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider).asData?.value.user;
+    final fullName = user?.fullName?.trim();
+    final greetingTarget = fullName != null && fullName.isNotEmpty
+        ? fullName
+        : user?.email;
+
     return Scaffold(
       key: const Key('home-screen'),
       appBar: AppBar(
         title: const Text('Mealio'),
         actions: [
           IconButton(
-            key: const Key('home-login-button'),
-            tooltip: 'Return to Login',
-            onPressed: () => context.go('/login'),
+            key: const Key('home-logout-button'),
+            tooltip: 'Logout',
+            onPressed: () {
+              ref.read(authControllerProvider.notifier).logout();
+            },
             icon: const Icon(Icons.logout_rounded),
           ),
           const SizedBox(width: 8),
@@ -33,7 +42,10 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
             Text(
-              'Good to see you',
+              greetingTarget == null
+                  ? 'Good to see you'
+                  : 'Good to see you, $greetingTarget',
+              key: const Key('home-greeting'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
