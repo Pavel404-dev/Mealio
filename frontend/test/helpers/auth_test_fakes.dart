@@ -131,18 +131,28 @@ class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository({
     this.restoreHandler,
     this.loginHandler,
+    this.registerHandler,
     this.logoutHandler,
   }) : super(apiClient: ApiClient(Dio()), storage: FakeSecureStorageService());
 
   Future<AuthUser?> Function()? restoreHandler;
   Future<AuthUser> Function({required String email, required String password})?
   loginHandler;
+  Future<AuthUser> Function({
+    required String email,
+    required String password,
+    String? fullName,
+  })?
+  registerHandler;
   Future<void> Function()? logoutHandler;
 
   int restoreCalls = 0;
   int loginCalls = 0;
+  int registerCalls = 0;
   int logoutCalls = 0;
   String? lastLoginEmail;
+  String? lastRegisterEmail;
+  String? lastRegisterFullName;
 
   @override
   Future<AuthUser?> restoreSession() {
@@ -162,6 +172,25 @@ class FakeAuthRepository extends AuthRepository {
     }
 
     return handler(email: email, password: password);
+  }
+
+  @override
+  Future<AuthUser> register({
+    required String email,
+    required String password,
+    String? fullName,
+  }) {
+    registerCalls++;
+    lastRegisterEmail = email;
+    lastRegisterFullName = fullName;
+
+    final handler = registerHandler;
+
+    if (handler == null) {
+      return Future<AuthUser>.value(testAuthUser);
+    }
+
+    return handler(email: email, password: password, fullName: fullName);
   }
 
   @override

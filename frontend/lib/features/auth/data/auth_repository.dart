@@ -24,6 +24,39 @@ class AuthRepository {
   final ApiClient _apiClient;
   final SecureStorageService _storage;
 
+  Future<AuthUser> register({
+    required String email,
+    required String password,
+    String? fullName,
+  }) async {
+    final normalizedFullName = fullName?.trim();
+
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/register',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'full_name': normalizedFullName == null || normalizedFullName.isEmpty
+              ? null
+              : normalizedFullName,
+          'password': password,
+        },
+      );
+
+      if (response.statusCode != 201) {
+        throw const FormatException('Unexpected registration status code');
+      }
+
+      return AuthUser.fromJson(response.data);
+    } on DioException catch (error) {
+      throw _mapDioException(error, requestKind: _AuthRequestKind.registration);
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
   Future<AuthUser> login({
     required String email,
     required String password,
@@ -49,7 +82,7 @@ class AuthRepository {
       final response = await _apiClient.get<Object?>('/auth/me');
       return AuthUser.fromJson(response.data);
     } on DioException catch (error) {
-      throw _mapDioException(error, isLoginRequest: false);
+      throw _mapDioException(error, requestKind: _AuthRequestKind.session);
     } on FormatException {
       throw AuthFailure.unexpected();
     } catch (_) {
@@ -106,7 +139,7 @@ class AuthRepository {
 
       return _parseAccessToken(response.data);
     } on DioException catch (error) {
-      throw _mapDioException(error, isLoginRequest: true);
+      throw _mapDioException(error, requestKind: _AuthRequestKind.login);
     } on FormatException {
       throw AuthFailure.unexpected();
     } catch (_) {
@@ -133,19 +166,31 @@ class AuthRepository {
 
   AuthFailure _mapDioException(
     DioException error, {
-    required bool isLoginRequest,
+    required _AuthRequestKind requestKind,
   }) {
     final statusCode = error.response?.statusCode;
 
-    if (isLoginRequest && statusCode == 401) {
-      return AuthFailure.invalidCredentials();
+    if (requestKind == _AuthRequestKind.login) {
+      if (statusCode == 401) {
+        return AuthFailure.invalidCredentials();
+      }
+
+      if (statusCode == 422) {
+        return AuthFailure.validation();
+      }
     }
 
-    if (isLoginRequest && statusCode == 422) {
-      return AuthFailure.validation();
+    if (requestKind == _AuthRequestKind.registration) {
+      if (statusCode == 409) {
+        return AuthFailure.duplicateEmail();
+      }
+
+      if (statusCode == 422) {
+        return AuthFailure.registrationValidation();
+      }
     }
 
-    if (!isLoginRequest && statusCode == 401) {
+    if (requestKind == _AuthRequestKind.session && statusCode == 401) {
       return AuthFailure.invalidSession();
     }
 
@@ -172,3 +217,5 @@ class AuthRepository {
     }
   }
 }
+
+enum _AuthRequestKind { login, registration, session }

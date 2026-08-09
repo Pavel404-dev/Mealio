@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
@@ -30,14 +31,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = session?.isAuthenticated ?? false;
 
       if (isAuthenticated) {
-        if (location == '/splash' || location == '/login') {
+        if (location == '/splash' ||
+            location == '/login' ||
+            location == '/register') {
           return '/home';
         }
 
         return null;
       }
 
-      if (location != '/login') {
+      final isPublicAuthRoute = location == '/login' || location == '/register';
+
+      if (!isPublicAuthRoute) {
         return '/login';
       }
 
@@ -48,7 +53,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) {
+          final extra = state.extra;
+          return LoginScreen(
+            registrationSuccessEmail: extra is String ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     ],
   );
