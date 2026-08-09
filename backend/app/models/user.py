@@ -47,6 +47,12 @@ class User(Base):
         nullable=False,
     )
 
+    auth_sessions = relationship(
+        "AuthSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
     user_ingredients = relationship(
         "UserIngredient",
         back_populates="user",
