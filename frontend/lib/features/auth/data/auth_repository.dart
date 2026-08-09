@@ -14,7 +14,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 class AuthRepository {
-  AuthRepository({required this._apiClient, required this._storage});
+  AuthRepository({
+    required ApiClient apiClient,
+    required SecureStorageService storage,
+  }) : this._(apiClient, storage);
+
+  AuthRepository._(this._apiClient, this._storage);
 
   final ApiClient _apiClient;
   final SecureStorageService _storage;

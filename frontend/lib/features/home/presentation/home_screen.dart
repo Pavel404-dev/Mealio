@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/auth_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -11,6 +12,30 @@ class HomeScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature will be implemented in a future PR.')),
     );
+  }
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authControllerProvider.notifier).logout();
+    } on AuthFailure catch (failure) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message)));
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -29,8 +54,8 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             key: const Key('home-logout-button'),
             tooltip: 'Logout',
-            onPressed: () {
-              ref.read(authControllerProvider.notifier).logout();
+            onPressed: () async {
+              await _logout(context, ref);
             },
             icon: const Icon(Icons.logout_rounded),
           ),
