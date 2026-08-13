@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/session_invalidation.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 import '../domain/auth_user.dart';
@@ -36,6 +37,8 @@ class AuthSession {
 class AuthController extends AsyncNotifier<AuthSession> {
   @override
   Future<AuthSession> build() async {
+    ref.watch(sessionInvalidationProvider);
+
     try {
       final user = await ref.watch(authRepositoryProvider).restoreSession();
 
@@ -79,7 +82,10 @@ class AuthController extends AsyncNotifier<AuthSession> {
   }
 
   Future<void> logout() async {
-    await ref.read(authRepositoryProvider).logout();
-    state = const AsyncData(AuthSession.unauthenticated());
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } finally {
+      state = const AsyncData(AuthSession.unauthenticated());
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_token_pair.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage_provider.dart';
 import '../domain/auth_failure.dart';
@@ -61,10 +62,10 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final token = await _requestAccessToken(email: email, password: password);
+    final tokenPair = await _requestTokenPair(email: email, password: password);
 
     try {
-      await _storage.writeAccessToken(token);
+      await _storage.writeTokenPair(tokenPair);
     } catch (_) {
       throw AuthFailure.unexpected();
     }
@@ -72,7 +73,7 @@ class AuthRepository {
     try {
       return await getCurrentUser();
     } catch (_) {
-      await _deleteAccessTokenBestEffort();
+      await _deleteTokenPairBestEffort();
       rethrow;
     }
   }
@@ -91,27 +92,37 @@ class AuthRepository {
   }
 
   Future<AuthUser?> restoreSession() async {
-    final String? storedToken;
+    final String? storedAccessToken;
+    final String? storedRefreshToken;
 
     try {
-      storedToken = await _storage.readAccessToken();
+      storedAccessToken = await _storage.readAccessToken();
+      storedRefreshToken = await _storage.readRefreshToken();
     } catch (_) {
       throw AuthFailure.unexpected();
     }
 
-    if (storedToken == null || storedToken.trim().isEmpty) {
-      if (storedToken != null) {
-        await _deleteAccessTokenBestEffort();
+    final accessToken = storedAccessToken?.trim();
+    final refreshToken = storedRefreshToken?.trim();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      if (storedAccessToken != null || storedRefreshToken != null) {
+        await _deleteTokenPairBestEffort();
       }
 
       return null;
+    }
+
+    if (storedRefreshToken != null &&
+        (refreshToken == null || refreshToken.isEmpty)) {
+      await _deleteRefreshTokenBestEffort();
     }
 
     try {
       return await getCurrentUser();
     } on AuthFailure catch (failure) {
       if (failure.type == AuthFailureType.invalidSession) {
-        await _deleteAccessTokenBestEffort();
+        await _deleteTokenPairBestEffort();
         return null;
       }
 
@@ -120,14 +131,38 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    String? refreshToken;
+    Object? cleanupError;
+
     try {
-      await _storage.deleteAccessToken();
+      refreshToken = (await _storage.readRefreshToken())?.trim();
     } catch (_) {
+      // Local cleanup still takes priority over remote revocation.
+    }
+
+    try {
+      await _storage.deleteTokenPair();
+    } catch (error) {
+      cleanupError = error;
+    }
+
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _apiClient.post<Object?>(
+          '/auth/logout',
+          data: {'refresh_token': refreshToken},
+        );
+      } catch (_) {
+        // Backend logout is best effort; local logout must still complete.
+      }
+    }
+
+    if (cleanupError != null) {
       throw AuthFailure.unexpected();
     }
   }
 
-  Future<String> _requestAccessToken({
+  Future<AuthTokenPair> _requestTokenPair({
     required String email,
     required String password,
   }) async {
@@ -137,7 +172,7 @@ class AuthRepository {
         data: {'email': email.trim(), 'password': password},
       );
 
-      return _parseAccessToken(response.data);
+      return AuthTokenPair.fromJson(response.data);
     } on DioException catch (error) {
       throw _mapDioException(error, requestKind: _AuthRequestKind.login);
     } on FormatException {
@@ -145,23 +180,6 @@ class AuthRepository {
     } catch (_) {
       throw AuthFailure.unexpected();
     }
-  }
-
-  String _parseAccessToken(Object? data) {
-    if (data is! Map<String, dynamic>) {
-      throw const FormatException('Invalid login response');
-    }
-
-    final accessToken = data['access_token'];
-    final tokenType = data['token_type'];
-
-    if (accessToken is! String ||
-        accessToken.trim().isEmpty ||
-        tokenType != 'bearer') {
-      throw const FormatException('Invalid login response');
-    }
-
-    return accessToken.trim();
   }
 
   AuthFailure _mapDioException(
@@ -209,11 +227,19 @@ class AuthRepository {
     }
   }
 
-  Future<void> _deleteAccessTokenBestEffort() async {
+  Future<void> _deleteTokenPairBestEffort() async {
     try {
-      await _storage.deleteAccessToken();
+      await _storage.deleteTokenPair();
     } catch (_) {
       // Keep the original authentication failure as the visible error.
+    }
+  }
+
+  Future<void> _deleteRefreshTokenBestEffort() async {
+    try {
+      await _storage.deleteRefreshToken();
+    } catch (_) {
+      // A valid legacy access token can still be checked by /auth/me.
     }
   }
 }

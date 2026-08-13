@@ -330,9 +330,7 @@ void main() {
     expect(find.byKey(const Key('login-screen')), findsOneWidget);
   });
 
-  testWidgets('logout failure stays on Home and shows safe error', (
-    tester,
-  ) async {
+  testWidgets('logout failure still routes from Home to Login', (tester) async {
     final repository = FakeAuthRepository(
       restoreHandler: () async => testAuthUser,
       logoutHandler: () async => throw AuthFailure.unexpected(),
@@ -345,12 +343,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.logoutCalls, 1);
-    expect(find.byKey(const Key('home-screen')), findsOneWidget);
-    expect(find.byKey(const Key('login-screen')), findsNothing);
-    expect(
-      find.text('Something went wrong. Please try again.'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('home-screen')), findsNothing);
+    expect(find.byKey(const Key('login-screen')), findsOneWidget);
+    expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
   });
 
   testWidgets('unauthenticated user cannot open Home', (tester) async {
