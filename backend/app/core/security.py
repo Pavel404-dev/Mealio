@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -9,6 +11,7 @@ from app.core.config import get_settings
 
 
 _password_hasher = PasswordHash.recommended()
+_REFRESH_TOKEN_BYTES = 48
 
 
 def hash_password(plain_password: str) -> str:
@@ -29,6 +32,14 @@ def verify_password(
         )
     except UnknownHashError:
         return False
+
+
+def generate_refresh_token() -> str:
+    return secrets.token_urlsafe(_REFRESH_TOKEN_BYTES)
+
+
+def hash_refresh_token(refresh_token: str) -> str:
+    return hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()
 
 
 def create_access_token(

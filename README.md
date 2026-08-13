@@ -33,6 +33,8 @@ The backend currently includes:
 * user registration;
 * user login;
 * JWT access token generation;
+* opaque refresh-token sessions with rotation;
+* server-side refresh-session revocation;
 * current authenticated user endpoint;
 * Argon2 password hashing and verification;
 * ingredient management;
@@ -60,8 +62,7 @@ The backend currently includes:
 
 The following functionality is planned for future development:
 
-* refresh tokens;
-* logout flow;
+* Flutter automatic token refresh and server-side logout integration;
 * password reset;
 * email verification;
 * saving generated AI recipes;

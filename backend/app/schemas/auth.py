@@ -74,6 +74,21 @@ class UserLogin(BaseModel):
         return value
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: SecretStr = Field(
+        min_length=1,
+        max_length=512,
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+
 class AccessTokenResponse(BaseModel):
     access_token: str = Field(min_length=1)
     token_type: Literal["bearer"] = "bearer"
+
+
+class TokenPairResponse(AccessTokenResponse):
+    refresh_token: str = Field(min_length=1)
