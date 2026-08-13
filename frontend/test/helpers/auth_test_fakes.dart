@@ -57,6 +57,8 @@ class FakeSecureStorageService extends SecureStorageService {
 
   Completer<String?>? pendingRead;
   Completer<String?>? pendingRefreshRead;
+  Completer<void>? accessWriteStarted;
+  Completer<void>? pendingAccessWrite;
 
   int readCount = 0;
   int writeCount = 0;
@@ -90,6 +92,16 @@ class FakeSecureStorageService extends SecureStorageService {
 
     if (failAccessWrite) {
       throw StateError('Fake access-token write failure');
+    }
+
+    final started = accessWriteStarted;
+    if (started != null && !started.isCompleted) {
+      started.complete();
+    }
+
+    final pendingWrite = pendingAccessWrite;
+    if (pendingWrite != null) {
+      await pendingWrite.future;
     }
 
     _accessToken = token;

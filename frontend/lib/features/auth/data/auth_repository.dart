@@ -135,13 +135,7 @@ class AuthRepository {
     Object? cleanupError;
 
     try {
-      refreshToken = (await _storage.readRefreshToken())?.trim();
-    } catch (_) {
-      // Local cleanup still takes priority over remote revocation.
-    }
-
-    try {
-      await _storage.deleteTokenPair();
+      refreshToken = await _storage.deleteTokenPairAndGetRefreshToken();
     } catch (error) {
       cleanupError = error;
     }

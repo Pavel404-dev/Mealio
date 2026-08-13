@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mealio/core/auth/auth_token_pair.dart';
 import 'package:mealio/core/network/api_client.dart';
 import 'package:mealio/core/network/auth_interceptor.dart';
 import 'package:mealio/core/network/token_refresh_coordinator.dart';
@@ -433,6 +436,62 @@ void main() {
     expect(adapter.requests.single.path, '/auth/logout');
     expect(adapter.requests.single.data, {'refresh_token': 'stored-refresh'});
   });
+
+  test(
+    'logout revokes the latest refresh token when rotation finishes first',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      );
+      repository = AuthRepository(
+        apiClient: ApiClient(createFakeDio(adapter)),
+        storage: storage,
+      );
+      adapter.enqueue(const FakeHttpResponse(statusCode: 204, body: null));
+
+      final accessWriteStarted = Completer<void>();
+      final releaseAccessWrite = Completer<void>();
+
+      storage.accessWriteStarted = accessWriteStarted;
+      storage.pendingAccessWrite = releaseAccessWrite;
+
+      final rotationFuture = storage.writeTokenPair(
+        const AuthTokenPair(
+          accessToken: 'rotated-access',
+          refreshToken: 'rotated-refresh',
+        ),
+      );
+
+      await accessWriteStarted.future;
+
+      expect(storage.accessToken, 'old-access');
+      expect(storage.refreshToken, 'rotated-refresh');
+
+      final logoutFuture = repository.logout();
+
+      // Logout is queued behind the in-progress rotation and must not read
+      // the stale refresh token before the pair mutation completes.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(adapter.requests, isEmpty);
+      expect(storage.accessToken, 'old-access');
+      expect(storage.refreshToken, 'rotated-refresh');
+
+      releaseAccessWrite.complete();
+
+      await rotationFuture;
+      await logoutFuture;
+
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(adapter.requests, hasLength(1));
+      expect(adapter.requests.single.path, '/auth/logout');
+      expect(adapter.requests.single.data, {
+        'refresh_token': 'rotated-refresh',
+      });
+    },
+  );
 
   test('logout without refresh token still clears local session', () async {
     storage = FakeSecureStorageService(accessToken: 'stored-access');

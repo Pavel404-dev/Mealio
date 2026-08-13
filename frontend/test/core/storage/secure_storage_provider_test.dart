@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mealio/core/auth/auth_token_pair.dart';
 
@@ -66,6 +68,74 @@ void main() {
     expect(storage.refreshWriteCount, 1);
     expect(storage.writeCount, 1);
   });
+
+  test('conditional replacement only updates the matching session', () async {
+    final storage = FakeSecureStorageService(
+      accessToken: 'old-access',
+      refreshToken: 'old-refresh',
+    );
+
+    final mismatch = await storage.replaceTokenPairIfRefreshTokenMatches(
+      expectedRefreshToken: 'another-refresh',
+      pair: pair,
+    );
+
+    expect(mismatch, isFalse);
+    expect(storage.accessToken, 'old-access');
+    expect(storage.refreshToken, 'old-refresh');
+
+    final replaced = await storage.replaceTokenPairIfRefreshTokenMatches(
+      expectedRefreshToken: 'old-refresh',
+      pair: pair,
+    );
+
+    expect(replaced, isTrue);
+    expect(storage.accessToken, 'access-token');
+    expect(storage.refreshToken, 'refresh-token');
+  });
+
+  test(
+    'deleteTokenPair waits for an in-progress pair write and wins',
+    () async {
+      final storage = FakeSecureStorageService(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      );
+      final accessWriteStarted = Completer<void>();
+      final releaseAccessWrite = Completer<void>();
+
+      storage.accessWriteStarted = accessWriteStarted;
+      storage.pendingAccessWrite = releaseAccessWrite;
+
+      final writeFuture = storage.writeTokenPair(pair);
+
+      await accessWriteStarted.future;
+
+      // The refresh credential has already been written, while the access
+      // credential is intentionally paused inside the same pair mutation.
+      expect(storage.refreshToken, 'refresh-token');
+      expect(storage.accessToken, 'old-access');
+
+      final deleteFuture = storage.deleteTokenPair();
+
+      // Give the queued delete an opportunity to run. It must remain blocked
+      // until the complete token-pair write releases the mutation queue.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(storage.deleteCount, 0);
+      expect(storage.refreshDeleteCount, 0);
+
+      releaseAccessWrite.complete();
+
+      await writeFuture;
+      await deleteFuture;
+
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(storage.deleteCount, 1);
+      expect(storage.refreshDeleteCount, 1);
+    },
+  );
 
   test(
     'deleteTokenPair still attempts refresh deletion after access failure',

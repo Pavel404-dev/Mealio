@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -18,6 +20,8 @@ class SecureStorageService {
   SecureStorageService(this._storage);
 
   final FlutterSecureStorage _storage;
+
+  Future<void> _tokenPairMutationTail = Future<void>.value();
   int _tokenPairRevision = 0;
 
   int get tokenPairRevision => _tokenPairRevision;
@@ -46,18 +50,77 @@ class SecureStorageService {
     return _storage.delete(key: refreshTokenStorageKey);
   }
 
-  Future<void> writeTokenPair(AuthTokenPair pair) async {
+  Future<void> writeTokenPair(AuthTokenPair pair) {
+    return _serializeTokenPairMutation(() async {
+      await _writeTokenPairUnlocked(pair);
+    });
+  }
+
+  Future<bool> replaceTokenPairIfRefreshTokenMatches({
+    required String expectedRefreshToken,
+    required AuthTokenPair pair,
+  }) {
+    return _serializeTokenPairMutation(() async {
+      final currentRefreshToken = (await readRefreshToken())?.trim();
+
+      if (currentRefreshToken != expectedRefreshToken.trim()) {
+        return false;
+      }
+
+      await _writeTokenPairUnlocked(pair);
+      return true;
+    });
+  }
+
+  Future<void> deleteTokenPair() {
+    return _serializeTokenPairMutation(_deleteTokenPairUnlocked);
+  }
+
+  Future<String?> deleteTokenPairAndGetRefreshToken() {
+    return _serializeTokenPairMutation(() async {
+      String? refreshToken;
+
+      try {
+        refreshToken = (await readRefreshToken())?.trim();
+      } catch (_) {
+        // Local cleanup still takes priority if the credential cannot be read.
+      }
+
+      await _deleteTokenPairUnlocked();
+      return refreshToken;
+    });
+  }
+
+  Future<T> _serializeTokenPairMutation<T>(Future<T> Function() mutation) {
+    final previousMutation = _tokenPairMutationTail;
+    final release = Completer<void>();
+
+    _tokenPairMutationTail = release.future;
+
+    return () async {
+      await previousMutation;
+
+      try {
+        return await mutation();
+      } finally {
+        release.complete();
+      }
+    }();
+  }
+
+  Future<void> _writeTokenPairUnlocked(AuthTokenPair pair) async {
     try {
+      // Refresh first keeps an interrupted write in the safer refresh-only state.
       await writeRefreshToken(pair.refreshToken);
       await writeAccessToken(pair.accessToken);
       _tokenPairRevision++;
     } catch (error, stackTrace) {
-      await _deleteTokenPairBestEffort();
+      await _deleteTokenPairUnlockedBestEffort();
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
 
-  Future<void> deleteTokenPair() async {
+  Future<void> _deleteTokenPairUnlocked() async {
     Object? firstError;
     StackTrace? firstStackTrace;
 
@@ -82,9 +145,9 @@ class SecureStorageService {
     }
   }
 
-  Future<void> _deleteTokenPairBestEffort() async {
+  Future<void> _deleteTokenPairUnlockedBestEffort() async {
     try {
-      await deleteTokenPair();
+      await _deleteTokenPairUnlocked();
     } catch (_) {
       // Preserve the original token-pair write failure.
     }

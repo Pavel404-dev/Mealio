@@ -109,26 +109,21 @@ class TokenRefreshCoordinator {
       throw const TokenRefreshFailure.invalidSession();
     }
 
-    final String? currentRefreshToken;
+    final bool replaced;
     try {
-      currentRefreshToken = (await _storage.readRefreshToken())?.trim();
+      replaced = await _storage.replaceTokenPairIfRefreshTokenMatches(
+        expectedRefreshToken: refreshToken,
+        pair: tokenPair,
+      );
     } catch (_) {
       await _revokeRefreshTokenBestEffort(tokenPair.refreshToken);
       await _invalidateLocalSession();
       throw const TokenRefreshFailure.invalidSession();
     }
 
-    if (currentRefreshToken != refreshToken) {
+    if (!replaced) {
       await _revokeRefreshTokenBestEffort(tokenPair.refreshToken);
       throw const TokenRefreshFailure.superseded();
-    }
-
-    try {
-      await _storage.writeTokenPair(tokenPair);
-    } catch (_) {
-      await _revokeRefreshTokenBestEffort(tokenPair.refreshToken);
-      await _invalidateLocalSession();
-      throw const TokenRefreshFailure.invalidSession();
     }
 
     return tokenPair;
