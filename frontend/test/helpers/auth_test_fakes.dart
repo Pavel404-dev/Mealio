@@ -19,17 +19,59 @@ final testAuthUser = AuthUser(
 );
 
 class FakeSecureStorageService extends SecureStorageService {
-  FakeSecureStorageService({this._token}) : super(const FlutterSecureStorage());
+  factory FakeSecureStorageService({
+    String? token,
+    String? accessToken,
+    String? refreshToken,
+    bool failAccessWrite = false,
+    bool failRefreshWrite = false,
+    bool failAccessDelete = false,
+    bool failRefreshDelete = false,
+  }) {
+    return FakeSecureStorageService._(
+      accessToken ?? token,
+      refreshToken,
+      failAccessWrite,
+      failRefreshWrite,
+      failAccessDelete,
+      failRefreshDelete,
+    );
+  }
 
-  String? _token;
+  FakeSecureStorageService._(
+    this._accessToken,
+    this._refreshToken,
+    this.failAccessWrite,
+    this.failRefreshWrite,
+    this.failAccessDelete,
+    this.failRefreshDelete,
+  ) : super(const FlutterSecureStorage());
+
+  String? _accessToken;
+  String? _refreshToken;
+
+  bool failAccessWrite;
+  bool failRefreshWrite;
+  bool failAccessDelete;
+  bool failRefreshDelete;
+
   Completer<String?>? pendingRead;
+  Completer<String?>? pendingRefreshRead;
+  Completer<void>? accessWriteStarted;
+  Completer<void>? pendingAccessWrite;
 
   int readCount = 0;
   int writeCount = 0;
   int deleteCount = 0;
+  int refreshReadCount = 0;
+  int refreshWriteCount = 0;
+  int refreshDeleteCount = 0;
   String? lastWrittenToken;
+  String? lastWrittenRefreshToken;
 
-  String? get token => _token;
+  String? get token => _accessToken;
+  String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
 
   @override
   Future<String?> readAccessToken() {
@@ -40,20 +82,75 @@ class FakeSecureStorageService extends SecureStorageService {
       return completer.future;
     }
 
-    return Future.value(_token);
+    return Future.value(_accessToken);
   }
 
   @override
   Future<void> writeAccessToken(String token) async {
     writeCount++;
     lastWrittenToken = token;
-    _token = token;
+
+    if (failAccessWrite) {
+      throw StateError('Fake access-token write failure');
+    }
+
+    final started = accessWriteStarted;
+    if (started != null && !started.isCompleted) {
+      started.complete();
+    }
+
+    final pendingWrite = pendingAccessWrite;
+    if (pendingWrite != null) {
+      await pendingWrite.future;
+    }
+
+    _accessToken = token;
   }
 
   @override
   Future<void> deleteAccessToken() async {
     deleteCount++;
-    _token = null;
+
+    if (failAccessDelete) {
+      throw StateError('Fake access-token delete failure');
+    }
+
+    _accessToken = null;
+  }
+
+  @override
+  Future<String?> readRefreshToken() {
+    refreshReadCount++;
+    final completer = pendingRefreshRead;
+
+    if (completer != null) {
+      return completer.future;
+    }
+
+    return Future.value(_refreshToken);
+  }
+
+  @override
+  Future<void> writeRefreshToken(String token) async {
+    refreshWriteCount++;
+    lastWrittenRefreshToken = token;
+
+    if (failRefreshWrite) {
+      throw StateError('Fake refresh-token write failure');
+    }
+
+    _refreshToken = token;
+  }
+
+  @override
+  Future<void> deleteRefreshToken() async {
+    refreshDeleteCount++;
+
+    if (failRefreshDelete) {
+      throw StateError('Fake refresh-token delete failure');
+    }
+
+    _refreshToken = null;
   }
 }
 
@@ -68,9 +165,14 @@ class FakeHttpResponse {
   final DioExceptionType? errorType;
 }
 
+typedef FakeHttpResponseHandler =
+    FutureOr<FakeHttpResponse> Function(RequestOptions options);
+
 class FakeHttpClientAdapter implements HttpClientAdapter {
   final Queue<FakeHttpResponse> _responses = Queue<FakeHttpResponse>();
   final List<RequestOptions> requests = <RequestOptions>[];
+
+  FakeHttpResponseHandler? responseHandler;
 
   void enqueue(FakeHttpResponse response) {
     _responses.add(response);
@@ -84,11 +186,18 @@ class FakeHttpClientAdapter implements HttpClientAdapter {
   ) async {
     requests.add(options);
 
-    if (_responses.isEmpty) {
-      throw StateError('No fake HTTP response queued');
-    }
+    final FakeHttpResponse response;
+    final handler = responseHandler;
 
-    final response = _responses.removeFirst();
+    if (handler != null) {
+      response = await handler(options);
+    } else {
+      if (_responses.isEmpty) {
+        throw StateError('No fake HTTP response queued');
+      }
+
+      response = _responses.removeFirst();
+    }
 
     if (response.errorType != null) {
       throw DioException(

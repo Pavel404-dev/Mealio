@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mealio/core/auth/session_invalidation.dart';
 import 'package:mealio/features/auth/data/auth_repository.dart';
 import 'package:mealio/features/auth/domain/auth_failure.dart';
 import 'package:mealio/features/auth/domain/auth_user.dart';
@@ -98,6 +99,44 @@ void main() {
     expect(session.failure?.type, AuthFailureType.invalidCredentials);
   });
 
+  test(
+    'global session invalidation rebuilds into unauthenticated state',
+    () async {
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => testAuthUser,
+      );
+      final container = createContainer(repository);
+
+      await container.read(authControllerProvider.future);
+      expect(
+        container.read(authControllerProvider).asData!.value.isAuthenticated,
+        isTrue,
+      );
+
+      repository.restoreHandler = () async => null;
+      final invalidated = Completer<void>();
+      final subscription = container.listen(authControllerProvider, (
+        previous,
+        next,
+      ) {
+        final session = next.asData?.value;
+        if (session != null &&
+            !session.isAuthenticated &&
+            !invalidated.isCompleted) {
+          invalidated.complete();
+        }
+      });
+      addTearDown(subscription.close);
+
+      container.read(sessionInvalidationProvider.notifier).invalidate();
+      await invalidated.future;
+
+      final session = container.read(authControllerProvider).asData!.value;
+      expect(session.isAuthenticated, isFalse);
+      expect(repository.restoreCalls, 2);
+    },
+  );
+
   test('logout becomes unauthenticated', () async {
     final repository = FakeAuthRepository(
       restoreHandler: () async => testAuthUser,
@@ -106,6 +145,27 @@ void main() {
 
     await container.read(authControllerProvider.future);
     await container.read(authControllerProvider.notifier).logout();
+
+    final session = container.read(authControllerProvider).asData!.value;
+    expect(session.isAuthenticated, isFalse);
+    expect(repository.logoutCalls, 1);
+  });
+
+  test('logout failure still leaves controller unauthenticated', () async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+      logoutHandler: () async {
+        throw AuthFailure.unexpected();
+      },
+    );
+    final container = createContainer(repository);
+
+    await container.read(authControllerProvider.future);
+
+    await expectLater(
+      container.read(authControllerProvider.notifier).logout(),
+      throwsA(isA<AuthFailure>()),
+    );
 
     final session = container.read(authControllerProvider).asData!.value;
     expect(session.isAuthenticated, isFalse);

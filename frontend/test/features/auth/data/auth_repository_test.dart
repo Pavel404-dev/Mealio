@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mealio/core/auth/auth_token_pair.dart';
 import 'package:mealio/core/network/api_client.dart';
+import 'package:mealio/core/network/auth_interceptor.dart';
+import 'package:mealio/core/network/token_refresh_coordinator.dart';
 import 'package:mealio/features/auth/data/auth_repository.dart';
 import 'package:mealio/features/auth/domain/auth_failure.dart';
 
@@ -14,14 +19,23 @@ void main() {
     'created_at': '2026-07-20T10:00:00Z',
     'updated_at': '2026-07-20T10:00:00Z',
   };
+  const tokenPairJson = {
+    'access_token': 'test-access-token',
+    'refresh_token': 'test-refresh-token',
+    'token_type': 'bearer',
+  };
 
   late FakeHttpClientAdapter adapter;
+  late FakeHttpClientAdapter refreshAdapter;
   late FakeSecureStorageService storage;
   late AuthRepository repository;
+  late int invalidationCount;
 
   setUp(() {
     adapter = FakeHttpClientAdapter();
+    refreshAdapter = FakeHttpClientAdapter();
     storage = FakeSecureStorageService();
+    invalidationCount = 0;
 
     repository = AuthRepository(
       apiClient: ApiClient(createFakeDio(adapter)),
@@ -29,14 +43,26 @@ void main() {
     );
   });
 
-  test('successful login posts credentials, saves token, fetches me', () async {
+  void useAuthenticatedTransport() {
+    final dio = createFakeDio(adapter);
+    final coordinator = TokenRefreshCoordinator(
+      refreshDio: createFakeDio(refreshAdapter),
+      storage: storage,
+      onSessionInvalidated: () => invalidationCount++,
+    );
+    dio.interceptors.add(
+      AuthInterceptor(
+        dio: dio,
+        storage: storage,
+        refreshCoordinator: coordinator,
+      ),
+    );
+    repository = AuthRepository(apiClient: ApiClient(dio), storage: storage);
+  }
+
+  test('successful login stores token pair and fetches me', () async {
     adapter
-      ..enqueue(
-        const FakeHttpResponse(
-          statusCode: 200,
-          body: {'access_token': 'test-access-token', 'token_type': 'bearer'},
-        ),
-      )
+      ..enqueue(const FakeHttpResponse(statusCode: 200, body: tokenPairJson))
       ..enqueue(const FakeHttpResponse(statusCode: 200, body: userJson));
 
     final user = await repository.login(
@@ -51,12 +77,12 @@ void main() {
       'password': 'test-password',
     });
     expect(adapter.requests[1].path, '/auth/me');
-    expect(storage.writeCount, 1);
-    expect(storage.lastWrittenToken, 'test-access-token');
+    expect(storage.accessToken, 'test-access-token');
+    expect(storage.refreshToken, 'test-refresh-token');
     expect(user, testAuthUser);
   });
 
-  test('login 401 maps to invalid credentials and stores no token', () async {
+  test('login 401 maps to invalid credentials and stores no pair', () async {
     adapter.enqueue(
       const FakeHttpResponse(
         statusCode: 401,
@@ -75,8 +101,8 @@ void main() {
       ),
     );
 
-    expect(storage.writeCount, 0);
-    expect(storage.token, isNull);
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
   });
 
   test('login 422 maps to validation error', () async {
@@ -119,11 +145,11 @@ void main() {
     );
   });
 
-  test('malformed login response is handled safely', () async {
+  test('login rejects missing refresh token without storing session', () async {
     adapter.enqueue(
       const FakeHttpResponse(
         statusCode: 200,
-        body: {'access_token': '', 'token_type': 'bearer'},
+        body: {'access_token': 'access', 'token_type': 'bearer'},
       ),
     );
 
@@ -138,17 +164,71 @@ void main() {
       ),
     );
 
-    expect(storage.writeCount, 0);
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
   });
 
-  test('me failure after saved login token removes token', () async {
+  test('login rejects empty access token and wrong token type', () async {
+    for (final body in const [
+      {'access_token': '', 'refresh_token': 'refresh', 'token_type': 'bearer'},
+      {
+        'access_token': 'access',
+        'refresh_token': 'refresh',
+        'token_type': 'Bearer',
+      },
+    ]) {
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: body));
+
+      await expectLater(
+        repository.login(email: 'pavel@example.com', password: 'test-password'),
+        throwsA(isA<AuthFailure>()),
+      );
+    }
+
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+  });
+
+  test('login rejects non-map token response', () async {
+    adapter.enqueue(
+      const FakeHttpResponse(statusCode: 200, body: ['not', 'a', 'map']),
+    );
+
+    await expectLater(
+      repository.login(email: 'pavel@example.com', password: 'test-password'),
+      throwsA(isA<AuthFailure>()),
+    );
+
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+  });
+
+  test('storage failure during login leaves no partial token pair', () async {
+    storage = FakeSecureStorageService(
+      accessToken: 'old-access',
+      refreshToken: 'old-refresh',
+      failAccessWrite: true,
+    );
+    repository = AuthRepository(
+      apiClient: ApiClient(createFakeDio(adapter)),
+      storage: storage,
+    );
+    adapter.enqueue(
+      const FakeHttpResponse(statusCode: 200, body: tokenPairJson),
+    );
+
+    await expectLater(
+      repository.login(email: 'pavel@example.com', password: 'test-password'),
+      throwsA(isA<AuthFailure>()),
+    );
+
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+  });
+
+  test('me failure after saved login pair removes both tokens', () async {
     adapter
-      ..enqueue(
-        const FakeHttpResponse(
-          statusCode: 200,
-          body: {'access_token': 'test-access-token', 'token_type': 'bearer'},
-        ),
-      )
+      ..enqueue(const FakeHttpResponse(statusCode: 200, body: tokenPairJson))
       ..enqueue(
         const FakeHttpResponse(
           statusCode: 500,
@@ -161,23 +241,22 @@ void main() {
       throwsA(isA<AuthFailure>()),
     );
 
-    expect(storage.writeCount, 1);
-    expect(storage.deleteCount, 1);
-    expect(storage.token, isNull);
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
   });
 
-  test(
-    'restoreSession without token returns null without network request',
-    () async {
-      final user = await repository.restoreSession();
+  test('restoreSession without tokens returns null without network', () async {
+    final user = await repository.restoreSession();
 
-      expect(user, isNull);
-      expect(adapter.requests, isEmpty);
-    },
-  );
+    expect(user, isNull);
+    expect(adapter.requests, isEmpty);
+  });
 
-  test('restoreSession with valid token fetches current user', () async {
-    storage = FakeSecureStorageService(token: 'stored-token');
+  test('restoreSession with valid token pair fetches current user', () async {
+    storage = FakeSecureStorageService(
+      accessToken: 'stored-access',
+      refreshToken: 'stored-refresh',
+    );
     repository = AuthRepository(
       apiClient: ApiClient(createFakeDio(adapter)),
       storage: storage,
@@ -188,45 +267,234 @@ void main() {
 
     expect(user, testAuthUser);
     expect(adapter.requests.single.path, '/auth/me');
-    expect(storage.deleteCount, 0);
+    expect(storage.accessToken, 'stored-access');
+    expect(storage.refreshToken, 'stored-refresh');
   });
 
-  test('restoreSession with invalid token deletes token', () async {
-    storage = FakeSecureStorageService(token: 'invalid-token');
+  test(
+    'expired access with valid refresh restores session automatically',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'expired-access',
+        refreshToken: 'valid-refresh',
+      );
+      useAuthenticatedTransport();
+      adapter
+        ..enqueue(
+          const FakeHttpResponse(statusCode: 401, body: {'detail': 'expired'}),
+        )
+        ..enqueue(const FakeHttpResponse(statusCode: 200, body: userJson));
+      refreshAdapter.enqueue(
+        const FakeHttpResponse(
+          statusCode: 200,
+          body: {
+            'access_token': 'new-access',
+            'refresh_token': 'new-refresh',
+            'token_type': 'bearer',
+          },
+        ),
+      );
+
+      final user = await repository.restoreSession();
+
+      expect(user, testAuthUser);
+      expect(storage.accessToken, 'new-access');
+      expect(storage.refreshToken, 'new-refresh');
+      expect(refreshAdapter.requests, hasLength(1));
+      expect(invalidationCount, 0);
+    },
+  );
+
+  test(
+    'restore keeps token pair when refresh transport is unavailable',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'expired-access',
+        refreshToken: 'valid-refresh',
+      );
+      useAuthenticatedTransport();
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 401, body: {'detail': 'expired'}),
+      );
+      refreshAdapter.enqueue(
+        const FakeHttpResponse.error(DioExceptionType.connectionError),
+      );
+
+      await expectLater(
+        repository.restoreSession(),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.type,
+            'type',
+            AuthFailureType.connection,
+          ),
+        ),
+      );
+
+      expect(storage.accessToken, 'expired-access');
+      expect(storage.refreshToken, 'valid-refresh');
+      expect(invalidationCount, 0);
+    },
+  );
+
+  test(
+    'invalid refresh clears pair and restore becomes unauthenticated',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'expired-access',
+        refreshToken: 'invalid-refresh',
+      );
+      useAuthenticatedTransport();
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 401, body: {'detail': 'expired'}),
+      );
+      refreshAdapter.enqueue(
+        const FakeHttpResponse(
+          statusCode: 401,
+          body: {'detail': 'Invalid refresh token'},
+        ),
+      );
+
+      final user = await repository.restoreSession();
+
+      expect(user, isNull);
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(invalidationCount, 1);
+    },
+  );
+
+  test(
+    'legacy access-only state is accepted while access remains valid',
+    () async {
+      storage = FakeSecureStorageService(accessToken: 'legacy-access');
+      useAuthenticatedTransport();
+      adapter.enqueue(const FakeHttpResponse(statusCode: 200, body: userJson));
+
+      final user = await repository.restoreSession();
+
+      expect(user, testAuthUser);
+      expect(storage.accessToken, 'legacy-access');
+      expect(storage.refreshToken, isNull);
+      expect(refreshAdapter.requests, isEmpty);
+    },
+  );
+
+  test(
+    'legacy access-only state clears safely after access is rejected',
+    () async {
+      storage = FakeSecureStorageService(accessToken: 'legacy-access');
+      useAuthenticatedTransport();
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 401, body: {'detail': 'expired'}),
+      );
+
+      final user = await repository.restoreSession();
+
+      expect(user, isNull);
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(refreshAdapter.requests, isEmpty);
+      expect(invalidationCount, 1);
+    },
+  );
+
+  test(
+    'refresh-only corrupt state is cleaned without network request',
+    () async {
+      storage = FakeSecureStorageService(refreshToken: 'orphan-refresh');
+      repository = AuthRepository(
+        apiClient: ApiClient(createFakeDio(adapter)),
+        storage: storage,
+      );
+
+      final user = await repository.restoreSession();
+
+      expect(user, isNull);
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(adapter.requests, isEmpty);
+    },
+  );
+
+  test('logout sends refresh token then leaves both tokens cleared', () async {
+    storage = FakeSecureStorageService(
+      accessToken: 'stored-access',
+      refreshToken: 'stored-refresh',
+    );
     repository = AuthRepository(
       apiClient: ApiClient(createFakeDio(adapter)),
       storage: storage,
     );
-    adapter.enqueue(
-      const FakeHttpResponse(
-        statusCode: 401,
-        body: {'detail': 'Could not validate credentials'},
-      ),
-    );
+    adapter.enqueue(const FakeHttpResponse(statusCode: 204, body: null));
 
-    final user = await repository.restoreSession();
+    await repository.logout();
 
-    expect(user, isNull);
-    expect(storage.deleteCount, 1);
-    expect(storage.token, isNull);
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+    expect(adapter.requests, hasLength(1));
+    expect(adapter.requests.single.path, '/auth/logout');
+    expect(adapter.requests.single.data, {'refresh_token': 'stored-refresh'});
   });
 
-  test('restoreSession treats empty stored token as no session', () async {
-    storage = FakeSecureStorageService(token: '   ');
-    repository = AuthRepository(
-      apiClient: ApiClient(createFakeDio(adapter)),
-      storage: storage,
-    );
+  test(
+    'logout revokes the latest refresh token when rotation finishes first',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      );
+      repository = AuthRepository(
+        apiClient: ApiClient(createFakeDio(adapter)),
+        storage: storage,
+      );
+      adapter.enqueue(const FakeHttpResponse(statusCode: 204, body: null));
 
-    final user = await repository.restoreSession();
+      final accessWriteStarted = Completer<void>();
+      final releaseAccessWrite = Completer<void>();
 
-    expect(user, isNull);
-    expect(storage.deleteCount, 1);
-    expect(adapter.requests, isEmpty);
-  });
+      storage.accessWriteStarted = accessWriteStarted;
+      storage.pendingAccessWrite = releaseAccessWrite;
 
-  test('logout deletes access token', () async {
-    storage = FakeSecureStorageService(token: 'stored-token');
+      final rotationFuture = storage.writeTokenPair(
+        const AuthTokenPair(
+          accessToken: 'rotated-access',
+          refreshToken: 'rotated-refresh',
+        ),
+      );
+
+      await accessWriteStarted.future;
+
+      expect(storage.accessToken, 'old-access');
+      expect(storage.refreshToken, 'rotated-refresh');
+
+      final logoutFuture = repository.logout();
+
+      // Logout is queued behind the in-progress rotation and must not read
+      // the stale refresh token before the pair mutation completes.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(adapter.requests, isEmpty);
+      expect(storage.accessToken, 'old-access');
+      expect(storage.refreshToken, 'rotated-refresh');
+
+      releaseAccessWrite.complete();
+
+      await rotationFuture;
+      await logoutFuture;
+
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(adapter.requests, hasLength(1));
+      expect(adapter.requests.single.path, '/auth/logout');
+      expect(adapter.requests.single.data, {
+        'refresh_token': 'rotated-refresh',
+      });
+    },
+  );
+
+  test('logout without refresh token still clears local session', () async {
+    storage = FakeSecureStorageService(accessToken: 'stored-access');
     repository = AuthRepository(
       apiClient: ApiClient(createFakeDio(adapter)),
       storage: storage,
@@ -234,14 +502,38 @@ void main() {
 
     await repository.logout();
 
-    expect(storage.deleteCount, 1);
-    expect(storage.token, isNull);
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+    expect(adapter.requests, isEmpty);
+  });
+
+  test('logout network failure still clears local token pair', () async {
+    storage = FakeSecureStorageService(
+      accessToken: 'stored-access',
+      refreshToken: 'stored-refresh',
+    );
+    repository = AuthRepository(
+      apiClient: ApiClient(createFakeDio(adapter)),
+      storage: storage,
+    );
+    adapter.enqueue(
+      const FakeHttpResponse.error(DioExceptionType.connectionError),
+    );
+
+    await repository.logout();
+
+    expect(storage.accessToken, isNull);
+    expect(storage.refreshToken, isNull);
+    expect(adapter.requests, hasLength(1));
   });
 
   test(
     'successful registration posts normalized data without changing storage',
     () async {
-      storage = FakeSecureStorageService(token: 'existing-token');
+      storage = FakeSecureStorageService(
+        accessToken: 'existing-access',
+        refreshToken: 'existing-refresh',
+      );
       repository = AuthRepository(
         apiClient: ApiClient(createFakeDio(adapter)),
         storage: storage,
@@ -263,10 +555,13 @@ void main() {
       });
       expect(user, testAuthUser);
       expect(storage.readCount, 0);
+      expect(storage.refreshReadCount, 0);
       expect(storage.writeCount, 0);
+      expect(storage.refreshWriteCount, 0);
       expect(storage.deleteCount, 0);
-      expect(storage.lastWrittenToken, isNull);
-      expect(storage.token, 'existing-token');
+      expect(storage.refreshDeleteCount, 0);
+      expect(storage.accessToken, 'existing-access');
+      expect(storage.refreshToken, 'existing-refresh');
     },
   );
 
