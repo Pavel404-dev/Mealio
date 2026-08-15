@@ -93,6 +93,34 @@ class RefreshTokenRequest(BaseModel):
     )
 
 
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+
+class EmailVerificationConfirm(BaseModel):
+    token: SecretStr = Field(
+        min_length=1,
+        max_length=512,
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+
+class EmailVerificationRequestResponse(BaseModel):
+    message: str
+
+
 class PasswordResetRequest(BaseModel):
     email: EmailStr
 

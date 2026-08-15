@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -53,6 +54,14 @@ class UsersRepository:
     ) -> None:
         user.password_hash = password_hash
 
+    def set_email_verified_at(
+        self,
+        *,
+        user: User,
+        verified_at: datetime | None,
+    ) -> None:
+        user.email_verified_at = verified_at
+
     async def create(self, data: UserCreate) -> User:
         user = User(
             email=str(data.email).strip().lower(),
@@ -75,7 +84,7 @@ class UsersRepository:
 
         return created_user
 
-    async def create_registered(
+    async def add_registered(
         self,
         *,
         email: str,
@@ -86,25 +95,39 @@ class UsersRepository:
             email=email.strip().lower(),
             full_name=full_name,
             password_hash=password_hash,
+            email_verified_at=None,
         )
-
         self.db.add(user)
 
         try:
-            await self.db.commit()
+            await self.db.flush()
         except IntegrityError as exc:
-            await self.db.rollback()
-
             raise DuplicateResourceError("User with this email already exists") from exc
 
-        created_user = await self.get_by_id(user.id)
+        return user
 
-        if created_user is None:
-            raise RuntimeError("Created user was not found")
+    async def create_registered(
+        self,
+        *,
+        email: str,
+        full_name: str | None,
+        password_hash: str,
+    ) -> User:
+        try:
+            user = await self.add_registered(
+                email=email,
+                full_name=full_name,
+                password_hash=password_hash,
+            )
+            await self.db.commit()
+        except DuplicateResourceError:
+            await self.db.rollback()
+            raise
 
-        return created_user
+        await self.db.refresh(user)
+        return user
 
-    async def update(
+    async def apply_update(
         self,
         *,
         user: User,
@@ -119,12 +142,24 @@ class UsersRepository:
             user.full_name = update_data["full_name"]
 
         try:
-            await self.db.commit()
+            await self.db.flush()
         except IntegrityError as exc:
-            await self.db.rollback()
-
             raise DuplicateResourceError("User with this email already exists") from exc
 
-        await self.db.refresh(user)
-
         return user
+
+    async def update(
+        self,
+        *,
+        user: User,
+        data: UserUpdate,
+    ) -> User:
+        try:
+            updated_user = await self.apply_update(user=user, data=data)
+            await self.db.commit()
+        except DuplicateResourceError:
+            await self.db.rollback()
+            raise
+
+        await self.db.refresh(updated_user)
+        return updated_user

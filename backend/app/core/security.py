@@ -58,6 +58,14 @@ def hash_password_reset_token(reset_token: str) -> str:
     return _hash_opaque_token(reset_token)
 
 
+def generate_email_verification_token() -> str:
+    return _generate_opaque_token()
+
+
+def hash_email_verification_token(verification_token: str) -> str:
+    return _hash_opaque_token(verification_token)
+
+
 def create_access_token(
     subject: str,
     expires_delta: timedelta | None = None,

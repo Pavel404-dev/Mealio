@@ -1,11 +1,19 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_password_reset_mailer
+from app.api.deps import (
+    get_current_user,
+    get_email_verification_mailer,
+    get_password_reset_mailer,
+)
 from app.db.session import get_db
+from app.integrations.email_verification_mailer import EmailVerificationMailer
 from app.integrations.password_reset_mailer import PasswordResetMailer
 from app.models.user import User
 from app.schemas.auth import (
+    EmailVerificationConfirm,
+    EmailVerificationRequest,
+    EmailVerificationRequestResponse,
     PasswordResetConfirm,
     PasswordResetRequest,
     PasswordResetRequestResponse,
@@ -24,6 +32,10 @@ router = APIRouter(
     tags=["Auth"],
 )
 
+_EMAIL_VERIFICATION_REQUEST_MESSAGE = (
+    "If verification is needed for that email, "
+    "verification instructions have been sent."
+)
 _PASSWORD_RESET_REQUEST_MESSAGE = (
     "If an account with that email exists, password reset instructions have been sent."
 )
@@ -36,11 +48,20 @@ _PASSWORD_RESET_REQUEST_MESSAGE = (
 )
 async def register_user(
     payload: UserRegister,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    mailer: EmailVerificationMailer = Depends(get_email_verification_mailer),
 ):
     service = AuthService(db)
+    result = await service.register_user(payload)
 
-    return await service.register_user(payload)
+    background_tasks.add_task(
+        mailer.send_email_verification,
+        recipient_email=result.delivery.recipient_email,
+        verification_token=result.delivery.verification_token,
+    )
+
+    return result.user
 
 
 @router.post(
@@ -81,6 +102,46 @@ async def logout_user(
     service = AuthService(db)
 
     await service.logout_session(payload)
+
+
+@router.post(
+    "/email-verification/request",
+    response_model=EmailVerificationRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_email_verification(
+    payload: EmailVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    mailer: EmailVerificationMailer = Depends(get_email_verification_mailer),
+) -> EmailVerificationRequestResponse:
+    service = AuthService(db)
+    delivery = await service.request_email_verification(payload)
+
+    if delivery is not None:
+        background_tasks.add_task(
+            mailer.send_email_verification,
+            recipient_email=delivery.recipient_email,
+            verification_token=delivery.verification_token,
+        )
+
+    return EmailVerificationRequestResponse(
+        message=_EMAIL_VERIFICATION_REQUEST_MESSAGE,
+    )
+
+
+@router.post(
+    "/email-verification/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def confirm_email_verification(
+    payload: EmailVerificationConfirm,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    service = AuthService(db)
+
+    await service.confirm_email_verification(payload)
 
 
 @router.post(

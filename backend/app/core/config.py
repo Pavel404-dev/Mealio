@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
 
+    email_verification_token_expire_hours: int = Field(default=24, ge=1, le=168)
+    email_verification_url_base: str | None = None
     password_reset_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
     password_reset_url_base: str | None = None
     smtp_host: str | None = None
