@@ -9,6 +9,23 @@ from pydantic import (
     field_validator,
 )
 
+PASSWORD_MIN_LENGTH = 15
+PASSWORD_MAX_LENGTH = 128
+
+
+def _normalize_email(value: Any) -> Any:
+    if isinstance(value, str):
+        return value.strip().lower()
+
+    return value
+
+
+def _validate_new_password(value: SecretStr) -> SecretStr:
+    if not value.get_secret_value().strip():
+        raise ValueError("Password cannot contain only whitespace")
+
+    return value
+
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -17,8 +34,8 @@ class UserRegister(BaseModel):
         max_length=255,
     )
     password: SecretStr = Field(
-        min_length=15,
-        max_length=128,
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
     )
 
     model_config = ConfigDict(
@@ -28,10 +45,7 @@ class UserRegister(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def normalize_email(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            return value.strip().lower()
-
-        return value
+        return _normalize_email(value)
 
     @field_validator("full_name", mode="before")
     @classmethod
@@ -48,17 +62,14 @@ class UserRegister(BaseModel):
         cls,
         value: SecretStr,
     ) -> SecretStr:
-        if not value.get_secret_value().strip():
-            raise ValueError("Password cannot contain only whitespace")
-
-        return value
+        return _validate_new_password(value)
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: SecretStr = Field(
         min_length=1,
-        max_length=128,
+        max_length=PASSWORD_MAX_LENGTH,
     )
 
     model_config = ConfigDict(
@@ -68,10 +79,7 @@ class UserLogin(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def normalize_email(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            return value.strip().lower()
-
-        return value
+        return _normalize_email(value)
 
 
 class RefreshTokenRequest(BaseModel):
@@ -83,6 +91,46 @@ class RefreshTokenRequest(BaseModel):
     model_config = ConfigDict(
         hide_input_in_errors=True,
     )
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+
+class PasswordResetConfirm(BaseModel):
+    token: SecretStr = Field(
+        min_length=1,
+        max_length=512,
+    )
+    new_password: SecretStr = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def reject_whitespace_only_password(
+        cls,
+        value: SecretStr,
+    ) -> SecretStr:
+        return _validate_new_password(value)
+
+
+class PasswordResetRequestResponse(BaseModel):
+    message: str
 
 
 class AccessTokenResponse(BaseModel):

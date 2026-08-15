@@ -11,6 +11,21 @@ class AuthSessionsRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    def add(
+        self,
+        *,
+        user_id: uuid.UUID,
+        refresh_token_hash: str,
+        expires_at: datetime,
+    ) -> None:
+        self.db.add(
+            AuthSession(
+                user_id=user_id,
+                refresh_token_hash=refresh_token_hash,
+                expires_at=expires_at,
+            )
+        )
+
     async def create(
         self,
         *,
@@ -18,13 +33,11 @@ class AuthSessionsRepository:
         refresh_token_hash: str,
         expires_at: datetime,
     ) -> None:
-        auth_session = AuthSession(
+        self.add(
             user_id=user_id,
             refresh_token_hash=refresh_token_hash,
             expires_at=expires_at,
         )
-
-        self.db.add(auth_session)
 
         try:
             await self.db.commit()
@@ -87,3 +100,23 @@ class AuthSessionsRepository:
         except Exception:
             await self.db.rollback()
             raise
+
+    async def revoke_all_for_user(
+        self,
+        *,
+        user_id: uuid.UUID,
+        revoked_at: datetime,
+    ) -> None:
+        statement = (
+            update(AuthSession)
+            .where(
+                AuthSession.user_id == user_id,
+                AuthSession.revoked_at.is_(None),
+            )
+            .values(
+                revoked_at=revoked_at,
+                updated_at=func.now(),
+            )
+        )
+
+        await self.db.execute(statement)

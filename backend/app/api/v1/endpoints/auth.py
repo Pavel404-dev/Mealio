@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_password_reset_mailer
 from app.db.session import get_db
+from app.integrations.password_reset_mailer import PasswordResetMailer
 from app.models.user import User
 from app.schemas.auth import (
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    PasswordResetRequestResponse,
     RefreshTokenRequest,
     TokenPairResponse,
     UserLogin,
@@ -18,6 +22,10 @@ from app.services.users import UsersService
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"],
+)
+
+_PASSWORD_RESET_REQUEST_MESSAGE = (
+    "If an account with that email exists, password reset instructions have been sent."
 )
 
 
@@ -73,6 +81,46 @@ async def logout_user(
     service = AuthService(db)
 
     await service.logout_session(payload)
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=PasswordResetRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_password_reset(
+    payload: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    mailer: PasswordResetMailer = Depends(get_password_reset_mailer),
+) -> PasswordResetRequestResponse:
+    service = AuthService(db)
+    delivery = await service.request_password_reset(payload)
+
+    if delivery is not None:
+        background_tasks.add_task(
+            mailer.send_password_reset,
+            recipient_email=delivery.recipient_email,
+            reset_token=delivery.reset_token,
+        )
+
+    return PasswordResetRequestResponse(
+        message=_PASSWORD_RESET_REQUEST_MESSAGE,
+    )
+
+
+@router.post(
+    "/password-reset/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def confirm_password_reset(
+    payload: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    service = AuthService(db)
+
+    await service.confirm_password_reset(payload)
 
 
 @router.get(
