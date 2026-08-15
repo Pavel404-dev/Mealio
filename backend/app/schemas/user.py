@@ -7,6 +7,7 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    computed_field,
     field_validator,
     model_validator,
 )
@@ -72,8 +73,14 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id: uuid.UUID
+    email_verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def email_verified(self) -> bool:
+        return self.email_verified_at is not None
 
     model_config = ConfigDict(
         from_attributes=True,

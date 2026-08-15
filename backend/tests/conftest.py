@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -30,10 +31,21 @@ os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 os.environ.pop("OPENAI_API_KEY", None)
 
+from app.api.deps import get_email_verification_mailer
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models import *  # noqa: F403
+
+
+class _NoOpEmailVerificationMailer:
+    def send_email_verification(
+        self,
+        *,
+        recipient_email: str,
+        verification_token: SecretStr,
+    ) -> None:
+        return None
 
 
 @pytest.fixture
@@ -84,6 +96,9 @@ async def client(
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_email_verification_mailer] = (
+        lambda: _NoOpEmailVerificationMailer()
+    )
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
