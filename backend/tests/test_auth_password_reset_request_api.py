@@ -222,3 +222,35 @@ async def test_request_reset_rejects_invalid_payload(
 
     assert response.status_code == 422
     assert mailer.calls == []
+
+
+@pytest.mark.asyncio
+async def test_request_reset_returns_same_503_when_delivery_is_not_configured(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register_user(client)
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "smtp_host", None)
+    monkeypatch.setattr(settings, "smtp_from_email", None)
+    monkeypatch.setattr(settings, "password_reset_url_base", None)
+
+    existing_response = await client.post(
+        REQUEST_RESET_URL,
+        json={"email": "reset-user@example.com"},
+    )
+    unknown_response = await client.post(
+        REQUEST_RESET_URL,
+        json={"email": "does-not-exist@example.com"},
+    )
+
+    expected_body = {"detail": "Password reset delivery is not configured"}
+
+    assert existing_response.status_code == 503
+    assert unknown_response.status_code == 503
+    assert existing_response.json() == unknown_response.json() == expected_body
+
+    token_count = await db_session.scalar(select(func.count(PasswordResetToken.id)))
+    assert token_count == 0

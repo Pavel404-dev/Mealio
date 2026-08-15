@@ -18,6 +18,7 @@ class AuthSessionsRepository:
         refresh_token_hash: str,
         expires_at: datetime,
     ) -> None:
+        """Add an auth session without committing the surrounding transaction."""
         self.db.add(
             AuthSession(
                 user_id=user_id,
@@ -107,6 +108,7 @@ class AuthSessionsRepository:
         user_id: uuid.UUID,
         revoked_at: datetime,
     ) -> None:
+        """Revoke all active user sessions without committing the transaction."""
         statement = (
             update(AuthSession)
             .where(
