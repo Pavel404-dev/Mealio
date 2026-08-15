@@ -18,6 +18,13 @@ class UsersRepository:
 
         return result.scalar_one_or_none()
 
+    async def get_by_id_for_update(self, user_id: uuid.UUID) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.id == user_id).with_for_update()
+        )
+
+        return result.scalar_one_or_none()
+
     async def get_by_email(self, email: str) -> User | None:
         normalized_email = email.strip().lower()
 
@@ -26,6 +33,25 @@ class UsersRepository:
         )
 
         return result.scalar_one_or_none()
+
+    async def get_by_email_for_update(self, email: str) -> User | None:
+        normalized_email = email.strip().lower()
+
+        result = await self.db.execute(
+            select(User)
+            .where(func.lower(User.email) == normalized_email)
+            .with_for_update()
+        )
+
+        return result.scalar_one_or_none()
+
+    def set_password_hash(
+        self,
+        *,
+        user: User,
+        password_hash: str,
+    ) -> None:
+        user.password_hash = password_hash
 
     async def create(self, data: UserCreate) -> User:
         user = User(
