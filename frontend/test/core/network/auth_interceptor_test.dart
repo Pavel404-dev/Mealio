@@ -115,6 +115,8 @@ void main() {
         '/auth/register',
         '/auth/refresh',
         '/auth/logout',
+        '/auth/email-verification/request',
+        '/auth/email-verification/confirm',
       ]) {
         appAdapter.enqueue(
           const FakeHttpResponse(statusCode: 401, body: {'detail': 'rejected'}),

@@ -65,61 +65,100 @@ flutter run -d <device-id> \
 
 ## Authentication
 
-Mealio currently supports the first complete frontend-to-backend authenticated user flow:
+Mealio supports registration, authenticated sessions with access/refresh tokens,
+automatic access-token refresh, backend logout, and email verification.
 
 ```text
 App start
     ↓
-restore access token
-    ├── valid token → GET /auth/me → Home
-    └── no/invalid token → Login
+restore access + refresh token pair
+    ↓
+GET /auth/me
+    ├── valid/refreshable session → Home
+    └── no/invalid session → Login
 
 Register
     ↓
 POST /auth/register
     ↓
-201 Created
+backend starts initial verification email delivery
     ↓
-Login with registered email prefilled
+Verify Email
+    ├── resend if needed
+    └── Continue to Login
 
 Login
     ↓
 POST /auth/login
     ↓
-save access token
+save access + refresh token pair
     ↓
 GET /auth/me
     ↓
 Home
 
+Protected request → 401
+    ↓
+POST /auth/refresh
+    ↓
+rotate refresh token pair
+    ↓
+retry original request once
+
 Logout
     ↓
-delete access token
+clear local token pair
+    ↓
+POST /auth/logout (best effort)
     ↓
 Login
 ```
 
+Email verification:
+
+```text
+/verify-email?token=<opaque-token>
+    ↓
+POST /auth/email-verification/confirm
+    ↓
+204 No Content
+    ├── logged out → verified success → Login
+    └── logged in → reload /auth/me → verified success → Home
+```
+
 Authentication details:
 
-- `POST /auth/register` creates a user and returns `UserRead`; it does not create a session or return an access token.
+- `POST /auth/register` creates a user and returns `UserRead`; it does not create a session or return authentication tokens.
 - Registration validates email, optional full name, a 15–128 character password, and password confirmation before sending the request.
-- Successful registration returns to Login, shows a success message, and prefills the normalized registered email.
-- `POST /auth/login` accepts the user's email and password.
-- `GET /auth/me` restores and verifies the current user.
-- The access token is stored with `flutter_secure_storage` under `mealio_access_token`.
-- A Dio interceptor asynchronously adds `Authorization: Bearer <token>` to authenticated requests.
-- Login and registration requests do not attach an existing bearer token.
-- Invalid or expired stored tokens are removed during session restoration.
-- If `/auth/me` fails after a successful login token was saved, the token is removed to avoid an inconsistent session.
-- Logout is local because the backend currently has no logout endpoint.
+- The backend automatically initiates the first verification email after successful registration; the frontend does not immediately resend it.
+- `UserRead.email_verified` is the frontend source for persistent verification state.
+- `POST /auth/email-verification/request` is used only for manual resend and keeps enumeration-resistant backend semantics.
+- `POST /auth/email-verification/confirm` accepts the opaque verification token and does not require an authenticated session.
+- The `/verify-email` route is public, including while session restoration is in progress.
+- Verification tokens are not persisted in secure storage and are not rendered by the UI.
+- `POST /auth/login` returns an access/refresh token pair.
+- `GET /auth/me` restores and synchronizes the current authenticated user.
+- Access and refresh tokens are stored with `flutter_secure_storage`.
+- A Dio interceptor adds bearer authentication only to protected requests.
+- A failed protected request can trigger one serialized refresh-token rotation and retry.
+- Public auth endpoints do not trigger automatic refresh.
+- Logout clears local credentials first and sends backend session revocation as a best-effort request.
 - Passwords are never stored by the frontend.
+
+### Production link deployment follow-up
+
+Flutter routing and verification-token confirmation are implemented independently
+from platform domain association. Production Android App Links still require a real
+HTTPS domain, Android signing information, `/.well-known/assetlinks.json`, an
+Android intent filter, and matching backend `EMAIL_VERIFICATION_URL_BASE`
+configuration. iOS Universal Links can be configured separately when iOS
+deployment becomes a priority.
 
 Not implemented yet:
 
-- refresh tokens;
-- automatic token refresh;
-- password reset;
-- email verification;
+- Flutter password-reset UX;
+- production Android App Links domain association;
+- iOS Universal Links deployment configuration;
 - social login.
 
 ## Quality checks
@@ -154,11 +193,13 @@ lib/
 │   ├── router/
 │   └── theme/
 ├── core/
+│   ├── auth/
 │   ├── config/
 │   ├── network/
 │   │   ├── api_client.dart
 │   │   ├── auth_interceptor.dart
-│   │   └── dio_provider.dart
+│   │   ├── dio_provider.dart
+│   │   └── token_refresh_coordinator.dart
 │   └── storage/
 └── features/
     ├── splash/
@@ -175,23 +216,24 @@ The frontend contains:
 
 - Material 3 theme;
 - Riverpod dependency providers and one global authentication state source;
-- GoRouter navigation with authentication redirects;
-- Dio configuration with bearer authentication;
-- secure access-token storage;
+- GoRouter navigation with protected routes and a public email-verification route;
+- Dio bearer authentication with serialized automatic token refresh;
+- secure access/refresh-token storage;
 - session restoration;
-- real registration flow;
-- real login flow;
-- local logout;
+- registration and login flows;
+- backend logout integration;
+- email-verification resend and confirmation UX;
 - authenticated Home dashboard;
-- widget, navigation, controller, repository, and interceptor tests.
+- widget, navigation, controller, repository, storage, and interceptor tests.
 
 ## Out of scope
 
-This authentication feature does not implement:
+This frontend authentication scope does not implement:
 
-- refresh tokens;
-- automatic token refresh;
-- backend logout;
+- Flutter password-reset UX;
+- production Android App Links domain association;
+- iOS Universal Links deployment configuration;
+- social login;
 - pantry integration;
 - AI recipe generation frontend;
 - meal plans;

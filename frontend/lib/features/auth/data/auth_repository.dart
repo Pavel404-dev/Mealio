@@ -58,6 +58,54 @@ class AuthRepository {
     }
   }
 
+  Future<void> requestEmailVerification({required String email}) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/email-verification/request',
+        data: {'email': email.trim().toLowerCase()},
+      );
+
+      if (response.statusCode != 202) {
+        throw const FormatException(
+          'Unexpected email verification request status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.emailVerificationRequest,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
+  Future<void> confirmEmailVerification({required String token}) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/email-verification/confirm',
+        data: {'token': token},
+      );
+
+      if (response.statusCode != 204) {
+        throw const FormatException(
+          'Unexpected email verification confirmation status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.emailVerificationConfirm,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
   Future<AuthUser> login({
     required String email,
     required String password,
@@ -202,6 +250,16 @@ class AuthRepository {
       }
     }
 
+    if (requestKind == _AuthRequestKind.emailVerificationRequest &&
+        statusCode != null) {
+      return AuthFailure.emailVerificationRequest();
+    }
+
+    if (requestKind == _AuthRequestKind.emailVerificationConfirm &&
+        (statusCode == 400 || statusCode == 422)) {
+      return AuthFailure.invalidEmailVerification();
+    }
+
     if (requestKind == _AuthRequestKind.session && statusCode == 401) {
       return AuthFailure.invalidSession();
     }
@@ -238,4 +296,10 @@ class AuthRepository {
   }
 }
 
-enum _AuthRequestKind { login, registration, session }
+enum _AuthRequestKind {
+  login,
+  registration,
+  emailVerificationRequest,
+  emailVerificationConfirm,
+  session,
+}
