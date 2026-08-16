@@ -125,7 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return;
       }
 
-      context.go('/login', extra: user.email);
+      context.go('/verify-email', extra: user.email);
     } on AuthFailure catch (failure) {
       if (!mounted) {
         return;

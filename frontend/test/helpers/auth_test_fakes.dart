@@ -239,12 +239,16 @@ Dio createFakeDio(FakeHttpClientAdapter adapter) {
 class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository({
     this.restoreHandler,
+    this.currentUserHandler,
     this.loginHandler,
     this.registerHandler,
+    this.requestEmailVerificationHandler,
+    this.confirmEmailVerificationHandler,
     this.logoutHandler,
   }) : super(apiClient: ApiClient(Dio()), storage: FakeSecureStorageService());
 
   Future<AuthUser?> Function()? restoreHandler;
+  Future<AuthUser> Function()? currentUserHandler;
   Future<AuthUser> Function({required String email, required String password})?
   loginHandler;
   Future<AuthUser> Function({
@@ -253,20 +257,35 @@ class FakeAuthRepository extends AuthRepository {
     String? fullName,
   })?
   registerHandler;
+  Future<void> Function({required String email})?
+  requestEmailVerificationHandler;
+  Future<void> Function({required String token})?
+  confirmEmailVerificationHandler;
   Future<void> Function()? logoutHandler;
 
   int restoreCalls = 0;
+  int currentUserCalls = 0;
   int loginCalls = 0;
   int registerCalls = 0;
+  int requestEmailVerificationCalls = 0;
+  int confirmEmailVerificationCalls = 0;
   int logoutCalls = 0;
   String? lastLoginEmail;
   String? lastRegisterEmail;
   String? lastRegisterFullName;
+  String? lastVerificationRequestEmail;
+  String? lastVerificationToken;
 
   @override
   Future<AuthUser?> restoreSession() {
     restoreCalls++;
     return restoreHandler?.call() ?? Future<AuthUser?>.value(null);
+  }
+
+  @override
+  Future<AuthUser> getCurrentUser() {
+    currentUserCalls++;
+    return currentUserHandler?.call() ?? Future<AuthUser>.value(testAuthUser);
   }
 
   @override
@@ -300,6 +319,22 @@ class FakeAuthRepository extends AuthRepository {
     }
 
     return handler(email: email, password: password, fullName: fullName);
+  }
+
+  @override
+  Future<void> requestEmailVerification({required String email}) {
+    requestEmailVerificationCalls++;
+    lastVerificationRequestEmail = email;
+    return requestEmailVerificationHandler?.call(email: email) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> confirmEmailVerification({required String token}) {
+    confirmEmailVerificationCalls++;
+    lastVerificationToken = token;
+    return confirmEmailVerificationHandler?.call(token: token) ??
+        Future<void>.value();
   }
 
   @override

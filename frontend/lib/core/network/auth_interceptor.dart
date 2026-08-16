@@ -19,6 +19,8 @@ class AuthInterceptor extends Interceptor {
     '/auth/register',
     '/auth/refresh',
     '/auth/logout',
+    '/auth/email-verification/request',
+    '/auth/email-verification/confirm',
   };
   static const String _authRetriedKey = 'mealio_auth_retried';
   static const String _authGenerationKey = 'mealio_auth_generation';

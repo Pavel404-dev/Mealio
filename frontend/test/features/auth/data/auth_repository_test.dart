@@ -16,6 +16,7 @@ void main() {
     'id': '7c59f60a-8428-4bce-a2bd-bfe7dd10b3af',
     'email': 'pavel@example.com',
     'full_name': 'Pavel Potapenko',
+    'email_verified': false,
     'created_at': '2026-07-20T10:00:00Z',
     'updated_at': '2026-07-20T10:00:00Z',
   };

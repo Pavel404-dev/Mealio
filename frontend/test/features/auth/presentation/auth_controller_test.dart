@@ -63,6 +63,50 @@ void main() {
     expect(session.isAuthenticated, isTrue);
   });
 
+  test('reload current user replaces authenticated user', () async {
+    final verifiedUser = AuthUser(
+      id: testAuthUser.id,
+      email: testAuthUser.email,
+      fullName: testAuthUser.fullName,
+      emailVerified: true,
+      createdAt: testAuthUser.createdAt,
+      updatedAt: testAuthUser.updatedAt,
+    );
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+      currentUserHandler: () async => verifiedUser,
+    );
+    final container = createContainer(repository);
+
+    await container.read(authControllerProvider.future);
+    final user = await container
+        .read(authControllerProvider.notifier)
+        .reloadCurrentUser();
+
+    expect(user, verifiedUser);
+    expect(repository.currentUserCalls, 1);
+    expect(
+      container.read(authControllerProvider).asData!.value.user,
+      verifiedUser,
+    );
+  });
+
+  test(
+    'reload current user is a no-op without authenticated session',
+    () async {
+      final repository = FakeAuthRepository(restoreHandler: () async => null);
+      final container = createContainer(repository);
+
+      await container.read(authControllerProvider.future);
+      final user = await container
+          .read(authControllerProvider.notifier)
+          .reloadCurrentUser();
+
+      expect(user, isNull);
+      expect(repository.currentUserCalls, 0);
+    },
+  );
+
   test('login success becomes authenticated', () async {
     final repository = FakeAuthRepository(
       restoreHandler: () async => null,

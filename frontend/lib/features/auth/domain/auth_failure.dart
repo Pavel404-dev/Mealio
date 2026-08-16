@@ -3,6 +3,8 @@ enum AuthFailureType {
   validation,
   duplicateEmail,
   registrationValidation,
+  emailVerificationInvalid,
+  emailVerificationRequest,
   connection,
   invalidSession,
   unexpected,
@@ -36,6 +38,20 @@ class AuthFailure implements Exception {
     return const AuthFailure(
       type: AuthFailureType.registrationValidation,
       message: 'Please check the registration details.',
+    );
+  }
+
+  factory AuthFailure.invalidEmailVerification() {
+    return const AuthFailure(
+      type: AuthFailureType.emailVerificationInvalid,
+      message: 'This verification link is invalid or has expired.',
+    );
+  }
+
+  factory AuthFailure.emailVerificationRequest() {
+    return const AuthFailure(
+      type: AuthFailureType.emailVerificationRequest,
+      message: 'Unable to resend verification email. Please try again.',
     );
   }
 

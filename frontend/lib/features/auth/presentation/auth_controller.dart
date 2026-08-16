@@ -81,6 +81,18 @@ class AuthController extends AsyncNotifier<AuthSession> {
     }
   }
 
+  Future<AuthUser?> reloadCurrentUser() async {
+    final currentSession = state.asData?.value;
+
+    if (currentSession?.isAuthenticated != true) {
+      return null;
+    }
+
+    final user = await ref.read(authRepositoryProvider).getCurrentUser();
+    state = AsyncData(AuthSession.authenticated(user));
+    return user;
+  }
+
   Future<void> logout() async {
     try {
       await ref.read(authRepositoryProvider).logout();

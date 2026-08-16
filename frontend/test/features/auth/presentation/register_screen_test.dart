@@ -388,43 +388,36 @@ void main() {
     expect(find.textContaining('internal failure'), findsNothing);
   });
 
-  testWidgets('successful registration returns to Login with prefilled email', (
-    tester,
-  ) async {
-    final registeredUser = AuthUser(
-      id: testAuthUser.id,
-      email: 'normalized@example.com',
-      fullName: testAuthUser.fullName,
-      createdAt: testAuthUser.createdAt,
-      updatedAt: testAuthUser.updatedAt,
-    );
-    final repository = FakeAuthRepository(
-      restoreHandler: () async => null,
-      registerHandler: ({required email, required password, fullName}) async =>
-          registeredUser,
-    );
+  testWidgets(
+    'successful registration opens Verify Email without automatic resend',
+    (tester) async {
+      final registeredUser = AuthUser(
+        id: testAuthUser.id,
+        email: 'normalized@example.com',
+        fullName: testAuthUser.fullName,
+        createdAt: testAuthUser.createdAt,
+        updatedAt: testAuthUser.updatedAt,
+      );
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => null,
+        registerHandler:
+            ({required email, required password, fullName}) async =>
+                registeredUser,
+      );
 
-    await openRegisterScreen(tester, repository);
-    await enterValidRegistration(tester);
-    await tester.tap(find.byKey(const Key('register-button')));
-    await tester.pumpAndSettle();
+      await openRegisterScreen(tester, repository);
+      await enterValidRegistration(tester);
+      await tester.tap(find.byKey(const Key('register-button')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('login-screen')), findsOneWidget);
-    expect(
-      find.byKey(const Key('registration-success-message')),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Account created successfully. You can now sign in.'),
-      findsOneWidget,
-    );
-    final emailField = tester.widget<TextFormField>(
-      find.byKey(const Key('login-email-field')),
-    );
-    expect(emailField.controller?.text, 'normalized@example.com');
-  });
+      expect(find.byKey(const Key('verify-email-screen')), findsOneWidget);
+      expect(find.text('normalized@example.com'), findsOneWidget);
+      expect(repository.requestEmailVerificationCalls, 0);
+      expect(find.byKey(const Key('login-screen')), findsNothing);
+    },
+  );
 
-  testWidgets('login failure is visible after successful registration', (
+  testWidgets('login failure is visible after verification handoff', (
     tester,
   ) async {
     final registeredUser = AuthUser(
@@ -449,10 +442,12 @@ void main() {
     await tester.tap(find.byKey(const Key('register-button')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('registration-success-message')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('verify-email-screen')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('verify-email-continue-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login-screen')), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const Key('login-password-field')),
@@ -463,7 +458,6 @@ void main() {
 
     expect(repository.loginCalls, 1);
     expect(find.text('Invalid email or password.'), findsOneWidget);
-    expect(find.byKey(const Key('registration-success-message')), findsNothing);
   });
 
   testWidgets('authenticated user cannot remain on Register', (tester) async {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
@@ -22,8 +23,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final location = state.matchedLocation;
+      final isVerificationRoute = location == '/verify-email';
 
       if (authState.isLoading) {
+        if (isVerificationRoute) {
+          return null;
+        }
+
         return location == '/splash' ? null : '/splash';
       }
 
@@ -40,7 +46,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      final isPublicAuthRoute = location == '/login' || location == '/register';
+      final isPublicAuthRoute =
+          location == '/login' ||
+          location == '/register' ||
+          isVerificationRoute;
 
       if (!isPublicAuthRoute) {
         return '/login';
@@ -65,6 +74,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) {
+          final extra = state.extra;
+          return VerifyEmailScreen(
+            email: extra is String ? extra : null,
+            token: state.uri.queryParameters['token'],
+          );
+        },
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     ],
