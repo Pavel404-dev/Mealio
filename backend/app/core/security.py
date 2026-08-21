@@ -1,4 +1,6 @@
 import hashlib
+import hmac
+import json
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -12,6 +14,10 @@ from app.core.config import get_settings
 
 _password_hasher = PasswordHash.recommended()
 _OPAQUE_TOKEN_BYTES = 48
+_EMAIL_OTP_DIGITS = 6
+_EMAIL_OTP_CODE_SPACE = 10**_EMAIL_OTP_DIGITS
+_EMAIL_OTP_DIGEST_DOMAIN = "mealio-email-otp-v1"
+_MIN_EMAIL_OTP_PEPPER_BYTES = 32
 
 
 def hash_password(plain_password: str) -> str:
@@ -64,6 +70,88 @@ def generate_email_verification_token() -> str:
 
 def hash_email_verification_token(verification_token: str) -> str:
     return _hash_opaque_token(verification_token)
+
+
+def generate_email_otp_code() -> str:
+    value = secrets.randbelow(_EMAIL_OTP_CODE_SPACE)
+    return f"{value:0{_EMAIL_OTP_DIGITS}d}"
+
+
+def _validate_email_otp_code(code: str) -> None:
+    if not (
+        len(code) == _EMAIL_OTP_DIGITS
+        and code.isascii()
+        and code.isdigit()
+    ):
+        raise ValueError("Email OTP code must contain exactly 6 ASCII digits")
+
+
+def hash_email_otp_code(
+    *,
+    code: str,
+    otp_pepper: str,
+    purpose: str,
+    user_id: str,
+    target_email: str,
+) -> str:
+    _validate_email_otp_code(code)
+
+    normalized_purpose = purpose.strip()
+    normalized_user_id = user_id.strip()
+    normalized_email = target_email.strip().lower()
+
+    if not normalized_purpose:
+        raise ValueError("Email OTP purpose is required")
+    if not normalized_user_id:
+        raise ValueError("Email OTP user ID is required")
+    if not normalized_email:
+        raise ValueError("Email OTP target email is required")
+
+    pepper_bytes = otp_pepper.encode("utf-8")
+    if len(pepper_bytes) < _MIN_EMAIL_OTP_PEPPER_BYTES:
+        raise ValueError("Email OTP pepper must contain at least 32 bytes")
+
+    message = json.dumps(
+        {
+            "domain": _EMAIL_OTP_DIGEST_DOMAIN,
+            "purpose": normalized_purpose,
+            "user_id": normalized_user_id,
+            "target_email": normalized_email,
+            "code": code,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+    return hmac.new(
+        pepper_bytes,
+        message,
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def verify_email_otp_code(
+    *,
+    code: str,
+    expected_digest: str,
+    otp_pepper: str,
+    purpose: str,
+    user_id: str,
+    target_email: str,
+) -> bool:
+    try:
+        candidate_digest = hash_email_otp_code(
+            code=code,
+            otp_pepper=otp_pepper,
+            purpose=purpose,
+            user_id=user_id,
+            target_email=target_email,
+        )
+    except ValueError:
+        return False
+
+    return hmac.compare_digest(candidate_digest, expected_digest)
 
 
 def create_access_token(
