@@ -66,7 +66,8 @@ flutter run -d <device-id> \
 ## Authentication
 
 Mealio supports registration, authenticated sessions with access/refresh tokens,
-automatic access-token refresh, backend logout, and email verification.
+automatic access-token refresh, backend logout, email verification, and password
+reset.
 
 ```text
 App start
@@ -126,6 +127,28 @@ POST /auth/email-verification/confirm
     └── logged in → reload /auth/me → verified success → Home
 ```
 
+Password reset:
+
+```text
+Login → Forgot password
+    ↓
+POST /auth/password-reset/request
+    ↓
+generic 202 Accepted success
+    ↓
+/reset-password?token=<opaque-token>
+    ↓
+enter + confirm a new 15–128 character password
+    ↓
+POST /auth/password-reset/confirm
+    ↓
+204 No Content
+    ↓
+clear the local authenticated session when present
+    ↓
+Login with the new password
+```
+
 Authentication details:
 
 - `POST /auth/register` creates a user and returns `UserRead`; it does not create a session or return authentication tokens.
@@ -134,8 +157,11 @@ Authentication details:
 - `UserRead.email_verified` is the frontend source for persistent verification state.
 - `POST /auth/email-verification/request` is used only for manual resend and keeps enumeration-resistant backend semantics.
 - `POST /auth/email-verification/confirm` accepts the opaque verification token and does not require an authenticated session.
-- The `/verify-email` route is public, including while session restoration is in progress.
-- Verification tokens are not persisted in secure storage and are not rendered by the UI.
+- The `/verify-email` and `/reset-password` routes are public, including while session restoration is in progress.
+- Verification and password-reset tokens are not persisted in secure storage and are not rendered by the UI.
+- `POST /auth/password-reset/request` uses the backend's generic enumeration-resistant success semantics.
+- `POST /auth/password-reset/confirm` accepts an opaque token and a 15–128 character password; the frontend preserves the password exactly as entered.
+- A successful password reset does not auto-login. If a Mealio session is active, the frontend clears it because the backend revokes refresh sessions during reset.
 - `POST /auth/login` returns an access/refresh token pair.
 - `GET /auth/me` restores and synchronizes the current authenticated user.
 - Access and refresh tokens are stored with `flutter_secure_storage`.
@@ -147,16 +173,15 @@ Authentication details:
 
 ### Production link deployment follow-up
 
-Flutter routing and verification-token confirmation are implemented independently
+Flutter routing for verification and password-reset tokens is implemented independently
 from platform domain association. Production Android App Links still require a real
 HTTPS domain, Android signing information, `/.well-known/assetlinks.json`, an
-Android intent filter, and matching backend `EMAIL_VERIFICATION_URL_BASE`
-configuration. iOS Universal Links can be configured separately when iOS
-deployment becomes a priority.
+Android intent filter, and matching backend `EMAIL_VERIFICATION_URL_BASE` and
+`PASSWORD_RESET_URL_BASE` configuration. iOS Universal Links can be configured
+separately when iOS deployment becomes a priority.
 
 Not implemented yet:
 
-- Flutter password-reset UX;
 - production Android App Links domain association;
 - iOS Universal Links deployment configuration;
 - social login.
@@ -216,13 +241,14 @@ The frontend contains:
 
 - Material 3 theme;
 - Riverpod dependency providers and one global authentication state source;
-- GoRouter navigation with protected routes and a public email-verification route;
+- GoRouter navigation with protected routes and public email-verification and password-reset routes;
 - Dio bearer authentication with serialized automatic token refresh;
 - secure access/refresh-token storage;
 - session restoration;
 - registration and login flows;
 - backend logout integration;
 - email-verification resend and confirmation UX;
+- password-reset request and confirmation UX;
 - authenticated Home dashboard;
 - widget, navigation, controller, repository, storage, and interceptor tests.
 
@@ -230,7 +256,6 @@ The frontend contains:
 
 This frontend authentication scope does not implement:
 
-- Flutter password-reset UX;
 - production Android App Links domain association;
 - iOS Universal Links deployment configuration;
 - social login;

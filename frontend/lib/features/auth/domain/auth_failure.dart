@@ -5,6 +5,9 @@ enum AuthFailureType {
   registrationValidation,
   emailVerificationInvalid,
   emailVerificationRequest,
+  passwordResetRequest,
+  passwordResetInvalid,
+  passwordResetValidation,
   connection,
   invalidSession,
   unexpected,
@@ -52,6 +55,27 @@ class AuthFailure implements Exception {
     return const AuthFailure(
       type: AuthFailureType.emailVerificationRequest,
       message: 'Unable to resend verification email. Please try again.',
+    );
+  }
+
+  factory AuthFailure.passwordResetRequest() {
+    return const AuthFailure(
+      type: AuthFailureType.passwordResetRequest,
+      message: 'Unable to send password reset instructions. Please try again.',
+    );
+  }
+
+  factory AuthFailure.invalidPasswordReset() {
+    return const AuthFailure(
+      type: AuthFailureType.passwordResetInvalid,
+      message: 'This password reset link is invalid or has expired.',
+    );
+  }
+
+  factory AuthFailure.passwordResetValidation() {
+    return const AuthFailure(
+      type: AuthFailureType.passwordResetValidation,
+      message: 'Please check the new password and try again.',
     );
   }
 

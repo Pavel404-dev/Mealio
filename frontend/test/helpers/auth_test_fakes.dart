@@ -244,6 +244,8 @@ class FakeAuthRepository extends AuthRepository {
     this.registerHandler,
     this.requestEmailVerificationHandler,
     this.confirmEmailVerificationHandler,
+    this.requestPasswordResetHandler,
+    this.confirmPasswordResetHandler,
     this.logoutHandler,
   }) : super(apiClient: ApiClient(Dio()), storage: FakeSecureStorageService());
 
@@ -261,6 +263,9 @@ class FakeAuthRepository extends AuthRepository {
   requestEmailVerificationHandler;
   Future<void> Function({required String token})?
   confirmEmailVerificationHandler;
+  Future<void> Function({required String email})? requestPasswordResetHandler;
+  Future<void> Function({required String token, required String newPassword})?
+  confirmPasswordResetHandler;
   Future<void> Function()? logoutHandler;
 
   int restoreCalls = 0;
@@ -269,12 +274,17 @@ class FakeAuthRepository extends AuthRepository {
   int registerCalls = 0;
   int requestEmailVerificationCalls = 0;
   int confirmEmailVerificationCalls = 0;
+  int requestPasswordResetCalls = 0;
+  int confirmPasswordResetCalls = 0;
   int logoutCalls = 0;
   String? lastLoginEmail;
   String? lastRegisterEmail;
   String? lastRegisterFullName;
   String? lastVerificationRequestEmail;
   String? lastVerificationToken;
+  String? lastPasswordResetRequestEmail;
+  String? lastPasswordResetToken;
+  String? lastPasswordResetPassword;
 
   @override
   Future<AuthUser?> restoreSession() {
@@ -334,6 +344,29 @@ class FakeAuthRepository extends AuthRepository {
     confirmEmailVerificationCalls++;
     lastVerificationToken = token;
     return confirmEmailVerificationHandler?.call(token: token) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) {
+    requestPasswordResetCalls++;
+    lastPasswordResetRequestEmail = email;
+    return requestPasswordResetHandler?.call(email: email) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) {
+    confirmPasswordResetCalls++;
+    lastPasswordResetToken = token;
+    lastPasswordResetPassword = newPassword;
+    return confirmPasswordResetHandler?.call(
+          token: token,
+          newPassword: newPassword,
+        ) ??
         Future<void>.value();
   }
 
