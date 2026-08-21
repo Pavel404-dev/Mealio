@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/auth_controller.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -24,9 +26,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authControllerProvider);
       final location = state.matchedLocation;
       final isVerificationRoute = location == '/verify-email';
+      final isPasswordResetRoute = location == '/reset-password';
+      final isPublicLinkRoute = isVerificationRoute || isPasswordResetRoute;
 
       if (authState.isLoading) {
-        if (isVerificationRoute) {
+        if (isPublicLinkRoute) {
           return null;
         }
 
@@ -49,7 +53,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isPublicAuthRoute =
           location == '/login' ||
           location == '/register' ||
-          isVerificationRoute;
+          location == '/forgot-password' ||
+          isVerificationRoute ||
+          isPasswordResetRoute;
 
       if (!isPublicAuthRoute) {
         return '/login';
@@ -74,6 +80,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) =>
+            ResetPasswordScreen(token: state.uri.queryParameters['token']),
       ),
       GoRoute(
         path: '/verify-email',

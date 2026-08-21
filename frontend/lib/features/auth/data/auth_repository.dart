@@ -106,6 +106,57 @@ class AuthRepository {
     }
   }
 
+  Future<void> requestPasswordReset({required String email}) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/password-reset/request',
+        data: {'email': email.trim().toLowerCase()},
+      );
+
+      if (response.statusCode != 202) {
+        throw const FormatException(
+          'Unexpected password reset request status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.passwordResetRequest,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/password-reset/confirm',
+        data: {'token': token, 'new_password': newPassword},
+      );
+
+      if (response.statusCode != 204) {
+        throw const FormatException(
+          'Unexpected password reset confirmation status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.passwordResetConfirm,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
   Future<AuthUser> login({
     required String email,
     required String password,
@@ -260,6 +311,21 @@ class AuthRepository {
       return AuthFailure.invalidEmailVerification();
     }
 
+    if (requestKind == _AuthRequestKind.passwordResetRequest &&
+        statusCode != null) {
+      return AuthFailure.passwordResetRequest();
+    }
+
+    if (requestKind == _AuthRequestKind.passwordResetConfirm) {
+      if (statusCode == 400) {
+        return AuthFailure.invalidPasswordReset();
+      }
+
+      if (statusCode == 422) {
+        return AuthFailure.passwordResetValidation();
+      }
+    }
+
     if (requestKind == _AuthRequestKind.session && statusCode == 401) {
       return AuthFailure.invalidSession();
     }
@@ -301,5 +367,7 @@ enum _AuthRequestKind {
   registration,
   emailVerificationRequest,
   emailVerificationConfirm,
+  passwordResetRequest,
+  passwordResetConfirm,
   session,
 }
