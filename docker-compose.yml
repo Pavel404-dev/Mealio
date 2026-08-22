@@ -39,6 +39,7 @@ services:
       EMAIL_VERIFICATION_URL_BASE: ${EMAIL_VERIFICATION_URL_BASE:-}
       PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: ${PASSWORD_RESET_TOKEN_EXPIRE_MINUTES:-30}
       PASSWORD_RESET_URL_BASE: ${PASSWORD_RESET_URL_BASE:-}
+      AUTH_ABUSE_PEPPER: ${AUTH_ABUSE_PEPPER:-dev_mealio_auth_abuse_pepper_change_later_123456789}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
@@ -58,7 +59,7 @@ services:
 
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-proxy-headers"
 
 volumes:
   mealio_postgres_data:
