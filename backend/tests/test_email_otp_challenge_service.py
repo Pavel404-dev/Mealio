@@ -423,8 +423,7 @@ async def test_concurrent_issue_requests_are_serialized(
         result = await check_session.execute(
             select(EmailOtpChallenge).where(
                 EmailOtpChallenge.user_id == user_id,
-                EmailOtpChallenge.purpose
-                == EmailOtpPurpose.EMAIL_VERIFICATION,
+                EmailOtpChallenge.purpose == EmailOtpPurpose.EMAIL_VERIFICATION,
             )
         )
         challenges = list(result.scalars())

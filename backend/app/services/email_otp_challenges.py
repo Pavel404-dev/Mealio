@@ -125,9 +125,7 @@ class EmailOtpChallengeService:
                 user_id=str(user_id),
                 target_email=normalized_email,
             )
-            expires_at = now + timedelta(
-                minutes=self.settings.email_otp_expire_minutes
-            )
+            expires_at = now + timedelta(minutes=self.settings.email_otp_expire_minutes)
 
             self.repository.add(
                 user_id=user_id,
@@ -170,8 +168,7 @@ class EmailOtpChallengeService:
                 or challenge.used_at is not None
                 or challenge.revoked_at is not None
                 or challenge.expires_at <= now
-                or challenge.failed_attempts
-                >= self.settings.email_otp_max_attempts
+                or challenge.failed_attempts >= self.settings.email_otp_max_attempts
             ):
                 return False
 

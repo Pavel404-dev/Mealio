@@ -78,11 +78,7 @@ def generate_email_otp_code() -> str:
 
 
 def _validate_email_otp_code(code: str) -> None:
-    if not (
-        len(code) == _EMAIL_OTP_DIGITS
-        and code.isascii()
-        and code.isdigit()
-    ):
+    if not (len(code) == _EMAIL_OTP_DIGITS and code.isascii() and code.isdigit()):
         raise ValueError("Email OTP code must contain exactly 6 ASCII digits")
 
 
