@@ -29,6 +29,10 @@ os.environ.setdefault(
 )
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+os.environ.setdefault(
+    "AUTH_ABUSE_PEPPER",
+    "test_auth_abuse_pepper_with_more_than_32_chars",
+)
 os.environ.pop("OPENAI_API_KEY", None)
 
 from app.api.deps import get_email_verification_mailer

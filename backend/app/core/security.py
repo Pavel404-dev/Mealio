@@ -1,7 +1,9 @@
 import hashlib
 import hmac
+import ipaddress
 import json
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -9,6 +11,7 @@ import jwt
 from pwdlib import PasswordHash
 from pwdlib.exceptions import UnknownHashError
 
+from app.core.auth_abuse import AuthAbuseDimension
 from app.core.config import get_settings
 
 
@@ -18,6 +21,8 @@ _EMAIL_OTP_DIGITS = 6
 _EMAIL_OTP_CODE_SPACE = 10**_EMAIL_OTP_DIGITS
 _EMAIL_OTP_DIGEST_DOMAIN = "mealio-email-otp-v1"
 _MIN_EMAIL_OTP_PEPPER_BYTES = 32
+_AUTH_ABUSE_DIGEST_DOMAIN = "mealio-auth-abuse-identifier-v1"
+_MIN_AUTH_ABUSE_PEPPER_BYTES = 32
 
 
 def hash_password(plain_password: str) -> str:
@@ -148,6 +153,69 @@ def verify_email_otp_code(
         return False
 
     return hmac.compare_digest(candidate_digest, expected_digest)
+
+
+def normalize_auth_abuse_identifier(
+    *,
+    dimension: AuthAbuseDimension,
+    identifier: str,
+) -> str:
+    raw_identifier = identifier.strip()
+    if not raw_identifier:
+        raise ValueError("Authentication abuse identifier is required")
+
+    if dimension is AuthAbuseDimension.EMAIL:
+        return raw_identifier.lower()
+
+    if dimension is AuthAbuseDimension.USER:
+        try:
+            return str(uuid.UUID(raw_identifier))
+        except ValueError as exc:
+            raise ValueError("Authentication abuse user identifier is invalid") from exc
+
+    if dimension is AuthAbuseDimension.IP:
+        try:
+            address = ipaddress.ip_address(raw_identifier)
+        except ValueError as exc:
+            raise ValueError("Authentication abuse IP identifier is invalid") from exc
+
+        if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped:
+            return address.ipv4_mapped.compressed
+        return address.compressed
+
+    raise ValueError("Unsupported authentication abuse dimension")
+
+
+def hash_auth_abuse_identifier(
+    *,
+    dimension: AuthAbuseDimension,
+    identifier: str,
+    abuse_pepper: str,
+) -> str:
+    normalized_identifier = normalize_auth_abuse_identifier(
+        dimension=dimension,
+        identifier=identifier,
+    )
+    pepper_bytes = abuse_pepper.encode("utf-8")
+    if len(pepper_bytes) < _MIN_AUTH_ABUSE_PEPPER_BYTES:
+        raise ValueError("Authentication abuse pepper must contain at least 32 bytes")
+
+    message = json.dumps(
+        {
+            "domain": _AUTH_ABUSE_DIGEST_DOMAIN,
+            "dimension": dimension.value,
+            "identifier": normalized_identifier,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+    return hmac.new(
+        pepper_bytes,
+        message,
+        hashlib.sha256,
+    ).hexdigest()
 
 
 def create_access_token(

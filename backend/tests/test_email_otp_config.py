@@ -6,12 +6,14 @@ from app.core.config import Settings
 DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/mealio_test"
 JWT_SECRET = "test-jwt-secret-key-with-at-least-32-characters"
 OTP_PEPPER = "test-email-otp-pepper-with-at-least-32-characters"
+ABUSE_PEPPER = "test-auth-abuse-pepper-with-at-least-32-characters"
 
 
 def _settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "database_url": DATABASE_URL,
         "jwt_secret_key": JWT_SECRET,
+        "auth_abuse_pepper": ABUSE_PEPPER,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
