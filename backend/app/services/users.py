@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.email_otp_challenge import EmailOtpPurpose
+from app.repositories.email_otp_challenges import EmailOtpChallengesRepository
 from app.repositories.email_verification_tokens import (
     EmailVerificationTokensRepository,
 )
@@ -17,6 +19,7 @@ class UsersService:
         self.db = db
         self.repository = UsersRepository(db)
         self.email_verification_repository = EmailVerificationTokensRepository(db)
+        self.email_otp_repository = EmailOtpChallengesRepository(db)
 
     async def get_user(self, user_id: uuid.UUID):
         user = await self.repository.get_by_id(user_id)
@@ -90,6 +93,11 @@ class UsersService:
                 )
                 await self.email_verification_repository.revoke_unused_for_user(
                     user_id=updated_user.id,
+                    revoked_at=now,
+                )
+                await self.email_otp_repository.revoke_unused_for_user(
+                    user_id=updated_user.id,
+                    purpose=EmailOtpPurpose.EMAIL_VERIFICATION,
                     revoked_at=now,
                 )
 

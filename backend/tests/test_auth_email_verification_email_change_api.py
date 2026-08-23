@@ -8,9 +8,13 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_email_verification_mailer
+from app.api.deps import (
+    get_email_verification_mailer,
+    get_email_verification_otp_mailer,
+)
 from app.core.security import hash_email_verification_token
 from app.main import app
+from app.models.email_otp_challenge import EmailOtpChallenge, EmailOtpPurpose
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.user import User
 from app.repositories.email_verification_tokens import (
@@ -22,8 +26,11 @@ LOGIN_URL = "/api/v1/auth/login"
 ME_URL = "/api/v1/auth/me"
 REQUEST_VERIFICATION_URL = "/api/v1/auth/email-verification/request"
 CONFIRM_VERIFICATION_URL = "/api/v1/auth/email-verification/confirm"
+OTP_REQUEST_URL = "/api/v1/auth/email-verification/otp/request"
+OTP_CONFIRM_URL = "/api/v1/auth/email-verification/otp/confirm"
 PASSWORD = "Mealio-password-123"
 INVALID_DETAIL = "Invalid or expired email verification token."
+OTP_INVALID_DETAIL = "Invalid or expired email verification code."
 
 
 class FakeEmailVerificationMailer:
@@ -39,8 +46,32 @@ class FakeEmailVerificationMailer:
         self.calls.append((recipient_email, verification_token.get_secret_value()))
 
 
+class FakeEmailVerificationOtpMailer:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, datetime]] = []
+
+    def send_email_verification_otp(
+        self,
+        *,
+        recipient_email: str,
+        verification_code: SecretStr,
+        expires_at: datetime,
+    ) -> None:
+        self.calls.append(
+            (
+                recipient_email,
+                verification_code.get_secret_value(),
+                expires_at,
+            )
+        )
+
+
 def _use_fake_mailer(mailer: FakeEmailVerificationMailer) -> None:
     app.dependency_overrides[get_email_verification_mailer] = lambda: mailer
+
+
+def _use_fake_otp_mailer(mailer: FakeEmailVerificationOtpMailer) -> None:
+    app.dependency_overrides[get_email_verification_otp_mailer] = lambda: mailer
 
 
 async def _register_and_login(
@@ -149,6 +180,70 @@ async def test_email_change_revokes_old_token_and_new_email_can_be_verified(
     assert me_response.status_code == 200
     assert me_response.json()["email"] == "new-address@example.com"
     assert me_response.json()["email_verified"] is True
+
+
+@pytest.mark.asyncio
+async def test_email_change_revokes_otp_even_after_changing_back(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    email = "otp-email-change@example.com"
+    link_mailer = FakeEmailVerificationMailer()
+    otp_mailer = FakeEmailVerificationOtpMailer()
+    _use_fake_mailer(link_mailer)
+    _use_fake_otp_mailer(otp_mailer)
+    registered_user, _, headers = await _register_and_login(
+        client,
+        link_mailer,
+        email=email,
+    )
+
+    request_response = await client.post(
+        OTP_REQUEST_URL,
+        json={"email": email},
+    )
+    assert request_response.status_code == 202
+    assert len(otp_mailer.calls) == 1
+    old_code = otp_mailer.calls[0][1]
+
+    change_away_response = await client.patch(
+        ME_URL,
+        headers=headers,
+        json={"email": "otp-email-change-new@example.com"},
+    )
+    assert change_away_response.status_code == 200
+
+    change_back_response = await client.patch(
+        ME_URL,
+        headers=headers,
+        json={"email": email},
+    )
+    assert change_back_response.status_code == 200
+    assert change_back_response.json()["email_verified"] is False
+
+    old_confirm_response = await client.post(
+        OTP_CONFIRM_URL,
+        json={"email": email, "code": old_code},
+    )
+    assert old_confirm_response.status_code == 400
+    assert old_confirm_response.json() == {"detail": OTP_INVALID_DETAIL}
+
+    me_response = await client.get(ME_URL, headers=headers)
+    assert me_response.status_code == 200
+    assert me_response.json()["email"] == email
+    assert me_response.json()["email_verified"] is False
+    assert me_response.json()["email_verified_at"] is None
+
+    challenge_result = await db_session.execute(
+        select(EmailOtpChallenge).where(
+            EmailOtpChallenge.user_id == uuid.UUID(registered_user["id"]),
+            EmailOtpChallenge.purpose == EmailOtpPurpose.EMAIL_VERIFICATION,
+            EmailOtpChallenge.target_email == email,
+        )
+    )
+    challenge = challenge_result.scalar_one()
+    assert challenge.used_at is None
+    assert challenge.revoked_at is not None
 
 
 @pytest.mark.asyncio
