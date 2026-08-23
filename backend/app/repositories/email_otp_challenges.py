@@ -87,6 +87,29 @@ class EmailOtpChallengesRepository:
 
         await self.db.execute(statement)
 
+    async def revoke_unused_for_user(
+        self,
+        *,
+        user_id: uuid.UUID,
+        purpose: EmailOtpPurpose,
+        revoked_at: datetime,
+    ) -> None:
+        statement = (
+            update(EmailOtpChallenge)
+            .where(
+                EmailOtpChallenge.user_id == user_id,
+                EmailOtpChallenge.purpose == purpose,
+                EmailOtpChallenge.used_at.is_(None),
+                EmailOtpChallenge.revoked_at.is_(None),
+            )
+            .values(
+                revoked_at=revoked_at,
+                updated_at=revoked_at,
+            )
+        )
+
+        await self.db.execute(statement)
+
     async def increment_failed_attempts(
         self,
         *,

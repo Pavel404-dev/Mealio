@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import AsyncGenerator
+from datetime import datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -35,7 +36,11 @@ os.environ.setdefault(
 )
 os.environ.pop("OPENAI_API_KEY", None)
 
-from app.api.deps import get_email_verification_mailer
+from app.api.deps import (
+    get_email_verification_mailer,
+    get_email_verification_otp_mailer,
+)
+from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
@@ -48,6 +53,17 @@ class _NoOpEmailVerificationMailer:
         *,
         recipient_email: str,
         verification_token: SecretStr,
+    ) -> None:
+        return None
+
+
+class _NoOpEmailVerificationOtpMailer:
+    def send_email_verification_otp(
+        self,
+        *,
+        recipient_email: str,
+        verification_code: SecretStr,
+        expires_at: datetime,
     ) -> None:
         return None
 
@@ -94,14 +110,24 @@ async def db_session(
 @pytest.fixture
 async def client(
     async_session_maker: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         async with async_session_maker() as session:
             yield session
 
+    monkeypatch.setattr(
+        get_settings(),
+        "email_otp_pepper",
+        SecretStr("test_email_otp_pepper_with_more_than_32_chars"),
+    )
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_email_verification_mailer] = (
         lambda: _NoOpEmailVerificationMailer()
+    )
+    app.dependency_overrides[get_email_verification_otp_mailer] = (
+        lambda: _NoOpEmailVerificationOtpMailer()
     )
 
     async with AsyncClient(

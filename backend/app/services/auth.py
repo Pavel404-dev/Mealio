@@ -18,6 +18,7 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
+from app.models.email_otp_challenge import EmailOtpPurpose
 from app.models.user import User
 from app.repositories.auth_sessions import AuthSessionsRepository
 from app.repositories.email_verification_tokens import (
@@ -28,6 +29,8 @@ from app.repositories.password_reset_tokens import PasswordResetTokensRepository
 from app.repositories.users import UsersRepository
 from app.schemas.auth import (
     EmailVerificationConfirm,
+    EmailVerificationOtpConfirm,
+    EmailVerificationOtpRequest,
     EmailVerificationRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
@@ -35,6 +38,13 @@ from app.schemas.auth import (
     TokenPairResponse,
     UserLogin,
     UserRegister,
+)
+from app.services.email_otp_challenges import (
+    EmailOtpChallengeService,
+    EmailOtpConfigurationError,
+    EmailOtpDelivery,
+    EmailOtpDeliveryLimitError,
+    EmailOtpResendCooldownError,
 )
 
 
@@ -63,6 +73,16 @@ class AuthService:
         self.sessions_repository = AuthSessionsRepository(db)
         self.email_verification_repository = EmailVerificationTokensRepository(db)
         self.password_reset_repository = PasswordResetTokensRepository(db)
+        self.email_otp_service = EmailOtpChallengeService(db)
+
+    def _ensure_email_otp_configured(self) -> None:
+        try:
+            self.email_otp_service.ensure_configured()
+        except EmailOtpConfigurationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email verification code is not configured",
+            ) from exc
 
     def _add_email_verification_token(
         self,
@@ -278,6 +298,66 @@ class AuthService:
             await self.email_verification_repository.revoke_unused_for_user(
                 user_id=user.id,
                 revoked_at=now,
+            )
+
+    async def request_email_verification_otp(
+        self,
+        data: EmailVerificationOtpRequest,
+    ) -> EmailOtpDelivery | None:
+        self._ensure_email_otp_configured()
+
+        async with self.db.begin():
+            user = await self.repository.get_by_email_for_update(str(data.email))
+
+            if user is None or user.email_verified_at is not None:
+                return None
+
+            try:
+                return await self.email_otp_service.issue_challenge_in_transaction(
+                    user_id=user.id,
+                    purpose=EmailOtpPurpose.EMAIL_VERIFICATION,
+                    target_email=user.email,
+                )
+            except (EmailOtpResendCooldownError, EmailOtpDeliveryLimitError):
+                return None
+
+    async def confirm_email_verification_otp(
+        self,
+        data: EmailVerificationOtpConfirm,
+    ) -> None:
+        self._ensure_email_otp_configured()
+        confirmed = False
+
+        async with self.db.begin():
+            user = await self.repository.get_by_email_for_update(str(data.email))
+
+            if user is not None and user.email_verified_at is None:
+                confirmed = (
+                    await self.email_otp_service.verify_and_consume_in_transaction(
+                        user_id=user.id,
+                        purpose=EmailOtpPurpose.EMAIL_VERIFICATION,
+                        target_email=user.email,
+                        code=data.code,
+                    )
+                )
+
+                if confirmed:
+                    self.repository.set_email_verified_at(
+                        user=user,
+                        verified_at=datetime.now(UTC),
+                    )
+                    await (
+                        self.email_otp_service.revoke_unused_for_target_in_transaction(
+                            user_id=user.id,
+                            purpose=EmailOtpPurpose.EMAIL_VERIFICATION,
+                            target_email=user.email,
+                        )
+                    )
+
+        if not confirmed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired email verification code.",
             )
 
     async def request_password_reset(
