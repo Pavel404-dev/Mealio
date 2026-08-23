@@ -106,6 +106,50 @@ class EmailVerificationRequest(BaseModel):
         return _normalize_email(value)
 
 
+class EmailVerificationOtpRequest(BaseModel):
+    email: EmailStr
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+
+class EmailVerificationOtpConfirm(BaseModel):
+    email: EmailStr
+    code: SecretStr = Field(
+        json_schema_extra={
+            "minLength": 6,
+            "maxLength": 6,
+            "pattern": "^[0-9]{6}$",
+        },
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: SecretStr) -> SecretStr:
+        code = value.get_secret_value()
+        if not (len(code) == 6 and code.isascii() and code.isdigit()):
+            raise ValueError(
+                "Email verification code must contain exactly 6 ASCII digits"
+            )
+
+        return value
+
+
 class EmailVerificationConfirm(BaseModel):
     token: SecretStr = Field(
         min_length=1,

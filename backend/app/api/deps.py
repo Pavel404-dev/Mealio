@@ -11,11 +11,17 @@ from app.core.config import get_settings
 from app.core.security import decode_access_token, normalize_auth_abuse_identifier
 from app.db.session import get_db
 from app.integrations.email_verification_mailer import EmailVerificationMailer
+from app.integrations.email_verification_otp_mailer import (
+    EmailVerificationOtpMailer,
+)
 from app.integrations.openai_recipe_generation import OpenAIRecipeGenerationProvider
 from app.integrations.password_reset_mailer import PasswordResetMailer
 from app.integrations.recipe_generation import RecipeGenerationProvider
 from app.integrations.smtp_email_verification_mailer import (
     SmtpEmailVerificationMailer,
+)
+from app.integrations.smtp_email_verification_otp_mailer import (
+    SmtpEmailVerificationOtpMailer,
 )
 from app.integrations.smtp_password_reset_mailer import SmtpPasswordResetMailer
 from app.models.user import User
@@ -166,6 +172,47 @@ def get_email_verification_mailer() -> EmailVerificationMailer:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Email verification delivery is not configured",
         ) from exc
+
+
+def get_email_verification_otp_mailer() -> EmailVerificationOtpMailer:
+    settings = get_settings()
+
+    host = (settings.smtp_host or "").strip()
+    from_email = (settings.smtp_from_email or "").strip()
+    username = (settings.smtp_username or "").strip() or None
+    password = None
+
+    if settings.smtp_password is not None:
+        password = settings.smtp_password.get_secret_value().strip() or None
+
+    if not host or not from_email:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email verification code delivery is not configured",
+        )
+
+    try:
+        from_email = str(TypeAdapter(EmailStr).validate_python(from_email))
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email verification code delivery is not configured",
+        ) from exc
+
+    if (username is None) != (password is None):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email verification code delivery is not configured",
+        )
+
+    return SmtpEmailVerificationOtpMailer(
+        host=host,
+        port=settings.smtp_port,
+        username=username,
+        password=password,
+        from_email=from_email,
+        starttls=settings.smtp_starttls,
+    )
 
 
 def get_password_reset_mailer() -> PasswordResetMailer:
