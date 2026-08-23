@@ -66,6 +66,7 @@ jobs:
       JWT_SECRET_KEY: test_mealio_secret_key_with_more_than_32_chars
       JWT_ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      AUTH_ABUSE_PEPPER: test_auth_abuse_pepper_with_more_than_32_chars
 
     steps:
       - name: Check out repository

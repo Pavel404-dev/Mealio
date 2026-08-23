@@ -2,10 +2,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
+    enforce_auth_abuse_limit,
     get_current_user,
+    get_direct_client_ip,
     get_email_verification_mailer,
     get_password_reset_mailer,
 )
+from app.core.auth_abuse import AuthAbuseAction
 from app.db.session import get_db
 from app.integrations.email_verification_mailer import EmailVerificationMailer
 from app.integrations.password_reset_mailer import PasswordResetMailer
@@ -50,8 +53,15 @@ async def register_user(
     payload: UserRegister,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
     mailer: EmailVerificationMailer = Depends(get_email_verification_mailer),
 ):
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.REGISTER,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
     service = AuthService(db)
     result = await service.register_user(payload)
 
@@ -71,7 +81,14 @@ async def register_user(
 async def login_user(
     payload: UserLogin,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
 ):
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.LOGIN,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
     service = AuthService(db)
 
     return await service.login_user(payload)
@@ -113,8 +130,15 @@ async def request_email_verification(
     payload: EmailVerificationRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
     mailer: EmailVerificationMailer = Depends(get_email_verification_mailer),
 ) -> EmailVerificationRequestResponse:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.EMAIL_VERIFICATION_REQUEST,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
     service = AuthService(db)
     delivery = await service.request_email_verification(payload)
 
@@ -138,7 +162,13 @@ async def request_email_verification(
 async def confirm_email_verification(
     payload: EmailVerificationConfirm,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
 ) -> None:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.EMAIL_VERIFICATION_CONFIRM,
+        client_ip=client_ip,
+    )
     service = AuthService(db)
 
     await service.confirm_email_verification(payload)
@@ -153,8 +183,15 @@ async def request_password_reset(
     payload: PasswordResetRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
     mailer: PasswordResetMailer = Depends(get_password_reset_mailer),
 ) -> PasswordResetRequestResponse:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.PASSWORD_RESET_REQUEST,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
     service = AuthService(db)
     delivery = await service.request_password_reset(payload)
 
@@ -178,7 +215,13 @@ async def request_password_reset(
 async def confirm_password_reset(
     payload: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
 ) -> None:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.PASSWORD_RESET_CONFIRM,
+        client_ip=client_ip,
+    )
     service = AuthService(db)
 
     await service.confirm_password_reset(payload)

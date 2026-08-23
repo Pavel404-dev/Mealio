@@ -9,6 +9,8 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_password_reset_mailer
+from app.core.auth_abuse import AuthAbuseAction, AuthAbuseDimension
+from app.core.config import get_settings
 from app.core.security import hash_password_reset_token, verify_password
 from app.main import app
 from app.models.auth_session import AuthSession
@@ -175,7 +177,23 @@ async def test_confirm_reset_changes_password_consumes_token_and_revokes_session
 async def test_confirm_reset_returns_same_error_for_unknown_expired_used_and_revoked(
     client: AsyncClient,
     db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(
+        settings,
+        "auth_abuse_policies",
+        [
+            policy.model_copy(update={"limit": 5})
+            if (
+                policy.action is AuthAbuseAction.PASSWORD_RESET_REQUEST
+                and policy.dimension is AuthAbuseDimension.EMAIL
+            )
+            else policy
+            for policy in settings.auth_abuse_policies
+        ],
+    )
+
     mailer = FakePasswordResetMailer()
     _use_fake_mailer(mailer)
     await _register_user(client)
