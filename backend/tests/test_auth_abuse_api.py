@@ -9,9 +9,13 @@ from app.main import app
 LOGIN_URL = "/api/v1/auth/login"
 REGISTER_URL = "/api/v1/auth/register"
 PASSWORD_RESET_REQUEST_URL = "/api/v1/auth/password-reset/request"
+EMAIL_OTP_REQUEST_URL = "/api/v1/auth/email-verification/otp/request"
 LIMIT_DETAIL = "Too many authentication requests. Please try again later."
 GENERIC_RESET_MESSAGE = (
     "If an account with that email exists, password reset instructions have been sent."
+)
+GENERIC_OTP_MESSAGE = (
+    "If verification is needed for that email, a verification code has been sent."
 )
 
 
@@ -159,4 +163,49 @@ async def test_direct_peer_address_is_used_by_asgi_transport(
             },
         )
 
+    _assert_rate_limited(blocked)
+
+
+@pytest.mark.asyncio
+async def test_email_otp_request_limit_uses_normalized_email(
+    client: AsyncClient,
+) -> None:
+    for index in range(3):
+        email = (
+            "  UNKNOWN-OTP@EXAMPLE.COM  "
+            if index % 2 == 0
+            else "unknown-otp@example.com"
+        )
+        response = await client.post(
+            EMAIL_OTP_REQUEST_URL,
+            json={"email": email},
+        )
+        assert response.status_code == 202
+        assert response.json() == {"message": GENERIC_OTP_MESSAGE}
+
+    blocked = await client.post(
+        EMAIL_OTP_REQUEST_URL,
+        json={"email": "unknown-otp@example.com"},
+    )
+    _assert_rate_limited(blocked)
+
+
+@pytest.mark.asyncio
+async def test_email_otp_request_ip_limit_ignores_spoofed_forwarding_headers(
+    client: AsyncClient,
+) -> None:
+    for index in range(10):
+        response = await client.post(
+            EMAIL_OTP_REQUEST_URL,
+            headers={"X-Forwarded-For": f"198.51.100.{index + 1}"},
+            json={"email": f"unknown-otp-{index}@example.com"},
+        )
+        assert response.status_code == 202
+        assert response.json() == {"message": GENERIC_OTP_MESSAGE}
+
+    blocked = await client.post(
+        EMAIL_OTP_REQUEST_URL,
+        headers={"X-Forwarded-For": "203.0.113.250"},
+        json={"email": "unknown-otp-final@example.com"},
+    )
     _assert_rate_limited(blocked)
