@@ -48,6 +48,21 @@ void main() {
     expect(find.byKey(const Key('verify-email-screen')), findsOneWidget);
   }
 
+  Future<void> openLoggedOutOtpVerification(
+    WidgetTester tester,
+    FakeAuthRepository repository, {
+    String email = 'registered@example.com',
+  }) async {
+    await openLoggedOutVerification(tester, repository, email: email);
+    await tester.tap(find.byKey(const Key('verify-email-use-code-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('verify-email-otp-request-button')),
+      findsOneWidget,
+    );
+  }
+
   AuthUser verifiedUser() {
     return AuthUser(
       id: testAuthUser.id,
@@ -76,6 +91,11 @@ void main() {
         findsOneWidget,
       );
       expect(repository.requestEmailVerificationCalls, 0);
+      expect(repository.requestEmailVerificationOtpCalls, 0);
+      expect(
+        find.byKey(const Key('verify-email-use-code-button')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -432,5 +452,288 @@ void main() {
     expect(repository.confirmEmailVerificationCalls, 0);
     expect(find.text('Email verified'), findsOneWidget);
     expect(find.textContaining(token), findsNothing);
+  });
+
+  testWidgets('OTP mode is explicit and switching performs no requests', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+    await openLoggedOutOtpVerification(
+      tester,
+      repository,
+      email: '  REGISTERED@EXAMPLE.COM  ',
+    );
+
+    expect(find.text('registered@example.com'), findsOneWidget);
+    expect(repository.requestEmailVerificationOtpCalls, 0);
+    expect(repository.confirmEmailVerificationOtpCalls, 0);
+
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      '001234',
+    );
+    await tester.tap(find.byKey(const Key('verify-email-use-link-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('verify-email-resend-button')), findsOneWidget);
+    expect(repository.requestEmailVerificationOtpCalls, 0);
+    expect(repository.confirmEmailVerificationOtpCalls, 0);
+
+    await tester.tap(find.byKey(const Key('verify-email-use-code-button')));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('verify-email-otp-field')),
+    );
+    expect(field.controller?.text, isEmpty);
+  });
+
+  testWidgets('OTP request blocks duplicates and shows generic success', (
+    tester,
+  ) async {
+    final requestCompleter = Completer<void>();
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      requestEmailVerificationOtpHandler: ({required email}) =>
+          requestCompleter.future,
+    );
+
+    await openLoggedOutOtpVerification(tester, repository);
+
+    await tester.tap(find.byKey(const Key('verify-email-otp-request-button')));
+    await tester.tap(find.byKey(const Key('verify-email-otp-request-button')));
+    await tester.pump();
+
+    expect(repository.requestEmailVerificationOtpCalls, 1);
+    expect(
+      repository.lastVerificationOtpRequestEmail,
+      'registered@example.com',
+    );
+    expect(
+      find.byKey(const Key('verify-email-otp-request-loading')),
+      findsOneWidget,
+    );
+
+    requestCompleter.complete();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('If verification is needed, a code has been sent.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('OTP request failures use safe generic messages', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      requestEmailVerificationOtpHandler: ({required email}) {
+        throw AuthFailure.rateLimited();
+      },
+    );
+
+    await openLoggedOutOtpVerification(tester, repository);
+    await tester.tap(find.byKey(const Key('verify-email-otp-request-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Too many requests. Please try again later.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('registered@example.com is'), findsNothing);
+  });
+
+  testWidgets(
+    'OTP input filters to six ASCII digits and preserves leading zeroes',
+    (tester) async {
+      final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+      await openLoggedOutOtpVerification(tester, repository);
+      final otpField = find.byKey(const Key('verify-email-otp-field'));
+
+      await tester.enterText(otpField, '00a12 34567٥٦٧');
+      await tester.pump();
+
+      final field = tester.widget<TextField>(otpField);
+      expect(field.controller?.text, '001234');
+      expect(field.keyboardType, TextInputType.number);
+      expect(field.autofillHints, const [AutofillHints.oneTimeCode]);
+
+      await tester.tap(
+        find.byKey(const Key('verify-email-otp-confirm-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.confirmEmailVerificationOtpCalls, 1);
+      expect(
+        repository.lastVerificationOtpConfirmEmail,
+        'registered@example.com',
+      );
+      expect(repository.lastVerificationOtpCode, '001234');
+      expect(find.text('Email verified'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('verify-email-success-continue-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('login-screen')), findsOneWidget);
+    },
+  );
+
+  testWidgets('incomplete OTP is not submitted', (tester) async {
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+    await openLoggedOutOtpVerification(tester, repository);
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      '00123',
+    );
+    await tester.pump();
+
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('verify-email-otp-confirm-button')),
+    );
+    expect(button.onPressed, isNull);
+    expect(repository.confirmEmailVerificationOtpCalls, 0);
+  });
+
+  testWidgets('OTP confirmation blocks duplicate submissions', (tester) async {
+    final confirmCompleter = Completer<void>();
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      confirmEmailVerificationOtpHandler: ({required email, required code}) =>
+          confirmCompleter.future,
+    );
+
+    await openLoggedOutOtpVerification(tester, repository);
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      '001234',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('verify-email-otp-confirm-button')));
+    await tester.tap(find.byKey(const Key('verify-email-otp-confirm-button')));
+    await tester.pump();
+
+    expect(repository.confirmEmailVerificationOtpCalls, 1);
+    expect(
+      find.byKey(const Key('verify-email-otp-confirm-loading')),
+      findsOneWidget,
+    );
+
+    confirmCompleter.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Email verified'), findsOneWidget);
+  });
+
+  testWidgets('invalid OTP error is generic and does not echo the code', (
+    tester,
+  ) async {
+    const code = '009876';
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      confirmEmailVerificationOtpHandler: ({required email, required code}) {
+        throw AuthFailure.invalidEmailVerificationOtp();
+      },
+    );
+
+    await openLoggedOutOtpVerification(tester, repository);
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      code,
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('verify-email-otp-confirm-button')));
+    await tester.pumpAndSettle();
+
+    final error = find.byKey(const Key('verify-email-otp-confirm-error'));
+    expect(error, findsOneWidget);
+    expect(
+      find.descendant(of: error, matching: find.textContaining(code)),
+      findsNothing,
+    );
+    expect(find.text('Invalid or expired verification code.'), findsOneWidget);
+  });
+
+  testWidgets('authenticated OTP success reloads current user from backend', (
+    tester,
+  ) async {
+    useLargeTestSurface(tester);
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+      currentUserHandler: () async => verifiedUser(),
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byKey(const Key('home-screen')));
+    GoRouter.of(context).go('/verify-email');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('verify-email-use-code-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      '001234',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('verify-email-otp-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.confirmEmailVerificationOtpCalls, 1);
+    expect(repository.currentUserCalls, 1);
+    expect(find.text('Email verified'), findsOneWidget);
+
+    final screenContext = tester.element(
+      find.byKey(const Key('verify-email-screen')),
+    );
+    final container = ProviderScope.containerOf(screenContext);
+    expect(
+      container.read(authControllerProvider).asData?.value.user?.emailVerified,
+      isTrue,
+    );
+  });
+
+  testWidgets('OTP sync retry does not reconfirm a consumed code', (
+    tester,
+  ) async {
+    useLargeTestSurface(tester);
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+      currentUserHandler: () async {
+        throw AuthFailure.connection();
+      },
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byKey(const Key('home-screen')));
+    GoRouter.of(context).go('/verify-email');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('verify-email-use-code-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('verify-email-otp-field')),
+      '001234',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('verify-email-otp-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.confirmEmailVerificationOtpCalls, 1);
+    expect(repository.currentUserCalls, 1);
+    expect(
+      find.byKey(const Key('verify-email-sync-retry-button')),
+      findsOneWidget,
+    );
+
+    repository.currentUserHandler = () async => verifiedUser();
+    await tester.tap(find.byKey(const Key('verify-email-sync-retry-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.confirmEmailVerificationOtpCalls, 1);
+    expect(repository.currentUserCalls, 2);
+    expect(find.text('Email verified'), findsOneWidget);
   });
 }
