@@ -85,7 +85,9 @@ POST /auth/register
 backend starts initial verification email delivery
     ↓
 Verify Email
-    ├── resend if needed
+    ├── follow the verification link
+    ├── resend link email if needed
+    ├── explicitly request + confirm a six-digit OTP
     └── Continue to Login
 
 Login
@@ -118,13 +120,22 @@ Login
 Email verification:
 
 ```text
-/verify-email?token=<opaque-token>
-    ↓
-POST /auth/email-verification/confirm
-    ↓
-204 No Content
-    ├── logged out → verified success → Login
-    └── logged in → reload /auth/me → verified success → Home
+Link:
+    /verify-email?token=<opaque-token>
+        ↓
+    POST /auth/email-verification/confirm
+
+OTP (only after an explicit user action):
+    POST /auth/email-verification/otp/request
+        ↓
+    enter a six-digit ASCII code
+        ↓
+    POST /auth/email-verification/otp/confirm
+
+Either confirmation method:
+    204 No Content
+        ├── logged out → verified success → Login
+        └── logged in → reload /auth/me → verified success → Home
 ```
 
 Password reset:
@@ -154,11 +165,15 @@ Authentication details:
 - `POST /auth/register` creates a user and returns `UserRead`; it does not create a session or return authentication tokens.
 - Registration validates email, optional full name, a 15–128 character password, and password confirmation before sending the request.
 - The backend automatically initiates the first verification email after successful registration; the frontend does not immediately resend it.
-- `UserRead.email_verified` is the frontend source for persistent verification state.
+- Link and OTP confirmation are supported alternatives on the same Verify Email screen.
+- OTP delivery is requested only after an explicit user action; opening or rebuilding the screen and restoring a session never request a code.
+- `GET /auth/me` and `UserRead.email_verified` are the source of truth for persistent verification state.
 - `POST /auth/email-verification/request` is used only for manual resend and keeps enumeration-resistant backend semantics.
 - `POST /auth/email-verification/confirm` accepts the opaque verification token and does not require an authenticated session.
+- `POST /auth/email-verification/otp/request` preserves the backend's enumeration-resistant response semantics and does not use a frontend cooldown.
+- `POST /auth/email-verification/otp/confirm` sends the email and six-digit code as strings, preserving leading zeroes.
 - The `/verify-email` and `/reset-password` routes are public, including while session restoration is in progress.
-- Verification and password-reset tokens are not persisted in secure storage and are not rendered by the UI.
+- Verification tokens, OTP codes, and password-reset tokens are not persisted in secure storage or preferences. OTP values never enter route URLs.
 - `POST /auth/password-reset/request` uses the backend's generic enumeration-resistant success semantics.
 - `POST /auth/password-reset/confirm` accepts an opaque token and a 15–128 character password; the frontend preserves the password exactly as entered.
 - A successful password reset does not auto-login. If a Mealio session is active, the frontend clears it because the backend revokes refresh sessions during reset.
@@ -247,7 +262,7 @@ The frontend contains:
 - session restoration;
 - registration and login flows;
 - backend logout integration;
-- email-verification resend and confirmation UX;
+- link and OTP email-verification request and confirmation UX;
 - password-reset request and confirmation UX;
 - authenticated Home dashboard;
 - widget, navigation, controller, repository, storage, and interceptor tests.
