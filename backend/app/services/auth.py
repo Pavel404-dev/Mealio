@@ -481,6 +481,10 @@ class AuthService:
                 user_id=user.id,
                 revoked_at=datetime.now(UTC),
             )
+            await self.email_otp_service.revoke_unused_for_user_in_transaction(
+                user_id=user.id,
+                purpose=EmailOtpPurpose.PASSWORD_RESET,
+            )
 
     async def confirm_password_reset_otp(
         self,

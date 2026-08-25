@@ -14,12 +14,15 @@ from app.core.config import get_settings
 from app.core.security import hash_password_reset_token, verify_password
 from app.main import app
 from app.models.auth_session import AuthSession
+from app.models.email_otp_challenge import EmailOtpChallenge, EmailOtpPurpose
 from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
 from app.repositories.auth_sessions import AuthSessionsRepository
 from app.repositories.users import UsersRepository
+from app.services.email_otp_challenges import EmailOtpChallengeService
 
 CONFIRM_RESET_URL = "/api/v1/auth/password-reset/confirm"
+CONFIRM_OTP_RESET_URL = "/api/v1/auth/password-reset/otp/confirm"
 LOGIN_URL = "/api/v1/auth/login"
 REFRESH_URL = "/api/v1/auth/refresh"
 REGISTER_URL = "/api/v1/auth/register"
@@ -107,8 +110,14 @@ async def test_confirm_reset_changes_password_consumes_token_and_revokes_session
     mailer = FakePasswordResetMailer()
     _use_fake_mailer(mailer)
     registered_user = await _register_user(client)
+    user_id = uuid.UUID(registered_user["id"])
     first_tokens = await _login(client)
     second_tokens = await _login(client)
+    otp_delivery = await EmailOtpChallengeService(db_session).issue_challenge(
+        user_id=user_id,
+        purpose=EmailOtpPurpose.PASSWORD_RESET,
+        target_email="reset-confirm@example.com",
+    )
     reset_token = await _request_reset_token(client, mailer)
 
     response = await client.post(
@@ -137,6 +146,16 @@ async def test_confirm_reset_changes_password_consumes_token_and_revokes_session
     old_sessions = session_result.scalars().all()
     assert len(old_sessions) == 2
     assert all(session.revoked_at is not None for session in old_sessions)
+
+    otp_result = await db_session.execute(
+        select(EmailOtpChallenge).where(
+            EmailOtpChallenge.user_id == user_id,
+            EmailOtpChallenge.purpose == EmailOtpPurpose.PASSWORD_RESET,
+        )
+    )
+    otp_challenge = otp_result.scalar_one()
+    assert otp_challenge.used_at is None
+    assert otp_challenge.revoked_at is not None
 
     for old_refresh_token in (
         first_tokens["refresh_token"],
@@ -171,6 +190,19 @@ async def test_confirm_reset_changes_password_consumes_token_and_revokes_session
         json={"token": reset_token, "new_password": "Another-password-789"},
     )
     _assert_invalid_reset(reuse_response)
+
+    old_otp_response = await client.post(
+        CONFIRM_OTP_RESET_URL,
+        json={
+            "email": "reset-confirm@example.com",
+            "code": otp_delivery.code.get_secret_value(),
+            "new_password": "Another-password-789",
+        },
+    )
+    assert old_otp_response.status_code == 400
+    assert old_otp_response.json() == {
+        "detail": "Invalid or expired password reset code."
+    }
 
 
 @pytest.mark.asyncio
