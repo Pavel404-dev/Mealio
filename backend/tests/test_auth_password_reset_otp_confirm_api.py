@@ -628,7 +628,7 @@ async def test_concurrent_otp_reset_confirm_allows_exactly_one_success(
         {
             "email": "otp-reset-confirm@example.com",
             "code": "123456",
-            "new_password": "short",
+            "new_password": "private-short",
         },
         {
             "email": "otp-reset-confirm@example.com",
