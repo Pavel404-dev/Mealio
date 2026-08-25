@@ -249,3 +249,18 @@ class EmailOtpChallengeService:
             target_email=_normalize_email(target_email),
             revoked_at=datetime.now(UTC),
         )
+
+    async def revoke_unused_for_user_in_transaction(
+        self,
+        *,
+        user_id: uuid.UUID,
+        purpose: EmailOtpPurpose,
+    ) -> None:
+        if not self.db.in_transaction():
+            raise RuntimeError("Email OTP revocation requires an active transaction")
+
+        await self.repository.revoke_unused_for_user(
+            user_id=user_id,
+            purpose=purpose,
+            revoked_at=datetime.now(UTC),
+        )

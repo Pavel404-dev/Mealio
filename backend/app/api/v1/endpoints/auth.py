@@ -8,6 +8,7 @@ from app.api.deps import (
     get_email_verification_mailer,
     get_email_verification_otp_mailer,
     get_password_reset_mailer,
+    get_password_reset_otp_mailer,
 )
 from app.core.auth_abuse import AuthAbuseAction
 from app.db.session import get_db
@@ -16,6 +17,7 @@ from app.integrations.email_verification_otp_mailer import (
     EmailVerificationOtpMailer,
 )
 from app.integrations.password_reset_mailer import PasswordResetMailer
+from app.integrations.password_reset_otp_mailer import PasswordResetOtpMailer
 from app.models.user import User
 from app.schemas.auth import (
     EmailVerificationConfirm,
@@ -24,6 +26,8 @@ from app.schemas.auth import (
     EmailVerificationRequest,
     EmailVerificationRequestResponse,
     PasswordResetConfirm,
+    PasswordResetOtpConfirm,
+    PasswordResetOtpRequest,
     PasswordResetRequest,
     PasswordResetRequestResponse,
     RefreshTokenRequest,
@@ -50,6 +54,9 @@ _EMAIL_VERIFICATION_OTP_REQUEST_MESSAGE = (
 )
 _PASSWORD_RESET_REQUEST_MESSAGE = (
     "If an account with that email exists, password reset instructions have been sent."
+)
+_PASSWORD_RESET_OTP_REQUEST_MESSAGE = (
+    "If an account with that email exists, a password reset code has been sent."
 )
 
 
@@ -271,6 +278,40 @@ async def request_password_reset(
 
 
 @router.post(
+    "/password-reset/otp/request",
+    response_model=PasswordResetRequestResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_password_reset_otp(
+    payload: PasswordResetOtpRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
+    mailer: PasswordResetOtpMailer = Depends(get_password_reset_otp_mailer),
+) -> PasswordResetRequestResponse:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.PASSWORD_RESET_REQUEST,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
+    service = AuthService(db)
+    delivery = await service.request_password_reset_otp(payload)
+
+    if delivery is not None:
+        background_tasks.add_task(
+            mailer.send_password_reset_otp,
+            recipient_email=delivery.recipient_email,
+            reset_code=delivery.code,
+            expires_at=delivery.expires_at,
+        )
+
+    return PasswordResetRequestResponse(
+        message=_PASSWORD_RESET_OTP_REQUEST_MESSAGE,
+    )
+
+
+@router.post(
     "/password-reset/confirm",
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
@@ -288,6 +329,27 @@ async def confirm_password_reset(
     service = AuthService(db)
 
     await service.confirm_password_reset(payload)
+
+
+@router.post(
+    "/password-reset/otp/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def confirm_password_reset_otp(
+    payload: PasswordResetOtpConfirm,
+    db: AsyncSession = Depends(get_db),
+    client_ip: str = Depends(get_direct_client_ip),
+) -> None:
+    await enforce_auth_abuse_limit(
+        db=db,
+        action=AuthAbuseAction.PASSWORD_RESET_CONFIRM,
+        client_ip=client_ip,
+        email=str(payload.email),
+    )
+    service = AuthService(db)
+
+    await service.confirm_password_reset_otp(payload)
 
 
 @router.get(

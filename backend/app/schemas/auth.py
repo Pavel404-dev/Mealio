@@ -201,6 +201,60 @@ class PasswordResetConfirm(BaseModel):
         return _validate_new_password(value)
 
 
+class PasswordResetOtpRequest(BaseModel):
+    email: EmailStr
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+
+class PasswordResetOtpConfirm(BaseModel):
+    email: EmailStr
+    code: SecretStr = Field(
+        json_schema_extra={
+            "minLength": 6,
+            "maxLength": 6,
+            "pattern": "^[0-9]{6}$",
+        },
+    )
+    new_password: SecretStr = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
+
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+    )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return _normalize_email(value)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: SecretStr) -> SecretStr:
+        code = value.get_secret_value()
+        if not (len(code) == 6 and code.isascii() and code.isdigit()):
+            raise ValueError("Password reset code must contain exactly 6 ASCII digits")
+
+        return value
+
+    @field_validator("new_password")
+    @classmethod
+    def reject_whitespace_only_password(
+        cls,
+        value: SecretStr,
+    ) -> SecretStr:
+        return _validate_new_password(value)
+
+
 class PasswordResetRequestResponse(BaseModel):
     message: str
 
