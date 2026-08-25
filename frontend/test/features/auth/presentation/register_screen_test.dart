@@ -413,6 +413,7 @@ void main() {
       expect(find.byKey(const Key('verify-email-screen')), findsOneWidget);
       expect(find.text('normalized@example.com'), findsOneWidget);
       expect(repository.requestEmailVerificationCalls, 0);
+      expect(repository.requestEmailVerificationOtpCalls, 0);
       expect(find.byKey(const Key('login-screen')), findsNothing);
     },
   );

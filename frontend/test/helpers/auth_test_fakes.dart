@@ -244,6 +244,8 @@ class FakeAuthRepository extends AuthRepository {
     this.registerHandler,
     this.requestEmailVerificationHandler,
     this.confirmEmailVerificationHandler,
+    this.requestEmailVerificationOtpHandler,
+    this.confirmEmailVerificationOtpHandler,
     this.requestPasswordResetHandler,
     this.confirmPasswordResetHandler,
     this.logoutHandler,
@@ -263,6 +265,10 @@ class FakeAuthRepository extends AuthRepository {
   requestEmailVerificationHandler;
   Future<void> Function({required String token})?
   confirmEmailVerificationHandler;
+  Future<void> Function({required String email})?
+  requestEmailVerificationOtpHandler;
+  Future<void> Function({required String email, required String code})?
+  confirmEmailVerificationOtpHandler;
   Future<void> Function({required String email})? requestPasswordResetHandler;
   Future<void> Function({required String token, required String newPassword})?
   confirmPasswordResetHandler;
@@ -274,6 +280,8 @@ class FakeAuthRepository extends AuthRepository {
   int registerCalls = 0;
   int requestEmailVerificationCalls = 0;
   int confirmEmailVerificationCalls = 0;
+  int requestEmailVerificationOtpCalls = 0;
+  int confirmEmailVerificationOtpCalls = 0;
   int requestPasswordResetCalls = 0;
   int confirmPasswordResetCalls = 0;
   int logoutCalls = 0;
@@ -282,6 +290,9 @@ class FakeAuthRepository extends AuthRepository {
   String? lastRegisterFullName;
   String? lastVerificationRequestEmail;
   String? lastVerificationToken;
+  String? lastVerificationOtpRequestEmail;
+  String? lastVerificationOtpConfirmEmail;
+  String? lastVerificationOtpCode;
   String? lastPasswordResetRequestEmail;
   String? lastPasswordResetToken;
   String? lastPasswordResetPassword;
@@ -344,6 +355,26 @@ class FakeAuthRepository extends AuthRepository {
     confirmEmailVerificationCalls++;
     lastVerificationToken = token;
     return confirmEmailVerificationHandler?.call(token: token) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> requestEmailVerificationOtp({required String email}) {
+    requestEmailVerificationOtpCalls++;
+    lastVerificationOtpRequestEmail = email;
+    return requestEmailVerificationOtpHandler?.call(email: email) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> confirmEmailVerificationOtp({
+    required String email,
+    required String code,
+  }) {
+    confirmEmailVerificationOtpCalls++;
+    lastVerificationOtpConfirmEmail = email;
+    lastVerificationOtpCode = code;
+    return confirmEmailVerificationOtpHandler?.call(email: email, code: code) ??
         Future<void>.value();
   }
 

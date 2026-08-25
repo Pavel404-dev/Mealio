@@ -117,6 +117,8 @@ void main() {
         '/auth/logout',
         '/auth/email-verification/request',
         '/auth/email-verification/confirm',
+        '/auth/email-verification/otp/request',
+        '/auth/email-verification/otp/confirm',
         '/auth/password-reset/request',
         '/auth/password-reset/confirm',
       ]) {

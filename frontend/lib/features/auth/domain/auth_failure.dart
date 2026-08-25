@@ -5,6 +5,9 @@ enum AuthFailureType {
   registrationValidation,
   emailVerificationInvalid,
   emailVerificationRequest,
+  emailVerificationOtpRequest,
+  emailVerificationOtpInvalid,
+  rateLimited,
   passwordResetRequest,
   passwordResetInvalid,
   passwordResetValidation,
@@ -55,6 +58,27 @@ class AuthFailure implements Exception {
     return const AuthFailure(
       type: AuthFailureType.emailVerificationRequest,
       message: 'Unable to resend verification email. Please try again.',
+    );
+  }
+
+  factory AuthFailure.emailVerificationOtpRequest() {
+    return const AuthFailure(
+      type: AuthFailureType.emailVerificationOtpRequest,
+      message: 'Unable to request a verification code. Please try again.',
+    );
+  }
+
+  factory AuthFailure.invalidEmailVerificationOtp() {
+    return const AuthFailure(
+      type: AuthFailureType.emailVerificationOtpInvalid,
+      message: 'Invalid or expired verification code.',
+    );
+  }
+
+  factory AuthFailure.rateLimited() {
+    return const AuthFailure(
+      type: AuthFailureType.rateLimited,
+      message: 'Too many requests. Please try again later.',
     );
   }
 

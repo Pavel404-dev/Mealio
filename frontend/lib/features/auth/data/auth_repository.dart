@@ -106,6 +106,57 @@ class AuthRepository {
     }
   }
 
+  Future<void> requestEmailVerificationOtp({required String email}) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/email-verification/otp/request',
+        data: {'email': email.trim().toLowerCase()},
+      );
+
+      if (response.statusCode != 202) {
+        throw const FormatException(
+          'Unexpected email verification OTP request status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.emailVerificationOtpRequest,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
+  Future<void> confirmEmailVerificationOtp({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/email-verification/otp/confirm',
+        data: {'email': email.trim().toLowerCase(), 'code': code},
+      );
+
+      if (response.statusCode != 204) {
+        throw const FormatException(
+          'Unexpected email verification OTP confirmation status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.emailVerificationOtpConfirm,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
   Future<void> requestPasswordReset({required String email}) async {
     try {
       final response = await _apiClient.post<Object?>(
@@ -311,6 +362,26 @@ class AuthRepository {
       return AuthFailure.invalidEmailVerification();
     }
 
+    if (requestKind == _AuthRequestKind.emailVerificationOtpRequest) {
+      if (statusCode == 429) {
+        return AuthFailure.rateLimited();
+      }
+
+      if (statusCode != null) {
+        return AuthFailure.emailVerificationOtpRequest();
+      }
+    }
+
+    if (requestKind == _AuthRequestKind.emailVerificationOtpConfirm) {
+      if (statusCode == 429) {
+        return AuthFailure.rateLimited();
+      }
+
+      if (statusCode == 400 || statusCode == 422) {
+        return AuthFailure.invalidEmailVerificationOtp();
+      }
+    }
+
     if (requestKind == _AuthRequestKind.passwordResetRequest &&
         statusCode != null) {
       return AuthFailure.passwordResetRequest();
@@ -367,6 +438,8 @@ enum _AuthRequestKind {
   registration,
   emailVerificationRequest,
   emailVerificationConfirm,
+  emailVerificationOtpRequest,
+  emailVerificationOtpConfirm,
   passwordResetRequest,
   passwordResetConfirm,
   session,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,19 +21,34 @@ class VerifyEmailScreen extends ConsumerStatefulWidget {
   ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
+enum _VerificationMode { link, otp }
+
 enum _ConfirmationStatus { idle, loading, success, invalid, error, syncError }
 
 class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   static const int _maximumTokenLength = 512;
+  static final RegExp _otpPattern = RegExp(r'^[0-9]{6}$');
   static const String _resendSuccessMessage =
       'If verification is needed, instructions have been sent.';
+  static const String _otpRequestSuccessMessage =
+      'If verification is needed, a code has been sent.';
+
+  final TextEditingController _otpController = TextEditingController();
+  final FocusNode _otpFocusNode = FocusNode();
 
   bool _isResending = false;
   bool _isRefreshingStatus = false;
+  bool _isRequestingOtp = false;
+  bool _isConfirmingOtp = false;
   String? _resendMessage;
   AuthFailure? _resendFailure;
   String? _statusMessage;
   AuthFailure? _statusFailure;
+  String? _otpRequestMessage;
+  AuthFailure? _otpRequestFailure;
+  AuthFailure? _otpConfirmationFailure;
+
+  _VerificationMode _verificationMode = _VerificationMode.link;
 
   late _ConfirmationStatus _confirmationStatus;
   AuthFailure? _confirmationFailure;
@@ -64,6 +80,147 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final normalizedToken = token.trim();
     return normalizedToken.isNotEmpty &&
         normalizedToken.runes.length <= _maximumTokenLength;
+  }
+
+  @override
+  void dispose() {
+    _otpController.clear();
+    _otpController.dispose();
+    _otpFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _showOtpMode() {
+    if (_verificationMode == _VerificationMode.otp) {
+      return;
+    }
+
+    setState(() {
+      _verificationMode = _VerificationMode.otp;
+      _otpRequestMessage = null;
+      _otpRequestFailure = null;
+      _otpConfirmationFailure = null;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _otpFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _showLinkMode() {
+    if (_isRequestingOtp || _isConfirmingOtp) {
+      return;
+    }
+
+    _otpController.clear();
+    _otpFocusNode.unfocus();
+    setState(() {
+      _verificationMode = _VerificationMode.link;
+      _otpRequestMessage = null;
+      _otpRequestFailure = null;
+      _otpConfirmationFailure = null;
+    });
+  }
+
+  Future<void> _requestOtp(String email) async {
+    if (_isRequestingOtp || _isConfirmingOtp) {
+      return;
+    }
+
+    setState(() {
+      _isRequestingOtp = true;
+      _otpRequestMessage = null;
+      _otpRequestFailure = null;
+    });
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .requestEmailVerificationOtp(email: email);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRequestingOtp = false;
+        _otpRequestMessage = _otpRequestSuccessMessage;
+      });
+      _otpFocusNode.requestFocus();
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRequestingOtp = false;
+        _otpRequestFailure = failure;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRequestingOtp = false;
+        _otpRequestFailure = AuthFailure.unexpected();
+      });
+    }
+  }
+
+  Future<void> _confirmOtp(String email) async {
+    if (_isRequestingOtp || _isConfirmingOtp) {
+      return;
+    }
+
+    final code = _otpController.text;
+    if (!_otpPattern.hasMatch(code)) {
+      return;
+    }
+
+    setState(() {
+      _isConfirmingOtp = true;
+      _otpConfirmationFailure = null;
+    });
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .confirmEmailVerificationOtp(email: email, code: code);
+
+      if (!mounted) {
+        return;
+      }
+
+      _otpController.clear();
+      _otpFocusNode.unfocus();
+      setState(() {
+        _isConfirmingOtp = false;
+        _confirmationStatus = _ConfirmationStatus.success;
+      });
+
+      unawaited(_synchronizeAuthenticatedUser());
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isConfirmingOtp = false;
+        _otpConfirmationFailure = failure;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isConfirmingOtp = false;
+        _otpConfirmationFailure = AuthFailure.unexpected();
+      });
+    }
   }
 
   Future<void> _confirmEmail(String token) async {
@@ -303,7 +460,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       return;
     }
 
-    final email = widget.email?.trim();
+    final email = widget.email?.trim().toLowerCase();
     context.go(
       '/login',
       extra: email != null && email.isNotEmpty ? email : null,
@@ -315,9 +472,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final authSession = ref.watch(authControllerProvider).asData?.value;
     final currentUser = authSession?.user;
     final isAuthenticated = currentUser != null;
-    final routeEmail = widget.email?.trim();
+    final routeEmail = widget.email?.trim().toLowerCase();
     final email =
-        currentUser?.email ??
+        currentUser?.email.trim().toLowerCase() ??
         (routeEmail != null && routeEmail.isNotEmpty ? routeEmail : null);
 
     if (currentUser != null && currentUser.emailVerified) {
@@ -329,6 +486,15 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     }
 
     if (widget.token != null) {
+      return _buildConfirmation(
+        context,
+        currentUser: currentUser,
+        isAuthenticated: isAuthenticated,
+      );
+    }
+
+    if (_confirmationStatus == _ConfirmationStatus.success ||
+        _confirmationStatus == _ConfirmationStatus.syncError) {
       return _buildConfirmation(
         context,
         currentUser: currentUser,
@@ -352,6 +518,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     required String email,
     required bool isAuthenticated,
   }) {
+    if (_verificationMode == _VerificationMode.otp) {
+      return _buildOtpPending(
+        context,
+        email: email,
+        isAuthenticated: isAuthenticated,
+      );
+    }
+
     final actions = <Widget>[
       FilledButton.icon(
         key: const Key('verify-email-resend-button'),
@@ -365,6 +539,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               )
             : const Icon(Icons.mark_email_unread_outlined),
         label: Text(_isResending ? 'Sending…' : 'Resend email'),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        key: const Key('verify-email-use-code-button'),
+        onPressed: _showOtpMode,
+        icon: const Icon(Icons.password_rounded),
+        label: const Text('Verify with code'),
       ),
       if (isAuthenticated) ...[
         const SizedBox(height: 12),
@@ -463,6 +644,150 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         ],
         const SizedBox(height: 28),
         ...actions,
+      ],
+    );
+  }
+
+  Widget _buildOtpPending(
+    BuildContext context, {
+    required String email,
+    required bool isAuthenticated,
+  }) {
+    final hasCompleteCode = _otpPattern.hasMatch(_otpController.text);
+    final operationInProgress = _isRequestingOtp || _isConfirmingOtp;
+
+    return _buildShell(
+      context,
+      icon: Icons.password_rounded,
+      title: 'Verify with code',
+      subtitle: 'Request a six-digit verification code, then enter it below.',
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.cream,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Email address',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                email,
+                key: const Key('verify-email-otp-address'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        FilledButton.icon(
+          key: const Key('verify-email-otp-request-button'),
+          onPressed: operationInProgress ? null : () => _requestOtp(email),
+          icon: _isRequestingOtp
+              ? const SizedBox(
+                  key: Key('verify-email-otp-request-loading'),
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.mark_email_unread_outlined),
+          label: Text(_isRequestingOtp ? 'Sending…' : 'Send verification code'),
+        ),
+        if (_otpRequestMessage != null) ...[
+          const SizedBox(height: 18),
+          _buildInfoMessage(
+            context,
+            key: const Key('verify-email-otp-request-success'),
+            icon: Icons.info_outline_rounded,
+            message: _otpRequestMessage!,
+          ),
+        ],
+        if (_otpRequestFailure != null) ...[
+          const SizedBox(height: 18),
+          _buildErrorMessage(
+            context,
+            key: const Key('verify-email-otp-request-error'),
+            message: _otpRequestFailure!.message,
+          ),
+        ],
+        const SizedBox(height: 22),
+        TextField(
+          key: const Key('verify-email-otp-field'),
+          controller: _otpController,
+          focusNode: _otpFocusNode,
+          enabled: !_isConfirmingOtp,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.oneTimeCode],
+          enableSuggestions: false,
+          autocorrect: false,
+          maxLength: 6,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+            LengthLimitingTextInputFormatter(6),
+          ],
+          onChanged: (_) {
+            setState(() {
+              _otpConfirmationFailure = null;
+            });
+          },
+          onSubmitted: (_) {
+            if (!operationInProgress && hasCompleteCode) {
+              unawaited(_confirmOtp(email));
+            }
+          },
+          decoration: const InputDecoration(
+            labelText: 'Six-digit verification code',
+            hintText: '000000',
+            prefixIcon: Icon(Icons.pin_outlined),
+          ),
+        ),
+        if (_otpConfirmationFailure != null) ...[
+          const SizedBox(height: 14),
+          _buildErrorMessage(
+            context,
+            key: const Key('verify-email-otp-confirm-error'),
+            message: _otpConfirmationFailure!.message,
+          ),
+        ],
+        const SizedBox(height: 18),
+        FilledButton(
+          key: const Key('verify-email-otp-confirm-button'),
+          onPressed: operationInProgress || !hasCompleteCode
+              ? null
+              : () => _confirmOtp(email),
+          child: _isConfirmingOtp
+              ? const SizedBox(
+                  key: Key('verify-email-otp-confirm-loading'),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Confirm code'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          key: const Key('verify-email-use-link-button'),
+          onPressed: operationInProgress ? null : _showLinkMode,
+          child: const Text('Use verification link'),
+        ),
+        const SizedBox(height: 12),
+        TextButton(
+          key: const Key('verify-email-otp-continue-button'),
+          onPressed: operationInProgress
+              ? null
+              : () => _continue(isAuthenticated: isAuthenticated),
+          child: Text(
+            isAuthenticated ? 'Continue to Mealio' : 'Continue to login',
+          ),
+        ),
       ],
     );
   }
