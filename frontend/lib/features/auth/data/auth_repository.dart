@@ -208,6 +208,62 @@ class AuthRepository {
     }
   }
 
+  Future<void> requestPasswordResetOtp({required String email}) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/password-reset/otp/request',
+        data: {'email': email.trim().toLowerCase()},
+      );
+
+      if (response.statusCode != 202) {
+        throw const FormatException(
+          'Unexpected password reset OTP request status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.passwordResetOtpRequest,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
+  Future<void> confirmPasswordResetOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.post<Object?>(
+        '/auth/password-reset/otp/confirm',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'code': code,
+          'new_password': newPassword,
+        },
+      );
+
+      if (response.statusCode != 204) {
+        throw const FormatException(
+          'Unexpected password reset OTP confirmation status code',
+        );
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(
+        error,
+        requestKind: _AuthRequestKind.passwordResetOtpConfirm,
+      );
+    } on FormatException {
+      throw AuthFailure.unexpected();
+    } catch (_) {
+      throw AuthFailure.unexpected();
+    }
+  }
+
   Future<AuthUser> login({
     required String email,
     required String password,
@@ -397,6 +453,30 @@ class AuthRepository {
       }
     }
 
+    if (requestKind == _AuthRequestKind.passwordResetOtpRequest) {
+      if (statusCode == 429) {
+        return AuthFailure.rateLimited();
+      }
+
+      if (statusCode != null) {
+        return AuthFailure.passwordResetOtpRequest();
+      }
+    }
+
+    if (requestKind == _AuthRequestKind.passwordResetOtpConfirm) {
+      if (statusCode == 429) {
+        return AuthFailure.rateLimited();
+      }
+
+      if (statusCode == 400) {
+        return AuthFailure.invalidPasswordResetOtp();
+      }
+
+      if (statusCode == 422) {
+        return AuthFailure.passwordResetOtpValidation();
+      }
+    }
+
     if (requestKind == _AuthRequestKind.session && statusCode == 401) {
       return AuthFailure.invalidSession();
     }
@@ -442,5 +522,7 @@ enum _AuthRequestKind {
   emailVerificationOtpConfirm,
   passwordResetRequest,
   passwordResetConfirm,
+  passwordResetOtpRequest,
+  passwordResetOtpConfirm,
   session,
 }

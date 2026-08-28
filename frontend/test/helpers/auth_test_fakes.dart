@@ -248,6 +248,8 @@ class FakeAuthRepository extends AuthRepository {
     this.confirmEmailVerificationOtpHandler,
     this.requestPasswordResetHandler,
     this.confirmPasswordResetHandler,
+    this.requestPasswordResetOtpHandler,
+    this.confirmPasswordResetOtpHandler,
     this.logoutHandler,
   }) : super(apiClient: ApiClient(Dio()), storage: FakeSecureStorageService());
 
@@ -272,6 +274,14 @@ class FakeAuthRepository extends AuthRepository {
   Future<void> Function({required String email})? requestPasswordResetHandler;
   Future<void> Function({required String token, required String newPassword})?
   confirmPasswordResetHandler;
+  Future<void> Function({required String email})?
+  requestPasswordResetOtpHandler;
+  Future<void> Function({
+    required String email,
+    required String code,
+    required String newPassword,
+  })?
+  confirmPasswordResetOtpHandler;
   Future<void> Function()? logoutHandler;
 
   int restoreCalls = 0;
@@ -284,6 +294,8 @@ class FakeAuthRepository extends AuthRepository {
   int confirmEmailVerificationOtpCalls = 0;
   int requestPasswordResetCalls = 0;
   int confirmPasswordResetCalls = 0;
+  int requestPasswordResetOtpCalls = 0;
+  int confirmPasswordResetOtpCalls = 0;
   int logoutCalls = 0;
   String? lastLoginEmail;
   String? lastRegisterEmail;
@@ -296,6 +308,10 @@ class FakeAuthRepository extends AuthRepository {
   String? lastPasswordResetRequestEmail;
   String? lastPasswordResetToken;
   String? lastPasswordResetPassword;
+  String? lastPasswordResetOtpRequestEmail;
+  String? lastPasswordResetOtpConfirmEmail;
+  String? lastPasswordResetOtpCode;
+  String? lastPasswordResetOtpPassword;
 
   @override
   Future<AuthUser?> restoreSession() {
@@ -396,6 +412,32 @@ class FakeAuthRepository extends AuthRepository {
     lastPasswordResetPassword = newPassword;
     return confirmPasswordResetHandler?.call(
           token: token,
+          newPassword: newPassword,
+        ) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> requestPasswordResetOtp({required String email}) {
+    requestPasswordResetOtpCalls++;
+    lastPasswordResetOtpRequestEmail = email;
+    return requestPasswordResetOtpHandler?.call(email: email) ??
+        Future<void>.value();
+  }
+
+  @override
+  Future<void> confirmPasswordResetOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    confirmPasswordResetOtpCalls++;
+    lastPasswordResetOtpConfirmEmail = email;
+    lastPasswordResetOtpCode = code;
+    lastPasswordResetOtpPassword = newPassword;
+    return confirmPasswordResetOtpHandler?.call(
+          email: email,
+          code: code,
           newPassword: newPassword,
         ) ??
         Future<void>.value();

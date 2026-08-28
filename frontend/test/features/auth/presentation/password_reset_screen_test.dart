@@ -88,17 +88,17 @@ void main() {
     await tester.pump();
 
     expect(find.text('Enter a valid email address.'), findsOneWidget);
-    expect(repository.requestPasswordResetCalls, 0);
+    expect(repository.requestPasswordResetOtpCalls, 0);
   });
 
-  testWidgets('forgot-password request is generic and duplicate-safe', (
+  testWidgets('forgot-password requests OTP and navigates duplicate-safe', (
     tester,
   ) async {
     useLargeTestSurface(tester);
     final completer = Completer<void>();
     final repository = FakeAuthRepository(
       restoreHandler: () async => null,
-      requestPasswordResetHandler: ({required email}) => completer.future,
+      requestPasswordResetOtpHandler: ({required email}) => completer.future,
     );
 
     await tester.pumpWidget(createApp(repository));
@@ -115,8 +115,8 @@ void main() {
     await tester.tap(find.byKey(const Key('forgot-password-submit-button')));
     await tester.pump();
 
-    expect(repository.requestPasswordResetCalls, 1);
-    expect(repository.lastPasswordResetRequestEmail, '  PAVEL@EXAMPLE.COM  ');
+    expect(repository.requestPasswordResetOtpCalls, 1);
+    expect(repository.lastPasswordResetOtpRequestEmail, 'pavel@example.com');
     expect(
       find.byKey(const Key('forgot-password-loading-indicator')),
       findsOneWidget,
@@ -125,19 +125,15 @@ void main() {
     completer.complete();
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(
-        'If an account with that email exists, password reset instructions have been sent.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('password-reset-otp-screen')), findsOneWidget);
+    expect(find.text('pavel@example.com'), findsOneWidget);
   });
 
   testWidgets('forgot-password network failure is safe', (tester) async {
     useLargeTestSurface(tester);
     final repository = FakeAuthRepository(
       restoreHandler: () async => null,
-      requestPasswordResetHandler: ({required email}) {
+      requestPasswordResetOtpHandler: ({required email}) {
         throw AuthFailure.connection();
       },
     );
@@ -157,6 +153,35 @@ void main() {
 
     expect(
       find.text('Unable to connect to the server. Please try again.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('forgot-password preserves generic reset-link alternative', (
+    tester,
+  ) async {
+    useLargeTestSurface(tester);
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+    final context = tester.element(find.byKey(const Key('login-screen')));
+    GoRouter.of(context).go('/forgot-password');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('forgot-password-email-field')),
+      '  PAVEL@EXAMPLE.COM  ',
+    );
+    await tester.tap(find.byKey(const Key('forgot-password-link-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestPasswordResetCalls, 1);
+    expect(repository.lastPasswordResetRequestEmail, 'pavel@example.com');
+    expect(
+      find.text(
+        'If an account with that email exists, password reset instructions have been sent.',
+      ),
       findsOneWidget,
     );
   });
