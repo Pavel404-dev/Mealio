@@ -140,34 +140,39 @@ void main() {
     expect(repository.confirmPasswordResetOtpCalls, 0);
   });
 
-  testWidgets('OTP reset preserves leading zero and untrimmed password', (
-    tester,
-  ) async {
-    const password = '  Mealio-new-password  ';
-    final repository = FakeAuthRepository(restoreHandler: () async => null);
-    await openLoggedOutOtpReset(
-      tester,
-      repository,
-      email: '  PAVEL@EXAMPLE.COM  ',
-    );
+  testWidgets(
+    'OTP reset clears tokens after failed restore and preserves inputs',
+    (tester) async {
+      const password = '  Mealio-new-password  ';
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => throw AuthFailure.connection(),
+      );
+      await openLoggedOutOtpReset(
+        tester,
+        repository,
+        email: '  PAVEL@EXAMPLE.COM  ',
+      );
 
-    await enterValidReset(tester, code: '001234', password: password);
-    await tester.tap(find.byKey(const Key('password-reset-otp-submit-button')));
-    await tester.pumpAndSettle();
+      await enterValidReset(tester, code: '001234', password: password);
+      await tester.tap(
+        find.byKey(const Key('password-reset-otp-submit-button')),
+      );
+      await tester.pumpAndSettle();
 
-    expect(repository.confirmPasswordResetOtpCalls, 1);
-    expect(repository.lastPasswordResetOtpConfirmEmail, 'pavel@example.com');
-    expect(repository.lastPasswordResetOtpCode, '001234');
-    expect(repository.lastPasswordResetOtpPassword, password);
-    expect(repository.logoutCalls, 0);
-    expect(find.text('Password reset complete'), findsOneWidget);
-    expect(
-      find.byKey(const Key('password-reset-otp-code-field')),
-      findsNothing,
-    );
-    expect(find.textContaining('001234'), findsNothing);
-    expect(find.textContaining(password), findsNothing);
-  });
+      expect(repository.confirmPasswordResetOtpCalls, 1);
+      expect(repository.lastPasswordResetOtpConfirmEmail, 'pavel@example.com');
+      expect(repository.lastPasswordResetOtpCode, '001234');
+      expect(repository.lastPasswordResetOtpPassword, password);
+      expect(repository.logoutCalls, 1);
+      expect(find.text('Password reset complete'), findsOneWidget);
+      expect(
+        find.byKey(const Key('password-reset-otp-code-field')),
+        findsNothing,
+      );
+      expect(find.textContaining('001234'), findsNothing);
+      expect(find.textContaining(password), findsNothing);
+    },
+  );
 
   testWidgets('OTP reset prevents duplicate confirmation', (tester) async {
     final completer = Completer<void>();

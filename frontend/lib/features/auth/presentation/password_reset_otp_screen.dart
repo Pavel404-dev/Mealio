@@ -182,7 +182,7 @@ class _PasswordResetOtpScreenState
     });
 
     try {
-      final session = await ref.read(authControllerProvider.future);
+      await ref.read(authControllerProvider.future);
 
       if (!mounted) {
         return;
@@ -200,12 +200,10 @@ class _PasswordResetOtpScreenState
         return;
       }
 
-      if (session.isAuthenticated) {
-        try {
-          await ref.read(authControllerProvider.notifier).logout();
-        } catch (_) {
-          // logout() still transitions global auth state to unauthenticated.
-        }
+      try {
+        await ref.read(authControllerProvider.notifier).logout();
+      } catch (_) {
+        // logout() still transitions global auth state to unauthenticated.
       }
 
       if (!mounted) {
