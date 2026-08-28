@@ -35,6 +35,9 @@ The backend currently includes:
 * JWT access token generation;
 * opaque refresh-token sessions with rotation;
 * server-side refresh-session revocation;
+* PostgreSQL-backed authentication abuse protection;
+* email verification by link or six-digit email OTP;
+* password recovery by link or six-digit email OTP;
 * current authenticated user endpoint;
 * Argon2 password hashing and verification;
 * ingredient management;
@@ -62,9 +65,6 @@ The backend currently includes:
 
 The following functionality is planned for future development:
 
-* Flutter automatic token refresh and server-side logout integration;
-* password reset;
-* email verification;
 * saving generated AI recipes;
 * AI recipe classification;
 * personalized nutrition recommendations;
@@ -148,6 +148,20 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 * Dart
 
 The mobile application is initialized / under development.
+
+## Authentication Recovery
+
+Mealio supports both link-based and six-digit email OTP password recovery. Both
+request endpoints return an account-agnostic response so callers cannot use them
+to discover registered emails. OTP codes are stored only as purpose-bound
+HMAC-SHA256 digests and are subject to expiry, resend, delivery, and failed-attempt
+limits.
+
+A successful password reset revokes all refresh-token sessions and outstanding
+password-reset credentials for that user. Existing stateless access JWTs remain
+valid until their normal expiration; immediate access-token invalidation after a
+credential change is tracked as a separate feature. Flutter OTP password recovery
+will be implemented separately from this backend flow.
 
 ## Repository Structure
 

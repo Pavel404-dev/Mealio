@@ -39,6 +39,7 @@ os.environ.pop("OPENAI_API_KEY", None)
 from app.api.deps import (
     get_email_verification_mailer,
     get_email_verification_otp_mailer,
+    get_password_reset_otp_mailer,
 )
 from app.core.config import get_settings
 from app.db.base import Base
@@ -63,6 +64,17 @@ class _NoOpEmailVerificationOtpMailer:
         *,
         recipient_email: str,
         verification_code: SecretStr,
+        expires_at: datetime,
+    ) -> None:
+        return None
+
+
+class _NoOpPasswordResetOtpMailer:
+    def send_password_reset_otp(
+        self,
+        *,
+        recipient_email: str,
+        reset_code: SecretStr,
         expires_at: datetime,
     ) -> None:
         return None
@@ -128,6 +140,9 @@ async def client(
     )
     app.dependency_overrides[get_email_verification_otp_mailer] = (
         lambda: _NoOpEmailVerificationOtpMailer()
+    )
+    app.dependency_overrides[get_password_reset_otp_mailer] = (
+        lambda: _NoOpPasswordResetOtpMailer()
     )
 
     async with AsyncClient(

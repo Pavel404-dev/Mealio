@@ -71,6 +71,19 @@ For Docker Compose, place the same variables in a root `.env` file or export
 them in the shell before running `docker compose up --build`. Real API keys
 must never be committed or logged.
 
+## Authentication Recovery
+
+Password recovery is available through either a reset link or a six-digit email
+OTP. Request responses are intentionally generic for both known and unknown email
+addresses. OTP codes are never stored in plaintext; the shared OTP challenge
+engine stores a purpose-bound HMAC-SHA256 digest and enforces expiry, resend,
+delivery, and failed-attempt limits.
+
+After a successful password reset, every refresh-token session and outstanding
+password-reset credential for the user is revoked. Already issued stateless
+access JWTs remain valid until their `exp` claim. Immediate access-token
+invalidation and the Flutter OTP recovery UI are separate follow-up features.
+
 ## Notes
 
 The application loads environment variables from:

@@ -2,13 +2,15 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import SecretStr
 
-from app.api.deps import get_password_reset_mailer
+from app.api.deps import get_password_reset_mailer, get_password_reset_otp_mailer
 from app.main import app
 
 
 LOGIN_URL = "/api/v1/auth/login"
 REGISTER_URL = "/api/v1/auth/register"
 PASSWORD_RESET_REQUEST_URL = "/api/v1/auth/password-reset/request"
+PASSWORD_RESET_OTP_REQUEST_URL = "/api/v1/auth/password-reset/otp/request"
+PASSWORD_RESET_OTP_CONFIRM_URL = "/api/v1/auth/password-reset/otp/confirm"
 EMAIL_OTP_REQUEST_URL = "/api/v1/auth/email-verification/otp/request"
 LIMIT_DETAIL = "Too many authentication requests. Please try again later."
 GENERIC_RESET_MESSAGE = (
@@ -16,6 +18,9 @@ GENERIC_RESET_MESSAGE = (
 )
 GENERIC_OTP_MESSAGE = (
     "If verification is needed for that email, a verification code has been sent."
+)
+GENERIC_RESET_OTP_MESSAGE = (
+    "If an account with that email exists, a password reset code has been sent."
 )
 
 
@@ -28,6 +33,20 @@ class FakePasswordResetMailer:
         *,
         recipient_email: str,
         reset_token: SecretStr,
+    ) -> None:
+        self.calls.append(recipient_email)
+
+
+class FakePasswordResetOtpMailer:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def send_password_reset_otp(
+        self,
+        *,
+        recipient_email: str,
+        reset_code: SecretStr,
+        expires_at,
     ) -> None:
         self.calls.append(recipient_email)
 
@@ -131,6 +150,60 @@ async def test_password_reset_rate_limit_preserves_generic_account_behavior(
         _assert_rate_limited(blocked)
 
     assert mailer.calls == ["reset-existing@example.com"] * 3
+
+
+@pytest.mark.asyncio
+async def test_password_reset_otp_request_limit_uses_normalized_email(
+    client: AsyncClient,
+) -> None:
+    mailer = FakePasswordResetOtpMailer()
+    app.dependency_overrides[get_password_reset_otp_mailer] = lambda: mailer
+
+    for index in range(3):
+        email = (
+            "  UNKNOWN-RESET-OTP@EXAMPLE.COM  "
+            if index % 2 == 0
+            else "unknown-reset-otp@example.com"
+        )
+        response = await client.post(
+            PASSWORD_RESET_OTP_REQUEST_URL,
+            json={"email": email},
+        )
+        assert response.status_code == 202
+        assert response.json() == {"message": GENERIC_RESET_OTP_MESSAGE}
+
+    blocked = await client.post(
+        PASSWORD_RESET_OTP_REQUEST_URL,
+        json={"email": "unknown-reset-otp@example.com"},
+    )
+    _assert_rate_limited(blocked)
+    assert mailer.calls == []
+
+
+@pytest.mark.asyncio
+async def test_password_reset_otp_confirm_has_ip_brute_force_limit(
+    client: AsyncClient,
+) -> None:
+    for index in range(30):
+        response = await client.post(
+            PASSWORD_RESET_OTP_CONFIRM_URL,
+            json={
+                "email": f"unknown-reset-confirm-{index}@example.com",
+                "code": "123456",
+                "new_password": "Mealio-new-password-456",
+            },
+        )
+        assert response.status_code == 400
+
+    blocked = await client.post(
+        PASSWORD_RESET_OTP_CONFIRM_URL,
+        json={
+            "email": "unknown-reset-confirm-final@example.com",
+            "code": "123456",
+            "new_password": "Mealio-new-password-456",
+        },
+    )
+    _assert_rate_limited(blocked)
 
 
 @pytest.mark.asyncio

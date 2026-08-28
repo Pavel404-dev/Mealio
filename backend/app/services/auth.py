@@ -33,6 +33,8 @@ from app.schemas.auth import (
     EmailVerificationOtpRequest,
     EmailVerificationRequest,
     PasswordResetConfirm,
+    PasswordResetOtpConfirm,
+    PasswordResetOtpRequest,
     PasswordResetRequest,
     RefreshTokenRequest,
     TokenPairResponse,
@@ -82,6 +84,15 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Email verification code is not configured",
+            ) from exc
+
+    def _ensure_password_reset_otp_configured(self) -> None:
+        try:
+            self.email_otp_service.ensure_configured()
+        except EmailOtpConfigurationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Password reset code is not configured",
             ) from exc
 
     def _add_email_verification_token(
@@ -397,6 +408,27 @@ class AuthService:
             reset_token=SecretStr(reset_token),
         )
 
+    async def request_password_reset_otp(
+        self,
+        data: PasswordResetOtpRequest,
+    ) -> EmailOtpDelivery | None:
+        self._ensure_password_reset_otp_configured()
+
+        async with self.db.begin():
+            user = await self.repository.get_by_email_for_update(str(data.email))
+
+            if user is None:
+                return None
+
+            try:
+                return await self.email_otp_service.issue_challenge_in_transaction(
+                    user_id=user.id,
+                    purpose=EmailOtpPurpose.PASSWORD_RESET,
+                    target_email=user.email,
+                )
+            except (EmailOtpResendCooldownError, EmailOtpDeliveryLimitError):
+                return None
+
     async def confirm_password_reset(
         self,
         data: PasswordResetConfirm,
@@ -448,4 +480,57 @@ class AuthService:
             await self.sessions_repository.revoke_all_for_user(
                 user_id=user.id,
                 revoked_at=datetime.now(UTC),
+            )
+            await self.email_otp_service.revoke_unused_for_user_in_transaction(
+                user_id=user.id,
+                purpose=EmailOtpPurpose.PASSWORD_RESET,
+            )
+
+    async def confirm_password_reset_otp(
+        self,
+        data: PasswordResetOtpConfirm,
+    ) -> None:
+        self._ensure_password_reset_otp_configured()
+        confirmed = False
+
+        async with self.db.begin():
+            user = await self.repository.get_by_email_for_update(str(data.email))
+
+            if user is not None:
+                confirmed = (
+                    await self.email_otp_service.verify_and_consume_in_transaction(
+                        user_id=user.id,
+                        purpose=EmailOtpPurpose.PASSWORD_RESET,
+                        target_email=user.email,
+                        code=data.code,
+                    )
+                )
+
+                if confirmed:
+                    now = datetime.now(UTC)
+                    password_hash = await run_in_threadpool(
+                        hash_password,
+                        data.new_password.get_secret_value(),
+                    )
+                    self.repository.set_password_hash(
+                        user=user,
+                        password_hash=password_hash,
+                    )
+                    await self.sessions_repository.revoke_all_for_user(
+                        user_id=user.id,
+                        revoked_at=now,
+                    )
+                    await self.email_otp_service.revoke_unused_for_user_in_transaction(
+                        user_id=user.id,
+                        purpose=EmailOtpPurpose.PASSWORD_RESET,
+                    )
+                    await self.password_reset_repository.revoke_unused_for_user(
+                        user_id=user.id,
+                        revoked_at=now,
+                    )
+
+        if not confirmed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired password reset code.",
             )
