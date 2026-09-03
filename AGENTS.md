@@ -112,9 +112,13 @@ flutter test
 For container changes, from the repository root:
 
 ```bash
-docker compose up --build
+docker compose build
 docker build -t mealio-backend ./backend
 ```
+
+For runtime Compose verification, use detached startup, a bounded readiness
+check, and `docker compose down` cleanup. Do not leave foreground services
+blocking the workflow.
 
 Before handoff, always run `git diff --check`, inspect the complete diff and
 status, report every check actually run, and state clearly what could not be
