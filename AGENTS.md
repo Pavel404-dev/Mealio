@@ -4,15 +4,17 @@
 
 These instructions apply to the entire Mealio repository.
 
-Mealio is a long-term AI-powered meal-planning application and bachelor project.
+Mealio is a long-term AI-powered meal-planning application and a bachelor's thesis project.
 The backend uses FastAPI, async SQLAlchemy, PostgreSQL, Alembic, Pydantic,
 pytest, Ruff, and Docker Compose. The frontend uses Flutter, Dart, Riverpod,
 GoRouter, Dio, and flutter_secure_storage.
 
 ## Source of truth
 
-- Treat the current working tree, current `main`, migrations, tests, and checked-in
-  documentation as authoritative.
+- Treat the current `HEAD`, working tree, migrations, tests, and checked-in
+  documentation as authoritative for the current task.
+- Use `main` only as an explicitly selected comparison base, and verify the
+  relevant refs before relying on it.
 - Historical chats and project checkpoints are supporting context only.
 - Before changing code, inspect the relevant implementation, tests, Git history,
   and documentation. Do not assume an earlier architecture still exists.
