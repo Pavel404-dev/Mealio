@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/password_reset_otp_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
@@ -27,10 +28,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final isVerificationRoute = location == '/verify-email';
       final isPasswordResetRoute = location == '/reset-password';
-      final isPublicLinkRoute = isVerificationRoute || isPasswordResetRoute;
+      final isPasswordResetOtpRoute = location == '/reset-password/code';
+      final isPublicRecoveryRoute =
+          isVerificationRoute ||
+          isPasswordResetRoute ||
+          isPasswordResetOtpRoute;
 
       if (authState.isLoading) {
-        if (isPublicLinkRoute) {
+        if (isPublicRecoveryRoute) {
           return null;
         }
 
@@ -55,7 +60,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           location == '/register' ||
           location == '/forgot-password' ||
           isVerificationRoute ||
-          isPasswordResetRoute;
+          isPasswordResetRoute ||
+          isPasswordResetOtpRoute;
 
       if (!isPublicAuthRoute) {
         return '/login';
@@ -84,6 +90,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password/code',
+        builder: (context, state) {
+          final extra = state.extra;
+          return PasswordResetOtpScreen(email: extra is String ? extra : null);
+        },
       ),
       GoRoute(
         path: '/reset-password',

@@ -23,6 +23,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
 
   bool _isSubmitting = false;
+  bool _isSendingLink = false;
   bool _isComplete = false;
   AuthFailure? _failure;
 
@@ -46,7 +47,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return null;
   }
 
-  Future<void> _submit() async {
+  Future<void> _requestOtp() async {
     if (_isSubmitting) {
       return;
     }
@@ -61,18 +62,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     });
 
     try {
+      final email = _emailController.text.trim().toLowerCase();
       await ref
           .read(authRepositoryProvider)
-          .requestPasswordReset(email: _emailController.text);
+          .requestPasswordResetOtp(email: email);
 
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _isSubmitting = false;
-        _isComplete = true;
-      });
+      context.go('/reset-password/code', extra: email);
     } on AuthFailure catch (failure) {
       if (!mounted) {
         return;
@@ -89,6 +88,60 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
       setState(() {
         _isSubmitting = false;
+        _failure = AuthFailure.unexpected();
+      });
+    }
+  }
+
+  Future<void> _sendResetLink() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _isSendingLink = true;
+      _failure = null;
+    });
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .requestPasswordReset(
+            email: _emailController.text.trim().toLowerCase(),
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _isSendingLink = false;
+        _isComplete = true;
+      });
+    } on AuthFailure catch (failure) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _isSendingLink = false;
+        _failure = failure;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _isSendingLink = false;
         _failure = AuthFailure.unexpected();
       });
     }
@@ -157,7 +210,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     Text(
                       _isComplete
                           ? _successMessage
-                          : 'Enter your email and Mealio will send password reset instructions if an account exists.',
+                          : 'Enter your email and Mealio will send a six-digit password reset code if an account exists.',
                       key: _isComplete
                           ? const Key('forgot-password-success-message')
                           : null,
@@ -172,7 +225,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
                         autofillHints: const [AutofillHints.email],
-                        onFieldSubmitted: (_) => _submit(),
+                        onFieldSubmitted: (_) => _requestOtp(),
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           hintText: 'you@example.com',
@@ -192,8 +245,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       const SizedBox(height: 24),
                       FilledButton(
                         key: const Key('forgot-password-submit-button'),
-                        onPressed: _isSubmitting ? null : _submit,
-                        child: _isSubmitting
+                        onPressed: _isSubmitting ? null : _requestOtp,
+                        child: _isSubmitting && !_isSendingLink
                             ? const SizedBox(
                                 key: Key('forgot-password-loading-indicator'),
                                 width: 20,
@@ -202,7 +255,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Send reset instructions'),
+                            : const Text('Send reset code'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        key: const Key('forgot-password-link-button'),
+                        onPressed: _isSubmitting ? null : _sendResetLink,
+                        child: _isSubmitting && _isSendingLink
+                            ? const SizedBox(
+                                key: Key(
+                                  'forgot-password-link-loading-indicator',
+                                ),
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Send reset link instead'),
                       ),
                     ] else ...[
                       const SizedBox(height: 28),

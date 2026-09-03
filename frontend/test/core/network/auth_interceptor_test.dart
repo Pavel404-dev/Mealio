@@ -121,6 +121,8 @@ void main() {
         '/auth/email-verification/otp/confirm',
         '/auth/password-reset/request',
         '/auth/password-reset/confirm',
+        '/auth/password-reset/otp/request',
+        '/auth/password-reset/otp/confirm',
       ]) {
         appAdapter.enqueue(
           const FakeHttpResponse(statusCode: 401, body: {'detail': 'rejected'}),
