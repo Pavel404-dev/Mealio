@@ -46,8 +46,9 @@ GoRouter, Dio, and flutter_secure_storage.
 - GitHub may be inspected read-only when relevant.
 - Never run destructive Git commands or discard existing changes without explicit,
   target-specific user approval.
-- Never print, commit, or expose secrets, credentials, tokens, OTP values, or
-  private configuration.
+- Never print, commit, or expose real secrets, credentials, tokens, OTP values,
+  or private configuration. Clearly synthetic, test-only values are allowed when
+  required for deterministic tests and must be unusable outside test environments.
 
 ## Backend conventions
 
