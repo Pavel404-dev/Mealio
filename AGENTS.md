@@ -92,14 +92,40 @@ python -m ruff check backend
 python -m ruff format --check backend
 ```
 
-From `backend/`, with the test database variables configured as documented:
+Before local database checks, start PostgreSQL from the repository root:
 
 ```bash
+docker compose up -d --wait --wait-timeout 60 postgres
+```
+
+The `mealio_test` database is disposable. Before a full migration-and-test run,
+obtain explicit, target-specific approval to recreate only this database. Then,
+from the repository root:
+
+```bash
+docker compose exec -T postgres \
+  dropdb --if-exists --force -U mealio_user mealio_test
+docker compose exec -T postgres \
+  createdb -U mealio_user -O mealio_user mealio_test
+```
+
+Then from `backend/`:
+
+```bash
+export DATABASE_URL=postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test
+export TEST_DATABASE_URL=postgresql+asyncpg://mealio_user:mealio_password@localhost:5432/mealio_test
+export JWT_SECRET_KEY=test_mealio_secret_key_with_more_than_32_chars
+export AUTH_ABUSE_PEPPER=test_auth_abuse_pepper_with_more_than_32_chars
 alembic upgrade head
 alembic current
 alembic check
-python -m pytest -v
 python -m pytest -v --cov=app --cov-report=term-missing
+```
+
+If this workflow started PostgreSQL, clean it up from the repository root:
+
+```bash
+docker compose down
 ```
 
 From `frontend/`:
