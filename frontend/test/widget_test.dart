@@ -345,7 +345,10 @@ void main() {
     expect(repository.logoutCalls, 1);
     expect(find.byKey(const Key('home-screen')), findsNothing);
     expect(find.byKey(const Key('login-screen')), findsOneWidget);
-    expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('unauthenticated user cannot open Home', (tester) async {

@@ -1,0 +1,44 @@
+name: Frontend Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-tests:
+    name: Run frontend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter 3.44.8
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.44.8"
+          cache: true
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Check frontend formatting
+        working-directory: frontend
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze frontend
+        working-directory: frontend
+        run: flutter analyze
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: flutter test
