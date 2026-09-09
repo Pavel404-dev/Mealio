@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../auth/domain/auth_failure.dart';
@@ -85,7 +86,7 @@ class HomeScreen extends ConsumerWidget {
               description: 'Track ingredients available at home.',
               icon: Icons.kitchen_outlined,
               accentColor: AppColors.sage,
-              onTap: () => _showPlaceholder(context, 'Pantry'),
+              onTap: () => context.push('/pantry'),
             ),
             const SizedBox(height: 14),
             _FeatureCard(

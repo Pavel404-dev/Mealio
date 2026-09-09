@@ -8,6 +8,7 @@ import 'package:mealio/app/app.dart';
 import 'package:mealio/features/auth/data/auth_repository.dart';
 import 'package:mealio/features/auth/domain/auth_failure.dart';
 import 'package:mealio/features/auth/domain/auth_user.dart';
+import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
 
 import 'helpers/auth_test_fakes.dart';
 
@@ -22,7 +23,10 @@ void main() {
 
   Widget createApp(FakeAuthRepository repository) {
     return ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+        pantryItemsProvider.overrideWith((ref) async => []),
+      ],
       child: const MealioApp(),
     );
   }
@@ -364,6 +368,69 @@ void main() {
     expect(find.byKey(const Key('home-screen')), findsNothing);
   });
 
+  testWidgets('authenticated Home Pantry tap opens Pantry', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('pantry-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+    expect(
+      find.text('Pantry will be implemented in a future PR.'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Back from Pantry returns to Home', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pantry-card')));
+    await tester.pumpAndSettle();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home-screen')), findsOneWidget);
+    expect(find.byKey(const Key('pantry-screen')), findsNothing);
+  });
+
+  testWidgets('unauthenticated user cannot open Pantry directly', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+    await openLoginScreen(tester, repository);
+    final context = tester.element(find.byKey(const Key('login-screen')));
+    GoRouter.of(context).go('/pantry');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login-screen')), findsOneWidget);
+    expect(find.byKey(const Key('pantry-screen')), findsNothing);
+  });
+
+  testWidgets('authenticated user can open Pantry directly', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+    final context = tester.element(find.byKey(const Key('home-screen')));
+    GoRouter.of(context).go('/pantry');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+  });
+
   testWidgets('authenticated user cannot remain on Login', (tester) async {
     final repository = FakeAuthRepository(
       restoreHandler: () async => testAuthUser,
@@ -401,5 +468,24 @@ void main() {
     expect(find.text('AI Recipe'), findsOneWidget);
     expect(find.text('Meal Plan'), findsOneWidget);
     expect(find.text('Shopping List'), findsOneWidget);
+
+    for (final feature in const [
+      ('ai-recipe-card', 'AI Recipe'),
+      ('meal-plan-card', 'Meal Plan'),
+      ('shopping-list-card', 'Shopping List'),
+    ]) {
+      final card = find.byKey(Key(feature.$1));
+      await tester.ensureVisible(card);
+      await tester.tap(card);
+      await tester.pump();
+      expect(
+        find.text('${feature.$2} will be implemented in a future PR.'),
+        findsOneWidget,
+      );
+      ScaffoldMessenger.of(
+        tester.element(find.byKey(const Key('home-screen'))),
+      ).hideCurrentSnackBar();
+      await tester.pumpAndSettle();
+    }
   });
 }
