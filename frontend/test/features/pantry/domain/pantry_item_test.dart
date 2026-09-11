@@ -63,6 +63,18 @@ void main() {
     expect(item.ingredient.nutritionValue, isNull);
   });
 
+  test('trims nullable category and normalizes blank values to null', () {
+    final trimmedJson = itemJson();
+    (trimmedJson['ingredient']! as Map<String, dynamic>)['category'] =
+        '  grain  ';
+
+    final blankJson = itemJson();
+    (blankJson['ingredient']! as Map<String, dynamic>)['category'] = '   ';
+
+    expect(PantryItem.fromJson(trimmedJson).ingredient.category, 'grain');
+    expect(PantryItem.fromJson(blankJson).ingredient.category, isNull);
+  });
+
   test('rejects a malformed root item', () {
     expect(() => PantryItem.fromJson(['not-an-object']), throwsFormatException);
   });

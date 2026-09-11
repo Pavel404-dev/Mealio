@@ -188,7 +188,8 @@ String? _nullableString(Map<String, dynamic> json, String key) {
     throw FormatException('Invalid $key');
   }
 
-  return value;
+  final normalizedValue = value.trim();
+  return normalizedValue.isEmpty ? null : normalizedValue;
 }
 
 DateTime _requiredDateTime(Map<String, dynamic> json, String key) {
