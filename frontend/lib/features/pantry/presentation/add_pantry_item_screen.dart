@@ -33,6 +33,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
   PantryFailure? _searchFailure;
   PantryFailure? _submitFailure;
   String? _ingredientError;
+  String _normalizedInputQuery = '';
   String? _lastRequestedQuery;
   int _searchGeneration = 0;
   bool _isSearching = true;
@@ -55,11 +56,14 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
   }
 
   void _onSearchChanged() {
-    _debounceTimer?.cancel();
     final query = _searchController.text.trim();
-    if (query == _lastRequestedQuery) {
+    if (query == _normalizedInputQuery) {
       return;
     }
+    _normalizedInputQuery = query;
+    _debounceTimer?.cancel();
+    _searchGeneration++;
+    _lastRequestedQuery = null;
     if (_submitFailure != null) {
       setState(() => _submitFailure = null);
     }

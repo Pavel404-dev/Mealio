@@ -130,6 +130,73 @@ void main() {
     expect(find.text('Oats'), findsNothing);
   });
 
+  testWidgets('input change invalidates active search before debounce', (
+    tester,
+  ) async {
+    final first = Completer<List<Ingredient>>();
+    final second = Completer<List<Ingredient>>();
+    final repository = _FakePantryRepository(
+      searchHandler: (query) => query.isEmpty ? first.future : second.future,
+    );
+    await tester.pumpWidget(createScreen(repository));
+    await tester.pump();
+
+    await tester.enterText(
+      find.byKey(const Key('ingredient-search-field')),
+      'rice',
+    );
+    first.complete([oats]);
+    await tester.pump();
+
+    expect(repository.searches, ['']);
+    expect(find.text('Oats'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(repository.searches, ['', 'rice']);
+    second.complete([rice]);
+    await tester.pump();
+
+    expect(find.text('Rice'), findsOneWidget);
+    expect(find.text('Oats'), findsNothing);
+  });
+
+  testWidgets('A to B to A restarts an invalidated A search', (tester) async {
+    final firstA = Completer<List<Ingredient>>();
+    final secondA = Completer<List<Ingredient>>();
+    var emptyQueryCalls = 0;
+    final repository = _FakePantryRepository(
+      searchHandler: (query) {
+        if (query.isNotEmpty) {
+          throw StateError('B must be cancelled before its debounce');
+        }
+        emptyQueryCalls++;
+        return emptyQueryCalls == 1 ? firstA.future : secondA.future;
+      },
+    );
+    await tester.pumpWidget(createScreen(repository));
+    await tester.pump();
+
+    await tester.enterText(
+      find.byKey(const Key('ingredient-search-field')),
+      'rice',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ingredient-search-field')),
+      '',
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(repository.searches, ['', '']);
+    secondA.complete([rice]);
+    await tester.pump();
+    expect(find.text('Rice'), findsOneWidget);
+
+    firstA.complete([oats]);
+    await tester.pump();
+    expect(find.text('Rice'), findsOneWidget);
+    expect(find.text('Oats'), findsNothing);
+  });
+
   testWidgets('shows empty, safe error, and retries current query', (
     tester,
   ) async {
