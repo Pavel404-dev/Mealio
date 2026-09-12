@@ -150,4 +150,169 @@ void main() {
 
     await expectFailure(PantryFailureType.unexpected);
   });
+
+  group('ingredient search', () {
+    Future<void> expectSearchFailure(PantryFailureType type) async {
+      await expectLater(
+        repository.searchIngredients(),
+        throwsA(
+          isA<PantryFailure>().having((failure) => failure.type, 'type', type),
+        ),
+      );
+    }
+
+    test('GETs /ingredients with trimmed search and pagination', () async {
+      adapter.enqueue(
+        FakeHttpResponse(statusCode: 200, body: [firstItemJson['ingredient']]),
+      );
+
+      final ingredients = await repository.searchIngredients(
+        search: '  Oats  ',
+      );
+
+      expect(ingredients.single.name, 'Oats');
+      final request = adapter.requests.single;
+      expect(request.method, 'GET');
+      expect(request.path, '/ingredients');
+      expect(request.queryParameters, {
+        'search': 'Oats',
+        'limit': 50,
+        'offset': 0,
+      });
+    });
+
+    test('omits blank search and parses an empty list', () async {
+      adapter.enqueue(const FakeHttpResponse(statusCode: 200, body: []));
+
+      expect(await repository.searchIngredients(search: '   '), isEmpty);
+      expect(adapter.requests.single.queryParameters, {
+        'limit': 50,
+        'offset': 0,
+      });
+    });
+
+    test('maps malformed roots and items to unexpected', () async {
+      for (final body in <Object?>[
+        {'items': []},
+        [
+          {'id': 'incomplete'},
+        ],
+      ]) {
+        adapter.enqueue(FakeHttpResponse(statusCode: 200, body: body));
+        await expectSearchFailure(PantryFailureType.unexpected);
+      }
+    });
+
+    test('maps connection, timeout, backend, and final 401 safely', () async {
+      for (final type in const [
+        DioExceptionType.connectionError,
+        DioExceptionType.receiveTimeout,
+      ]) {
+        adapter.enqueue(FakeHttpResponse.error(type));
+        await expectSearchFailure(PantryFailureType.connection);
+      }
+      for (final status in [500, 401]) {
+        adapter.enqueue(FakeHttpResponse(statusCode: status, body: const {}));
+        await expectSearchFailure(
+          status == 401
+              ? PantryFailureType.authentication
+              : PantryFailureType.backend,
+        );
+      }
+    });
+
+    test('rejects unexpected success status', () async {
+      adapter.enqueue(const FakeHttpResponse(statusCode: 201, body: []));
+      await expectSearchFailure(PantryFailureType.unexpected);
+    });
+  });
+
+  group('pantry create', () {
+    Future<void> expectCreateFailure(PantryFailureType type) async {
+      await expectLater(
+        repository.addPantryItem(
+          ingredientId: 'ingredient-1',
+          quantityG: '500.25',
+        ),
+        throwsA(
+          isA<PantryFailure>().having((failure) => failure.type, 'type', type),
+        ),
+      );
+    }
+
+    test('POSTs exact decimal-safe body with unset expiry', () async {
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 201, body: firstItemJson),
+      );
+
+      final item = await repository.addPantryItem(
+        ingredientId: 'ingredient-1',
+        quantityG: '500.25',
+      );
+
+      expect(item.id, 'pantry-1');
+      final request = adapter.requests.single;
+      expect(request.method, 'POST');
+      expect(request.path, '/pantry');
+      expect(request.data, {
+        'ingredient_id': 'ingredient-1',
+        'quantity_g': '500.25',
+        'expires_at': null,
+      });
+      expect((request.data as Map)['quantity_g'], isA<String>());
+    });
+
+    test('encodes selected expiry as UTC ISO-8601', () async {
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 201, body: firstItemJson),
+      );
+
+      await repository.addPantryItem(
+        ingredientId: 'ingredient-1',
+        quantityG: '1',
+        expiresAt: DateTime.parse('2026-10-01T02:00:00+02:00'),
+      );
+
+      expect(
+        (adapter.requests.single.data as Map)['expires_at'],
+        '2026-10-01T00:00:00.000Z',
+      );
+    });
+
+    test('maps create status failures safely', () async {
+      for (final entry in const {
+        401: PantryFailureType.authentication,
+        404: PantryFailureType.ingredientUnavailable,
+        409: PantryFailureType.duplicate,
+        422: PantryFailureType.validation,
+        500: PantryFailureType.backend,
+      }.entries) {
+        adapter.enqueue(
+          FakeHttpResponse(statusCode: entry.key, body: const {}),
+        );
+        await expectCreateFailure(entry.value);
+      }
+    });
+
+    test('maps connection and timeout to connection', () async {
+      for (final type in const [
+        DioExceptionType.connectionError,
+        DioExceptionType.sendTimeout,
+      ]) {
+        adapter.enqueue(FakeHttpResponse.error(type));
+        await expectCreateFailure(PantryFailureType.connection);
+      }
+    });
+
+    test('rejects malformed and unexpected success responses', () async {
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 201, body: {'id': 'incomplete'}),
+      );
+      await expectCreateFailure(PantryFailureType.unexpected);
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 200, body: firstItemJson),
+      );
+      await expectCreateFailure(PantryFailureType.unexpected);
+    });
+  });
 }

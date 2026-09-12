@@ -63,6 +63,65 @@ void main() {
     expect(item.ingredient.nutritionValue, isNull);
   });
 
+  test('parses Ingredient directly with decimal strings', () {
+    final ingredient = Ingredient.fromJson(fullItemJson['ingredient']);
+
+    expect(ingredient.id, 'ingredient-1');
+    expect(ingredient.name, 'Oats');
+    expect(ingredient.nutritionValue?.calories, 389);
+  });
+
+  test('direct Ingredient parsing accepts nullable and blank metadata', () {
+    final nullable =
+        Map<String, dynamic>.from(fullItemJson['ingredient']! as Map)
+          ..['category'] = null
+          ..['nutrition_value'] = null;
+    final blank = Map<String, dynamic>.from(nullable)..['category'] = '   ';
+
+    expect(Ingredient.fromJson(nullable).category, isNull);
+    expect(Ingredient.fromJson(nullable).nutritionValue, isNull);
+    expect(Ingredient.fromJson(blank).category, isNull);
+  });
+
+  test('direct Ingredient parsing rejects malformed required fields', () {
+    for (final json in <Object?>[
+      [],
+      {'name': 'Oats'},
+      {
+        'id': ' ',
+        'name': 'Oats',
+        'category': null,
+        'created_at': '2026-09-01T10:00:00Z',
+        'nutrition_value': null,
+      },
+      {
+        'id': 'ingredient-1',
+        'name': ' ',
+        'category': null,
+        'created_at': '2026-09-01T10:00:00Z',
+        'nutrition_value': null,
+      },
+      {
+        'id': 'ingredient-1',
+        'name': 'Oats',
+        'category': null,
+        'created_at': 'bad-date',
+        'nutrition_value': null,
+      },
+    ]) {
+      expect(() => Ingredient.fromJson(json), throwsFormatException);
+    }
+  });
+
+  test('direct Ingredient parsing rejects malformed nutrition decimals', () {
+    final json = Map<String, dynamic>.from(fullItemJson['ingredient']! as Map);
+    json['nutrition_value'] = Map<String, dynamic>.from(
+      json['nutrition_value']! as Map,
+    )..['calories'] = 389;
+
+    expect(() => Ingredient.fromJson(json), throwsFormatException);
+  });
+
   test('trims nullable category and normalizes blank values to null', () {
     final trimmedJson = itemJson();
     (trimmedJson['ingredient']! as Map<String, dynamic>)['category'] =

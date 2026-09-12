@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../domain/pantry_failure.dart';
@@ -16,6 +17,12 @@ class PantryScreen extends ConsumerWidget {
     return Scaffold(
       key: const Key('pantry-screen'),
       appBar: AppBar(title: const Text('Pantry')),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('pantry-add-button'),
+        onPressed: () => context.push('/pantry/add'),
+        icon: const Icon(Icons.add),
+        label: const Text('Add ingredient'),
+      ),
       body: SafeArea(
         child: pantryItems.when(
           loading: () => const Center(
