@@ -64,9 +64,13 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
     _debounceTimer?.cancel();
     _searchGeneration++;
     _lastRequestedQuery = null;
-    if (_submitFailure != null) {
-      setState(() => _submitFailure = null);
-    }
+    setState(() {
+      _isSearching = true;
+      _searchFailure = null;
+      if (_submitFailure != null) {
+        _submitFailure = null;
+      }
+    });
     _debounceTimer = Timer(_searchDebounce, () => _loadIngredients(query));
   }
 

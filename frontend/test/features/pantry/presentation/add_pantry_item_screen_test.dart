@@ -130,6 +130,42 @@ void main() {
     expect(find.text('Oats'), findsNothing);
   });
 
+  testWidgets(
+    'query change clears old results before debounce and starts new search after it',
+    (tester) async {
+      final second = Completer<List<Ingredient>>();
+      final repository = _FakePantryRepository(
+        searchHandler: (query) =>
+            query.isEmpty ? Future.value([oats]) : second.future,
+      );
+      await tester.pumpWidget(createScreen(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Oats'), findsOneWidget);
+      expect(repository.searches, ['']);
+
+      await tester.enterText(
+        find.byKey(const Key('ingredient-search-field')),
+        'rice',
+      );
+      await tester.pump();
+
+      expect(find.text('Oats'), findsNothing);
+      expect(
+        find.byKey(const Key('ingredient-search-loading-indicator')),
+        findsOneWidget,
+      );
+      expect(repository.searches, ['']);
+
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(repository.searches, ['', 'rice']);
+
+      second.complete([rice]);
+      await tester.pump();
+      expect(find.text('Rice'), findsOneWidget);
+    },
+  );
+
   testWidgets('input change invalidates active search before debounce', (
     tester,
   ) async {
