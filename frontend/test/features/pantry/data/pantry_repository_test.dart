@@ -151,6 +151,35 @@ void main() {
     await expectFailure(PantryFailureType.unexpected);
   });
 
+  test(
+    'maps non-response list failures to the list unexpected message',
+    () async {
+      for (final type in const [
+        DioExceptionType.badCertificate,
+        DioExceptionType.cancel,
+        DioExceptionType.unknown,
+      ]) {
+        adapter.enqueue(FakeHttpResponse.error(type));
+        await expectLater(
+          repository.getPantry(),
+          throwsA(
+            isA<PantryFailure>()
+                .having(
+                  (failure) => failure.type,
+                  'type',
+                  PantryFailureType.unexpected,
+                )
+                .having(
+                  (failure) => failure.message,
+                  'message',
+                  'Unable to load your pantry. Please try again.',
+                ),
+          ),
+        );
+      }
+    },
+  );
+
   group('ingredient search', () {
     Future<void> expectSearchFailure(PantryFailureType type) async {
       await expectLater(
@@ -225,6 +254,35 @@ void main() {
       adapter.enqueue(const FakeHttpResponse(statusCode: 201, body: []));
       await expectSearchFailure(PantryFailureType.unexpected);
     });
+
+    test(
+      'maps non-response failures to the search unexpected message',
+      () async {
+        for (final type in const [
+          DioExceptionType.badCertificate,
+          DioExceptionType.cancel,
+          DioExceptionType.unknown,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectLater(
+            repository.searchIngredients(),
+            throwsA(
+              isA<PantryFailure>()
+                  .having(
+                    (failure) => failure.type,
+                    'type',
+                    PantryFailureType.unexpected,
+                  )
+                  .having(
+                    (failure) => failure.message,
+                    'message',
+                    'Unable to load ingredients. Please try again.',
+                  ),
+            ),
+          );
+        }
+      },
+    );
   });
 
   group('pantry create', () {
@@ -314,5 +372,37 @@ void main() {
       );
       await expectCreateFailure(PantryFailureType.unexpected);
     });
+
+    test(
+      'maps non-response failures to the create unexpected message',
+      () async {
+        for (final type in const [
+          DioExceptionType.badCertificate,
+          DioExceptionType.cancel,
+          DioExceptionType.unknown,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectLater(
+            repository.addPantryItem(
+              ingredientId: 'ingredient-1',
+              quantityG: '500.25',
+            ),
+            throwsA(
+              isA<PantryFailure>()
+                  .having(
+                    (failure) => failure.type,
+                    'type',
+                    PantryFailureType.unexpected,
+                  )
+                  .having(
+                    (failure) => failure.message,
+                    'message',
+                    'Unable to add this ingredient. Please try again.',
+                  ),
+            ),
+          );
+        }
+      },
+    );
   });
 }

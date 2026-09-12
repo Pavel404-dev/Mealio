@@ -8,7 +8,7 @@ import 'package:mealio/features/pantry/data/pantry_repository.dart';
 import 'package:mealio/features/pantry/domain/pantry_failure.dart';
 import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/add_pantry_item_screen.dart';
-import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
+import 'package:mealio/features/pantry/presentation/pantry_screen.dart';
 
 void main() {
   final oats = Ingredient(
@@ -180,6 +180,26 @@ void main() {
     );
   });
 
+  testWidgets('first submit shows ingredient and quantity errors together', (
+    tester,
+  ) async {
+    final repository = _FakePantryRepository(
+      searchHandler: (_) async => [oats],
+    );
+    await tester.pumpWidget(createScreen(repository));
+    await tester.pumpAndSettle();
+
+    await tapSubmit(tester);
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('ingredient-validation-error')),
+      findsOneWidget,
+    );
+    expect(find.text('Quantity is required.'), findsOneWidget);
+    expect(repository.createCalls, 0);
+  });
+
   testWidgets('failure is safe, preserves form, and retry succeeds once', (
     tester,
   ) async {
@@ -266,6 +286,34 @@ void main() {
     expect(repository.lastExpiry?.isUtc, isTrue);
   });
 
+  testWidgets('reopening expiry keeps the selected calendar day', (
+    tester,
+  ) async {
+    final repository = _FakePantryRepository(
+      searchHandler: (_) async => [oats],
+    );
+    await tester.pumpWidget(createScreen(repository));
+    await tester.pumpAndSettle();
+    await tapSubmit(tester);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('pantry-expiry-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('pantry-expiry-button')));
+    await tester.pumpAndSettle();
+    final calendar = tester.widget<CalendarDatePicker>(
+      find.byType(CalendarDatePicker),
+    );
+    expect(calendar.initialDate, isNotNull);
+    expect(calendar.initialDate!.day, 15);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('dispose during unresolved search is safe', (tester) async {
     final completer = Completer<List<Ingredient>>();
     final repository = _FakePantryRepository(
@@ -281,35 +329,21 @@ void main() {
 
   testWidgets('success invalidates pantry and pops to Pantry', (tester) async {
     var pantryLoads = 0;
+    final createdItem = _item(oats);
     final repository = _FakePantryRepository(
       pantryHandler: () async {
         pantryLoads++;
-        return [];
+        return pantryLoads == 1 ? [] : [createdItem];
       },
       searchHandler: (_) async => [oats],
       createHandler:
           ({required ingredientId, required quantityG, expiresAt}) async =>
-              _item(oats),
+              createdItem,
     );
     final router = GoRouter(
       initialLocation: '/pantry',
       routes: [
-        GoRoute(
-          path: '/pantry',
-          builder: (_, _) => Scaffold(
-            key: const Key('fake-pantry'),
-            body: Consumer(
-              builder: (_, ref, _) {
-                ref.watch(pantryItemsProvider);
-                return FilledButton(
-                  key: const Key('open-add'),
-                  onPressed: () => ref.context.push('/pantry/add'),
-                  child: const Text('Open'),
-                );
-              },
-            ),
-          ),
-        ),
+        GoRoute(path: '/pantry', builder: (_, _) => const PantryScreen()),
         GoRoute(
           path: '/pantry/add',
           builder: (_, _) => const AddPantryItemScreen(),
@@ -324,13 +358,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('open-add')));
+    expect(find.byKey(const Key('pantry-empty-state')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pantry-add-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ingredient-result-ingredient-1')));
     await tester.enterText(find.byKey(const Key('pantry-quantity-field')), '1');
     await tapSubmit(tester);
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('fake-pantry')), findsOneWidget);
+    expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+    expect(find.byKey(const Key('pantry-item-pantry-1')), findsOneWidget);
+    expect(find.text('Oats'), findsOneWidget);
+    expect(find.text('1 g'), findsOneWidget);
     expect(pantryLoads, 2);
   });
 }

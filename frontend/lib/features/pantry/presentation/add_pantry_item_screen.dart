@@ -120,9 +120,16 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
 
   Future<void> _pickExpiry() async {
     final now = DateTime.now();
+    final currentExpiry = _expiresAt;
     final selected = await showDatePicker(
       context: context,
-      initialDate: _expiresAt?.toLocal() ?? now,
+      initialDate: currentExpiry == null
+          ? now
+          : DateTime(
+              currentExpiry.year,
+              currentExpiry.month,
+              currentExpiry.day,
+            ),
       firstDate: DateTime(now.year - 10),
       lastDate: DateTime(now.year + 20, 12, 31),
     );
@@ -145,7 +152,8 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
           ? 'Select an ingredient.'
           : null,
     );
-    if (ingredient == null || !_formKey.currentState!.validate()) {
+    final isFormValid = _formKey.currentState!.validate();
+    if (ingredient == null || !isFormValid) {
       return;
     }
     final quantity = PantryQuantity.fromInput(_quantityController.text);

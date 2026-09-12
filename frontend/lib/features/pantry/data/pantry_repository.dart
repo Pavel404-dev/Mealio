@@ -134,7 +134,11 @@ class PantryRepository {
       case DioExceptionType.badCertificate:
       case DioExceptionType.cancel:
       case DioExceptionType.unknown:
-        return PantryFailure.unexpected();
+        return switch (operation) {
+          _PantryOperation.list => PantryFailure.unexpected(),
+          _PantryOperation.search => PantryFailure.searchUnexpected(),
+          _PantryOperation.create => PantryFailure.createUnexpected(),
+        };
     }
   }
 }
