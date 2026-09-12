@@ -85,4 +85,16 @@ class _StubPantryRepository implements PantryRepository {
     calls++;
     return _handler();
   }
+
+  @override
+  Future<List<Ingredient>> searchIngredients({String? search}) async => [];
+
+  @override
+  Future<PantryItem> addPantryItem({
+    required String ingredientId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) {
+    throw UnimplementedError();
+  }
 }

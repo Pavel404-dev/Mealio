@@ -8,6 +8,8 @@ import 'package:mealio/app/app.dart';
 import 'package:mealio/features/auth/data/auth_repository.dart';
 import 'package:mealio/features/auth/domain/auth_failure.dart';
 import 'package:mealio/features/auth/domain/auth_user.dart';
+import 'package:mealio/features/pantry/data/pantry_repository.dart';
+import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
 
 import 'helpers/auth_test_fakes.dart';
@@ -25,6 +27,7 @@ void main() {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(repository),
+        pantryRepositoryProvider.overrideWithValue(_RouterPantryRepository()),
         pantryItemsProvider.overrideWith((ref) async => []),
       ],
       child: const MealioApp(),
@@ -403,6 +406,26 @@ void main() {
     expect(find.byKey(const Key('pantry-screen')), findsNothing);
   });
 
+  testWidgets('Pantry Add opens creation flow and Back returns to Pantry', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pantry-card')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pantry-add-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('add-pantry-item-screen')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-pantry-back-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+  });
+
   testWidgets('unauthenticated user cannot open Pantry directly', (
     tester,
   ) async {
@@ -429,6 +452,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+  });
+
+  testWidgets('authenticated user can open Add Pantry directly', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(createApp(repository));
+    await tester.pumpAndSettle();
+    final context = tester.element(find.byKey(const Key('home-screen')));
+    GoRouter.of(context).go('/pantry/add');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('add-pantry-item-screen')), findsOneWidget);
+  });
+
+  testWidgets('unauthenticated user cannot open Add Pantry directly', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+
+    await openLoginScreen(tester, repository);
+    final context = tester.element(find.byKey(const Key('login-screen')));
+    GoRouter.of(context).go('/pantry/add');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login-screen')), findsOneWidget);
+    expect(find.byKey(const Key('add-pantry-item-screen')), findsNothing);
   });
 
   testWidgets('authenticated user cannot remain on Login', (tester) async {
@@ -488,4 +541,40 @@ void main() {
       await tester.pumpAndSettle();
     }
   });
+}
+
+class _RouterPantryRepository implements PantryRepository {
+  final Ingredient _ingredient = Ingredient(
+    id: 'ingredient-1',
+    name: 'Oats',
+    category: 'grain',
+    createdAt: DateTime.parse('2026-09-01T10:00:00Z'),
+    nutritionValue: null,
+  );
+
+  @override
+  Future<List<PantryItem>> getPantry() async => [];
+
+  @override
+  Future<List<Ingredient>> searchIngredients({String? search}) async => [
+    _ingredient,
+  ];
+
+  @override
+  Future<PantryItem> addPantryItem({
+    required String ingredientId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) async {
+    return PantryItem(
+      id: 'pantry-1',
+      userId: 'user-1',
+      ingredientId: ingredientId,
+      quantityG: 1,
+      expiresAt: expiresAt,
+      createdAt: DateTime.parse('2026-09-10T10:00:00Z'),
+      updatedAt: DateTime.parse('2026-09-10T10:00:00Z'),
+      ingredient: _ingredient,
+    );
+  }
 }

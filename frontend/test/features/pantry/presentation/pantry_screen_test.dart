@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mealio/features/pantry/domain/pantry_failure.dart';
 import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
@@ -43,6 +44,58 @@ void main() {
 
     completer.complete([]);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Add action is visible in loading, empty, list, and error', (
+    tester,
+  ) async {
+    final completer = Completer<List<PantryItem>>();
+    await tester.pumpWidget(createScreen(() => completer.future));
+    await tester.pump();
+    expect(find.byKey(const Key('pantry-add-button')), findsOneWidget);
+    completer.complete([]);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pantry-add-button')), findsOneWidget);
+
+    await tester.pumpWidget(createScreen(() async => [pantryItem]));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pantry-add-button')), findsOneWidget);
+
+    await tester.pumpWidget(
+      createScreen(() async => throw PantryFailure.backend()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pantry-add-button')), findsOneWidget);
+  });
+
+  testWidgets('Add action pushes /pantry/add', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/pantry',
+      routes: [
+        GoRoute(
+          path: '/pantry',
+          builder: (context, state) => const PantryScreen(),
+        ),
+        GoRoute(
+          path: '/pantry/add',
+          builder: (context, state) =>
+              const Scaffold(key: Key('fake-add-screen')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [pantryItemsProvider.overrideWith((ref) async => [])],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('pantry-add-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('fake-add-screen')), findsOneWidget);
   });
 
   testWidgets('shows an empty state', (tester) async {
