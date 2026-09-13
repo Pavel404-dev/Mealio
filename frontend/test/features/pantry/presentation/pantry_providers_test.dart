@@ -97,4 +97,15 @@ class _StubPantryRepository implements PantryRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<PantryItem> updatePantryItem({
+    required String pantryItemId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deletePantryItem({required String pantryItemId}) =>
+      throw UnimplementedError();
 }

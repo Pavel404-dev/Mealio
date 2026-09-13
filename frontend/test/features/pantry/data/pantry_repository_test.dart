@@ -405,4 +405,284 @@ void main() {
       },
     );
   });
+
+  group('pantry update', () {
+    Future<void> expectUpdateFailure(PantryFailureType type) async {
+      await expectLater(
+        repository.updatePantryItem(
+          pantryItemId: 'pantry-1',
+          quantityG: '500.25',
+        ),
+        throwsA(
+          isA<PantryFailure>().having((failure) => failure.type, 'type', type),
+        ),
+      );
+    }
+
+    test('PATCHes exact decimal-safe body and parses the response', () async {
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 200, body: firstItemJson),
+      );
+
+      final item = await repository.updatePantryItem(
+        pantryItemId: 'pantry-1',
+        quantityG: '500.25',
+      );
+
+      expect(item.id, 'pantry-1');
+      final request = adapter.requests.single;
+      expect(request.method, 'PATCH');
+      expect(request.path, '/pantry/pantry-1');
+      expect(request.data, {'quantity_g': '500.25', 'expires_at': null});
+      expect((request.data as Map)['quantity_g'], isA<String>());
+    });
+
+    test('encodes expiry as UTC and sends null to clear it', () async {
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 200, body: firstItemJson),
+      );
+      await repository.updatePantryItem(
+        pantryItemId: 'pantry-1',
+        quantityG: '1',
+        expiresAt: DateTime.parse('2026-10-01T02:00:00+02:00'),
+      );
+      expect(
+        (adapter.requests.single.data as Map)['expires_at'],
+        '2026-10-01T00:00:00.000Z',
+      );
+
+      adapter.enqueue(
+        const FakeHttpResponse(statusCode: 200, body: firstItemJson),
+      );
+      await repository.updatePantryItem(
+        pantryItemId: 'pantry-1',
+        quantityG: '1',
+      );
+      expect((adapter.requests.last.data as Map)['expires_at'], isNull);
+    });
+
+    test(
+      'maps update response failures to safe operation-specific errors',
+      () async {
+        const cases = {
+          401: (
+            type: PantryFailureType.authentication,
+            message: 'Your session is no longer valid. Please sign in again.',
+          ),
+          404: (
+            type: PantryFailureType.pantryItemUnavailable,
+            message: 'This pantry item is no longer available.',
+          ),
+          422: (
+            type: PantryFailureType.validation,
+            message: 'Check the entered values and try again.',
+          ),
+          500: (
+            type: PantryFailureType.backend,
+            message: 'Unable to update this pantry item. Please try again.',
+          ),
+        };
+        for (final entry in cases.entries) {
+          adapter.enqueue(
+            FakeHttpResponse(
+              statusCode: entry.key,
+              body: const {'detail': 'must not be exposed'},
+            ),
+          );
+          await expectLater(
+            repository.updatePantryItem(
+              pantryItemId: 'pantry-1',
+              quantityG: '500.25',
+            ),
+            throwsA(
+              isA<PantryFailure>()
+                  .having((failure) => failure.type, 'type', entry.value.type)
+                  .having(
+                    (failure) => failure.message,
+                    'message',
+                    entry.value.message,
+                  ),
+            ),
+          );
+        }
+      },
+    );
+
+    test(
+      'maps malformed, unexpected, and non-response update failures safely',
+      () async {
+        for (final body in <Object?>[
+          {'id': 'incomplete'},
+          firstItemJson,
+        ]) {
+          adapter.enqueue(
+            FakeHttpResponse(
+              statusCode: body == firstItemJson ? 201 : 200,
+              body: body,
+            ),
+          );
+          await expectLater(
+            repository.updatePantryItem(
+              pantryItemId: 'pantry-1',
+              quantityG: '1',
+            ),
+            throwsA(
+              isA<PantryFailure>()
+                  .having(
+                    (failure) => failure.type,
+                    'type',
+                    PantryFailureType.unexpected,
+                  )
+                  .having(
+                    (failure) => failure.message,
+                    'message',
+                    'Unable to update this pantry item. Please try again.',
+                  ),
+            ),
+          );
+        }
+        for (final type in const [
+          DioExceptionType.connectionError,
+          DioExceptionType.connectionTimeout,
+          DioExceptionType.sendTimeout,
+          DioExceptionType.receiveTimeout,
+          DioExceptionType.transformTimeout,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectUpdateFailure(PantryFailureType.connection);
+        }
+        for (final type in const [
+          DioExceptionType.badCertificate,
+          DioExceptionType.cancel,
+          DioExceptionType.unknown,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectLater(
+            repository.updatePantryItem(
+              pantryItemId: 'pantry-1',
+              quantityG: '1',
+            ),
+            throwsA(
+              isA<PantryFailure>().having(
+                (failure) => failure.message,
+                'message',
+                'Unable to update this pantry item. Please try again.',
+              ),
+            ),
+          );
+        }
+      },
+    );
+  });
+
+  group('pantry delete', () {
+    Future<void> expectDeleteFailure(PantryFailureType type) async {
+      await expectLater(
+        repository.deletePantryItem(pantryItemId: 'pantry-1'),
+        throwsA(
+          isA<PantryFailure>().having((failure) => failure.type, 'type', type),
+        ),
+      );
+    }
+
+    test(
+      'DELETEs the exact path without a request body and accepts 204',
+      () async {
+        adapter.enqueue(const FakeHttpResponse(statusCode: 204, body: null));
+        await repository.deletePantryItem(pantryItemId: 'pantry-1');
+        final request = adapter.requests.single;
+        expect(request.method, 'DELETE');
+        expect(request.path, '/pantry/pantry-1');
+        expect(request.data, isNull);
+      },
+    );
+
+    test(
+      'maps delete response failures to safe operation-specific errors',
+      () async {
+        const cases = {
+          401: (
+            type: PantryFailureType.authentication,
+            message: 'Your session is no longer valid. Please sign in again.',
+          ),
+          404: (
+            type: PantryFailureType.pantryItemUnavailable,
+            message: 'This pantry item is no longer available.',
+          ),
+          422: (
+            type: PantryFailureType.backend,
+            message: 'Unable to delete this pantry item. Please try again.',
+          ),
+          500: (
+            type: PantryFailureType.backend,
+            message: 'Unable to delete this pantry item. Please try again.',
+          ),
+        };
+        for (final entry in cases.entries) {
+          adapter.enqueue(
+            FakeHttpResponse(
+              statusCode: entry.key,
+              body: const {'detail': 'must not be exposed'},
+            ),
+          );
+          await expectLater(
+            repository.deletePantryItem(pantryItemId: 'pantry-1'),
+            throwsA(
+              isA<PantryFailure>()
+                  .having((failure) => failure.type, 'type', entry.value.type)
+                  .having(
+                    (failure) => failure.message,
+                    'message',
+                    entry.value.message,
+                  ),
+            ),
+          );
+        }
+      },
+    );
+
+    test(
+      'rejects unexpected and non-response delete failures safely',
+      () async {
+        adapter.enqueue(const FakeHttpResponse(statusCode: 200, body: {}));
+        await expectLater(
+          repository.deletePantryItem(pantryItemId: 'pantry-1'),
+          throwsA(
+            isA<PantryFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Unable to delete this pantry item. Please try again.',
+            ),
+          ),
+        );
+        for (final type in const [
+          DioExceptionType.connectionError,
+          DioExceptionType.connectionTimeout,
+          DioExceptionType.sendTimeout,
+          DioExceptionType.receiveTimeout,
+          DioExceptionType.transformTimeout,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectDeleteFailure(PantryFailureType.connection);
+        }
+        for (final type in const [
+          DioExceptionType.badCertificate,
+          DioExceptionType.cancel,
+          DioExceptionType.unknown,
+        ]) {
+          adapter.enqueue(FakeHttpResponse.error(type));
+          await expectLater(
+            repository.deletePantryItem(pantryItemId: 'pantry-1'),
+            throwsA(
+              isA<PantryFailure>().having(
+                (failure) => failure.message,
+                'message',
+                'Unable to delete this pantry item. Please try again.',
+              ),
+            ),
+          );
+        }
+      },
+    );
+  });
 }

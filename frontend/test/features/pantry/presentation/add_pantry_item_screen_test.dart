@@ -525,6 +525,17 @@ class _FakePantryRepository implements PantryRepository {
         ) ??
         Future.error(PantryFailure.createBackend());
   }
+
+  @override
+  Future<PantryItem> updatePantryItem({
+    required String pantryItemId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deletePantryItem({required String pantryItemId}) =>
+      throw UnimplementedError();
 }
 
 PantryItem _item(Ingredient ingredient) => PantryItem(

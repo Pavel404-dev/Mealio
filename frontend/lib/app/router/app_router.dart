@@ -10,8 +10,10 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
-import '../../features/pantry/presentation/pantry_screen.dart';
+import '../../features/pantry/domain/pantry_item.dart';
 import '../../features/pantry/presentation/add_pantry_item_screen.dart';
+import '../../features/pantry/presentation/edit_pantry_item_screen.dart';
+import '../../features/pantry/presentation/pantry_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -123,6 +125,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pantry/add',
         builder: (context, state) => const AddPantryItemScreen(),
+      ),
+      GoRoute(
+        path: '/pantry/:pantryItemId/edit',
+        redirect: (context, state) {
+          final item = state.extra;
+          return item is PantryItem &&
+                  item.id == state.pathParameters['pantryItemId']
+              ? null
+              : '/pantry';
+        },
+        builder: (context, state) {
+          final item = state.extra;
+          final pantryItemId = state.pathParameters['pantryItemId'];
+          if (item is! PantryItem || item.id != pantryItemId) {
+            return const PantryScreen();
+          }
+
+          return EditPantryItemScreen(
+            key: ValueKey('edit-pantry-item-${item.id}'),
+            pantryItem: item,
+          );
+        },
       ),
     ],
   );
