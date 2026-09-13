@@ -1,0 +1,70 @@
+name: Feature
+description: Propose a focused, reviewable product or engineering change.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep one issue focused on one outcome. State unknowns explicitly.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What user or engineering outcome should this deliver, and why?
+      placeholder: As a ..., I want ..., so that ...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      description: List the behavior, layers, and documentation that this issue may change.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: List related work that must not be included in this issue.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Give observable, testable conditions for completion.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: required_tests
+    attributes:
+      label: Required tests
+      description: Name the automated checks or test cases required to demonstrate the criteria.
+      placeholder: Unit/API/widget tests, linting, migration checks, or N/A with a reason.
+    validations:
+      required: true
+  - type: textarea
+    id: manual_e2e
+    attributes:
+      label: Manual E2E expectations (future phase)
+      description: Manual E2E is not yet an active release gate. Record N/A, or state the future scenario to validate.
+      placeholder: N/A — manual E2E is a future phase.
+    validations:
+      required: true
+  - type: textarea
+    id: security_migration_impact
+    attributes:
+      label: Security and migration impact
+      description: State whether authentication, authorization, secrets, personal data, transactions, persistence, or an Alembic migration are affected. Write "None" when not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add links, mockups, API examples, constraints, or implementation notes.
