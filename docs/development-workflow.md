@@ -5,6 +5,14 @@ checks in the repository's current CI.
 
 ## Delivery path
 
+This is a human-owned repository process. Under the current repository policy,
+the user creates or modifies GitHub issues, creates branches, commits, pushes,
+opens PRs, performs review actions, and merges.
+
+Automated coding agents may inspect the provided working tree or branch, edit
+files, run verification, inspect diffs, and report proposed work. They must not
+perform the prohibited Git or GitHub mutations listed in [AGENTS.md](../AGENTS.md).
+
 1. Create a focused GitHub issue with the feature form. Define the goal, scope,
    exclusions, acceptance criteria, verification, and security or migration
    impact before implementation.
@@ -38,9 +46,9 @@ change, and run the relevant checks. Keep the working tree intentional: inspect
 PR.
 
 Codex Cloud may be used for a bounded implementation task when the issue gives
-clear scope, acceptance criteria, and verification expectations. It follows the
-same branch, commit, PR, Actions, and human-review gates as local work. Its
-output is proposed work, not a substitute for author ownership or review.
+clear scope, acceptance criteria, and verification expectations. The same agent
+restrictions apply. The user takes its proposed work through the delivery path,
+Actions checks, and human review described above.
 
 ## Model routing and token discipline
 
