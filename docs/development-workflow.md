@@ -82,7 +82,12 @@ Save tokens without weakening quality:
 
 ## Future delivery phases
 
-Staging, Android distribution, manual E2E, n8n automation, and TestFlight are
+See [Railway staging](staging.md) for the project IaC, manual secrets, plan/apply
+workflow, verification, rollback, and $10 monthly budget. Infrastructure is
+prepared in the repository; provisioning and deployment remain user actions.
+
+Staging activation, Android distribution, manual E2E, n8n automation, and
+TestFlight are
 future phases. They are not current merge gates or deployment commitments. Until
 then, record manual E2E as `N/A — manual E2E is a future phase` unless an issue
 is explicitly preparing a future scenario.
