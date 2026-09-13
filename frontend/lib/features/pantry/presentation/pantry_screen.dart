@@ -133,6 +133,7 @@ class _PantryList extends StatelessWidget {
         return Card(
           key: Key('pantry-item-${item.id}'),
           child: ListTile(
+            onTap: () => context.push('/pantry/${item.id}/edit', extra: item),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 18,
               vertical: 8,
@@ -143,12 +144,24 @@ class _PantryList extends StatelessWidget {
               child: Icon(Icons.kitchen_outlined),
             ),
             title: Text(item.ingredient.name),
-            subtitle: Text('${_formatQuantity(item.quantityG)} g'),
+            subtitle: Text(
+              item.expiresAt == null
+                  ? '${_formatQuantity(item.quantityG)} g'
+                  : '${_formatQuantity(item.quantityG)} g\n'
+                        'Expires ${_formatDate(item.expiresAt!)}',
+            ),
           ),
         );
       },
     );
   }
+}
+
+String _formatDate(DateTime date) {
+  final utcDate = date.toUtc();
+  return '${utcDate.year.toString().padLeft(4, '0')}-'
+      '${utcDate.month.toString().padLeft(2, '0')}-'
+      '${utcDate.day.toString().padLeft(2, '0')}';
 }
 
 String _formatQuantity(double quantity) {

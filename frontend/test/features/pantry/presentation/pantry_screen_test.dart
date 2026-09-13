@@ -29,6 +29,7 @@ void main() {
 
   Widget createScreen(Future<List<PantryItem>> Function() load) {
     return ProviderScope(
+      key: UniqueKey(),
       overrides: [pantryItemsProvider.overrideWith((ref) => load())],
       child: const MaterialApp(home: PantryScreen()),
     );
@@ -115,6 +116,60 @@ void main() {
     expect(find.byKey(const Key('pantry-list')), findsOneWidget);
     expect(find.text('Oats'), findsOneWidget);
     expect(find.text('250.5 g'), findsOneWidget);
+  });
+
+  testWidgets('shows expiry only for items that have one', (tester) async {
+    final expiringItem = PantryItem(
+      id: pantryItem.id,
+      userId: pantryItem.userId,
+      ingredientId: pantryItem.ingredientId,
+      quantityG: pantryItem.quantityG,
+      expiresAt: DateTime.parse('2026-10-01T00:00:00Z'),
+      createdAt: pantryItem.createdAt,
+      updatedAt: pantryItem.updatedAt,
+      ingredient: pantryItem.ingredient,
+    );
+    await tester.pumpWidget(createScreen(() async => [expiringItem]));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Expires 2026-10-01'), findsOneWidget);
+
+    await tester.pumpWidget(createScreen(() async => [pantryItem]));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Expires'), findsNothing);
+  });
+
+  testWidgets('tapping an item opens its edit route with the exact item', (
+    tester,
+  ) async {
+    PantryItem? routeItem;
+    final router = GoRouter(
+      initialLocation: '/pantry',
+      routes: [
+        GoRoute(path: '/pantry', builder: (_, _) => const PantryScreen()),
+        GoRoute(
+          path: '/pantry/:pantryItemId/edit',
+          builder: (_, state) {
+            routeItem = state.extra as PantryItem?;
+            return const Scaffold(key: Key('fake-edit-screen'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pantryItemsProvider.overrideWith((ref) async => [pantryItem]),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pantry-item-pantry-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('fake-edit-screen')), findsOneWidget);
+    expect(routeItem, same(pantryItem));
   });
 
   testWidgets('nullable nested values render safely', (tester) async {

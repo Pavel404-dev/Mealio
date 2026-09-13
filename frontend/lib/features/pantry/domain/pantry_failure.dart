@@ -2,6 +2,7 @@ enum PantryFailureType {
   connection,
   duplicate,
   ingredientUnavailable,
+  pantryItemUnavailable,
   validation,
   authentication,
   backend,
@@ -53,6 +54,13 @@ class PantryFailure implements Exception {
     );
   }
 
+  factory PantryFailure.pantryItemUnavailable() {
+    return const PantryFailure(
+      type: PantryFailureType.pantryItemUnavailable,
+      message: 'This pantry item is no longer available.',
+    );
+  }
+
   factory PantryFailure.validation() {
     return const PantryFailure(
       type: PantryFailureType.validation,
@@ -78,6 +86,34 @@ class PantryFailure implements Exception {
     return const PantryFailure(
       type: PantryFailureType.unexpected,
       message: 'Unable to add this ingredient. Please try again.',
+    );
+  }
+
+  factory PantryFailure.updateBackend() {
+    return const PantryFailure(
+      type: PantryFailureType.backend,
+      message: 'Unable to update this pantry item. Please try again.',
+    );
+  }
+
+  factory PantryFailure.updateUnexpected() {
+    return const PantryFailure(
+      type: PantryFailureType.unexpected,
+      message: 'Unable to update this pantry item. Please try again.',
+    );
+  }
+
+  factory PantryFailure.deleteBackend() {
+    return const PantryFailure(
+      type: PantryFailureType.backend,
+      message: 'Unable to delete this pantry item. Please try again.',
+    );
+  }
+
+  factory PantryFailure.deleteUnexpected() {
+    return const PantryFailure(
+      type: PantryFailureType.unexpected,
+      message: 'Unable to delete this pantry item. Please try again.',
     );
   }
 

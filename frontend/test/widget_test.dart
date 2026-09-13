@@ -23,11 +23,16 @@ void main() {
     updatedAt: DateTime.parse('2026-07-20T10:00:00Z'),
   );
 
-  Widget createApp(FakeAuthRepository repository) {
+  Widget createApp(
+    FakeAuthRepository repository, {
+    PantryRepository? pantryRepository,
+  }) {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(repository),
-        pantryRepositoryProvider.overrideWithValue(_RouterPantryRepository()),
+        pantryRepositoryProvider.overrideWithValue(
+          pantryRepository ?? _RouterPantryRepository(),
+        ),
         pantryItemsProvider.overrideWith((ref) async => []),
       ],
       child: const MealioApp(),
@@ -454,6 +459,197 @@ void main() {
     expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
   });
 
+  testWidgets(
+    'authenticated user can open edit from Pantry and return with Back',
+    (tester) async {
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => testAuthUser,
+      );
+      await tester.pumpWidget(createApp(repository));
+      await tester.pumpAndSettle();
+      final homeContext = tester.element(find.byKey(const Key('home-screen')));
+      GoRouter.of(homeContext).go('/pantry');
+      await tester.pumpAndSettle();
+      final pantryContext = tester.element(
+        find.byKey(const Key('pantry-screen')),
+      );
+      GoRouter.of(
+        pantryContext,
+      ).push('/pantry/pantry-1/edit', extra: _routerPantryItem);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('edit-pantry-item-screen')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('edit-pantry-back-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+    },
+  );
+
+  testWidgets('production edit route replaces state for a new pantry item', (
+    tester,
+  ) async {
+    final itemA = _routerPantryItemFor(
+      id: 'pantry-a',
+      ingredientId: 'ingredient-a',
+      quantityG: 125.5,
+      expiresAt: DateTime.parse('2026-10-01T18:30:00Z'),
+      ingredientName: 'Beans',
+    );
+    final itemB = _routerPantryItemFor(
+      id: 'pantry-b',
+      ingredientId: 'ingredient-b',
+      quantityG: 700,
+      expiresAt: DateTime.parse('2026-12-03T06:45:00Z'),
+      ingredientName: 'Rice',
+    );
+    final pantryRepository = _TrackingPantryRepository(
+      updateHandler: (_, _, _) async => itemB,
+    );
+    final authRepository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+    );
+
+    await tester.pumpWidget(
+      createApp(authRepository, pantryRepository: pantryRepository),
+    );
+    await tester.pumpAndSettle();
+    final homeContext = tester.element(find.byKey(const Key('home-screen')));
+    final router = GoRouter.of(homeContext);
+    router.go('/pantry/${itemA.id}/edit', extra: itemA);
+    await tester.pumpAndSettle();
+    router.go('/pantry/${itemB.id}/edit', extra: itemB);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rice'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('edit-pantry-quantity-field')),
+          )
+          .controller
+          ?.text,
+      '700',
+    );
+    expect(find.text('2026-12-03'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('edit-pantry-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(pantryRepository.updateCalls, 1);
+    expect(pantryRepository.lastPantryItemId, itemB.id);
+    expect(pantryRepository.lastQuantity, '700');
+    expect(pantryRepository.lastExpiry, itemB.expiresAt);
+    expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+    expect(find.byKey(const Key('edit-pantry-item-screen')), findsNothing);
+    expect(
+      find.byKey(const Key('edit-pantry-delete-confirm-dialog')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'completion for replaced production edit does not affect the new item',
+    (tester) async {
+      final itemA = _routerPantryItemFor(
+        id: 'pantry-a',
+        ingredientId: 'ingredient-a',
+        quantityG: 125.5,
+        expiresAt: DateTime.parse('2026-10-01T18:30:00Z'),
+        ingredientName: 'Beans',
+      );
+      final itemB = _routerPantryItemFor(
+        id: 'pantry-b',
+        ingredientId: 'ingredient-b',
+        quantityG: 700,
+        expiresAt: DateTime.parse('2026-12-03T06:45:00Z'),
+        ingredientName: 'Rice',
+      );
+      final updateA = Completer<PantryItem>();
+      final pantryRepository = _TrackingPantryRepository(
+        updateHandler: (id, _, _) =>
+            id == itemA.id ? updateA.future : Future.value(itemB),
+      );
+      final authRepository = FakeAuthRepository(
+        restoreHandler: () async => testAuthUser,
+      );
+
+      await tester.pumpWidget(
+        createApp(authRepository, pantryRepository: pantryRepository),
+      );
+      await tester.pumpAndSettle();
+      final homeContext = tester.element(find.byKey(const Key('home-screen')));
+      final router = GoRouter.of(homeContext);
+      router.go('/pantry/${itemA.id}/edit', extra: itemA);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('edit-pantry-save-button')));
+      await tester.pump();
+      expect(pantryRepository.updateCalls, 1);
+      expect(pantryRepository.lastPantryItemId, itemA.id);
+
+      router.go('/pantry/${itemB.id}/edit', extra: itemB);
+      await tester.pumpAndSettle();
+      updateA.complete(itemA);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('edit-pantry-item-screen')), findsOneWidget);
+      expect(find.byKey(const Key('pantry-screen')), findsNothing);
+      expect(find.text('Rice'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const Key('edit-pantry-quantity-field')),
+            )
+            .controller
+            ?.text,
+        '700',
+      );
+      expect(find.text('2026-12-03'), findsOneWidget);
+      expect(find.byKey(const Key('edit-pantry-error-message')), findsNothing);
+      expect(pantryRepository.updateCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('unauthenticated user cannot open pantry edit route', (
+    tester,
+  ) async {
+    final repository = FakeAuthRepository(restoreHandler: () async => null);
+    await openLoginScreen(tester, repository);
+    final context = tester.element(find.byKey(const Key('login-screen')));
+    GoRouter.of(context).go('/pantry/pantry-1/edit', extra: _routerPantryItem);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login-screen')), findsOneWidget);
+    expect(find.byKey(const Key('edit-pantry-item-screen')), findsNothing);
+  });
+
+  testWidgets(
+    'malformed pantry edit routes return authenticated user to Pantry',
+    (tester) async {
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => testAuthUser,
+      );
+      await tester.pumpWidget(createApp(repository));
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byKey(const Key('home-screen')));
+      GoRouter.of(context).go('/pantry/pantry-1/edit');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      final pantryContext = tester.element(
+        find.byKey(const Key('pantry-screen')),
+      );
+      GoRouter.of(
+        pantryContext,
+      ).go('/pantry/other-item/edit', extra: _routerPantryItem);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pantry-screen')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('authenticated user can open Add Pantry directly', (
     tester,
   ) async {
@@ -577,4 +773,109 @@ class _RouterPantryRepository implements PantryRepository {
       ingredient: _ingredient,
     );
   }
+
+  @override
+  Future<PantryItem> updatePantryItem({
+    required String pantryItemId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deletePantryItem({required String pantryItemId}) =>
+      throw UnimplementedError();
+}
+
+final _routerPantryItem = PantryItem(
+  id: 'pantry-1',
+  userId: 'user-1',
+  ingredientId: 'ingredient-1',
+  quantityG: 1,
+  expiresAt: null,
+  createdAt: DateTime.parse('2026-09-10T10:00:00Z'),
+  updatedAt: DateTime.parse('2026-09-10T10:00:00Z'),
+  ingredient: Ingredient(
+    id: 'ingredient-1',
+    name: 'Oats',
+    category: 'grain',
+    createdAt: DateTime.parse('2026-09-01T10:00:00Z'),
+    nutritionValue: null,
+  ),
+);
+
+Ingredient _routerIngredient({required String id, required String name}) {
+  return Ingredient(
+    id: id,
+    name: name,
+    category: 'grain',
+    createdAt: DateTime.parse('2026-09-01T10:00:00Z'),
+    nutritionValue: null,
+  );
+}
+
+PantryItem _routerPantryItemFor({
+  required String id,
+  required String ingredientId,
+  required String ingredientName,
+  required double quantityG,
+  required DateTime expiresAt,
+}) {
+  return PantryItem(
+    id: id,
+    userId: 'user-1',
+    ingredientId: ingredientId,
+    quantityG: quantityG,
+    expiresAt: expiresAt,
+    createdAt: DateTime.parse('2026-09-10T10:00:00Z'),
+    updatedAt: DateTime.parse('2026-09-10T10:00:00Z'),
+    ingredient: _routerIngredient(id: ingredientId, name: ingredientName),
+  );
+}
+
+typedef _RouterUpdateHandler =
+    Future<PantryItem> Function(
+      String pantryItemId,
+      String quantityG,
+      DateTime? expiresAt,
+    );
+
+class _TrackingPantryRepository implements PantryRepository {
+  _TrackingPantryRepository({this.updateHandler});
+
+  final _RouterUpdateHandler? updateHandler;
+  int updateCalls = 0;
+  String? lastPantryItemId;
+  String? lastQuantity;
+  DateTime? lastExpiry;
+
+  @override
+  Future<List<PantryItem>> getPantry() async => [];
+
+  @override
+  Future<PantryItem> updatePantryItem({
+    required String pantryItemId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) {
+    updateCalls++;
+    lastPantryItemId = pantryItemId;
+    lastQuantity = quantityG;
+    lastExpiry = expiresAt;
+    return updateHandler?.call(pantryItemId, quantityG, expiresAt) ??
+        Future.error(UnimplementedError());
+  }
+
+  @override
+  Future<List<Ingredient>> searchIngredients({String? search}) async => [];
+
+  @override
+  Future<PantryItem> addPantryItem({
+    required String ingredientId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) => Future.error(UnimplementedError());
+
+  @override
+  Future<void> deletePantryItem({required String pantryItemId}) =>
+      Future.error(UnimplementedError());
 }

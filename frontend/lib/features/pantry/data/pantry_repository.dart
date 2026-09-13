@@ -103,6 +103,53 @@ class PantryRepository {
     }
   }
 
+  Future<PantryItem> updatePantryItem({
+    required String pantryItemId,
+    required String quantityG,
+    DateTime? expiresAt,
+  }) async {
+    try {
+      final response = await _apiClient.patch<Object?>(
+        '/pantry/$pantryItemId',
+        data: {
+          'quantity_g': quantityG,
+          'expires_at': expiresAt?.toUtc().toIso8601String(),
+        },
+      );
+      if (response.statusCode != 200) {
+        throw const FormatException('Unexpected update status code');
+      }
+      return PantryItem.fromJson(response.data);
+    } on DioException catch (error) {
+      throw _mapDioException(error, operation: _PantryOperation.update);
+    } on FormatException {
+      throw PantryFailure.updateUnexpected();
+    } on PantryFailure {
+      rethrow;
+    } catch (_) {
+      throw PantryFailure.updateUnexpected();
+    }
+  }
+
+  Future<void> deletePantryItem({required String pantryItemId}) async {
+    try {
+      final response = await _apiClient.delete<Object?>(
+        '/pantry/$pantryItemId',
+      );
+      if (response.statusCode != 204) {
+        throw const FormatException('Unexpected delete status code');
+      }
+    } on DioException catch (error) {
+      throw _mapDioException(error, operation: _PantryOperation.delete);
+    } on FormatException {
+      throw PantryFailure.deleteUnexpected();
+    } on PantryFailure {
+      rethrow;
+    } catch (_) {
+      throw PantryFailure.deleteUnexpected();
+    }
+  }
+
   PantryFailure _mapDioException(
     DioException error, {
     _PantryOperation operation = _PantryOperation.list,
@@ -130,6 +177,22 @@ class PantryRepository {
               ? PantryFailure.authentication()
               : PantryFailure.searchBackend();
         }
+        if (operation == _PantryOperation.update) {
+          return switch (statusCode) {
+            401 => PantryFailure.authentication(),
+            404 => PantryFailure.pantryItemUnavailable(),
+            422 => PantryFailure.validation(),
+            _ => PantryFailure.updateBackend(),
+          };
+        }
+        if (operation == _PantryOperation.delete) {
+          return switch (statusCode) {
+            401 => PantryFailure.authentication(),
+            404 => PantryFailure.pantryItemUnavailable(),
+            422 => PantryFailure.deleteBackend(),
+            _ => PantryFailure.deleteBackend(),
+          };
+        }
         return PantryFailure.backend();
       case DioExceptionType.badCertificate:
       case DioExceptionType.cancel:
@@ -138,9 +201,11 @@ class PantryRepository {
           _PantryOperation.list => PantryFailure.unexpected(),
           _PantryOperation.search => PantryFailure.searchUnexpected(),
           _PantryOperation.create => PantryFailure.createUnexpected(),
+          _PantryOperation.update => PantryFailure.updateUnexpected(),
+          _PantryOperation.delete => PantryFailure.deleteUnexpected(),
         };
     }
   }
 }
 
-enum _PantryOperation { list, search, create }
+enum _PantryOperation { list, search, create, update, delete }
