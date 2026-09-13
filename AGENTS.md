@@ -41,6 +41,8 @@ GoRouter, Dio, and flutter_secure_storage.
 - Start every implementation task with a focused audit.
 - Prefer one carefully reviewed patch when practical.
 - Explain assumptions and security or migration tradeoffs before implementation.
+- See `docs/development-workflow.md` for human-owned process context; it does
+  not override the agent restrictions below.
 - Do not create or modify GitHub issues, remote branches, pull requests, comments,
   reviews, or merges. Do not commit or push. Provide commands for the user to run.
 - GitHub may be inspected read-only when relevant.
