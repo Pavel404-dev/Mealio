@@ -5,7 +5,16 @@
   "engines": {
     "node": ">=22"
   },
+  "scripts": {
+    "test": "node --import tsx --test railway.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "railway": "3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "tsx": "4.23.13",
+    "typescript": "5.8.3"
   }
 }

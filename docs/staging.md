@@ -28,10 +28,19 @@ services. See the [IaC reference](https://docs.railway.com/infrastructure-as-cod
 
 The pinned SDK's `postgres("Postgres")` helper selects PostgreSQL 18 and lets
 Railway provision the database and its volume. Local Compose and CI remain on
-PostgreSQL 17. On 2026-09-13, the complete Alembic chain was verified against a
-disposable `postgres:18` database using `upgrade head`, `current`, and `check`.
-The backend test suite and application queries were not rerun against PostgreSQL
-18; repeat compatibility verification if the helper version changes. See the
+PostgreSQL 17. On 2026-09-14, compatibility was verified locally against a new,
+disposable `postgres:18` container running PostgreSQL **18.6**. `alembic heads`
+reported the single head `b7e3c9a1d5f8`; `upgrade head`, `current`, and `check`
+passed with no schema drift. The full backend pytest suite ran in the backend
+Docker image (Python 3.12.14, pytest 8.3.4), with the checked-in tests mounted
+read-only and the repository's asyncio settings: **758 passed in 736.94 seconds**,
+with **82% total `app` coverage** (`--cov=app --cov-report=term-missing`).
+The database used `tmpfs`, synthetic credentials, an isolated internal Docker
+network, and no published ports or existing volumes. Both verification containers
+and their network were removed after the run; existing databases were untouched.
+This verifies PostgreSQL 18 application compatibility, not Railway networking or
+the Railway-specific database image. Repeat compatibility verification if the
+helper version changes. See the
 [SDK database helper](https://github.com/railwayapp/railway-ts-sdk/blob/v3.11.0/src/iac/sdk.ts).
 
 The backend service **Root Directory must be `backend`**. This makes the backend
@@ -163,10 +172,34 @@ dependency tree.
 
 ```bash
 npm ci --prefix .railway
+npm test --prefix .railway
+npm run typecheck --prefix .railway
 ```
 
 Node.js and the SDK are used only for Railway IaC evaluation and are not
-included in the backend Docker image.
+included in the backend Docker image. The offline tests invoke the exported
+`RailwayProgram` with `createRailwayContext({ environment: "staging" })` and check
+the actual project definition: both resources, PostgreSQL image and storage,
+GitHub source and build context, deploy settings, and unresolved variable
+references. They also require rejection of `production`, `development`,
+case-mismatched `Staging`, and an unset environment. No Railway login, linked
+project, API request, or secret values are needed. CI runs these tests and the
+TypeScript check after `npm ci`.
+
+The backend Docker CI job also runs the same runtime smoke check available locally:
+
+```bash
+docker build -t mealio-backend ./backend
+bash scripts/smoke-backend.sh mealio-backend
+```
+
+It starts the image's default command with synthetic `PORT=18765` and security
+configuration, waits up to 30 seconds for `GET /health` to return HTTP 200 with
+the expected JSON, and checks that PID 1 is Uvicorn with the expected port and
+startup arguments. It uses `--network none` and requires no database. An exit
+trap removes the container on success, failure, or interruption. This smoke
+check passed locally on 2026-09-14; `/health/db` remains a separate deployment
+check requiring the real staging database.
 
 The following steps create/apply remote infrastructure and are **not performed
 as part of this repository change**:

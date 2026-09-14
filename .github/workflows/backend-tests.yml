@@ -12,6 +12,30 @@ permissions:
   contents: read
 
 jobs:
+  railway-iac:
+    name: Validate Railway IaC offline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: .railway/package-lock.json
+
+      - name: Install locked IaC dependencies
+        run: npm ci --prefix .railway
+
+      - name: Evaluate and test Railway project graph offline
+        run: npm test --prefix .railway
+
+      - name: Check IaC TypeScript
+        run: npm run typecheck --prefix .railway
+
   backend-quality:
     name: Run backend quality checks
     runs-on: ubuntu-latest
@@ -94,10 +118,11 @@ jobs:
 
       - name: Run backend tests with coverage
         run: python -m pytest -v --cov=app --cov-report=term-missing
-        
+
   backend-docker-build:
-    name: Build backend Docker image
+    name: Build and smoke test backend Docker image
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Check out repository
@@ -105,3 +130,6 @@ jobs:
 
       - name: Build backend Docker image
         run: docker build -t mealio-backend ./backend
+
+      - name: Smoke test runtime PORT, health, and PID 1
+        run: bash scripts/smoke-backend.sh mealio-backend
