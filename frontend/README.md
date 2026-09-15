@@ -212,6 +212,10 @@ flutter test
 
 ## Debug APK
 
+For an internal APK targeting the staging backend, use the manual
+[Android staging QA workflow and installation guide](../docs/android-staging-qa.md).
+It includes source commit and checksum verification and debug-signing limitations.
+
 ```bash
 flutter build apk --debug \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000

@@ -1,0 +1,94 @@
+name: Android Staging QA APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-qa-apk:
+    name: Build internal staging QA debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+
+    steps:
+      - name: Check out source commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      # AGP 9.0.1 and the Gradle 9.1.0 wrapper support JDK 17.
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter 3.44.8
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.44.8"
+
+      - name: Configure Android toolchain
+        run: |
+          flutter config --jdk-dir="$JAVA_HOME"
+          flutter config --android-sdk="$ANDROID_HOME"
+          flutter --version
+          java -version
+          # Match Flutter 3.44.8 SDK/NDK defaults and AGP 9.0.1 build tools.
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;28.2.13676358" \
+            "cmake;3.22.1"
+
+      - name: Install locked frontend dependencies
+        run: |
+          git ls-files --error-unmatch pubspec.lock
+          flutter pub get --enforce-lockfile
+          git diff --exit-code HEAD -- pubspec.lock
+
+      - name: Check frontend formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze frontend
+        run: flutter analyze --no-pub
+
+      - name: Run frontend tests
+        run: flutter test --no-pub
+
+      - name: Build staging QA debug APK
+        run: |
+          flutter build apk --debug --no-pub \
+            --dart-define=API_BASE_URL=https://backend-staging-362e.up.railway.app
+
+      - name: Prepare and verify staging QA bundle
+        run: |
+          git diff --exit-code HEAD -- pubspec.lock
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          mkdir -p build/staging-qa
+          cp build/app/outputs/flutter-apk/app-debug.apk \
+            build/staging-qa/mealio-staging-qa-debug.apk
+          git rev-parse HEAD > build/staging-qa/SOURCE_COMMIT.txt
+          cd build/staging-qa
+          sha256sum mealio-staging-qa-debug.apk > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Upload internal staging QA bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: mealio-internal-staging-qa-debug-${{ github.sha }}
+          path: |
+            frontend/build/staging-qa/mealio-staging-qa-debug.apk
+            frontend/build/staging-qa/SOURCE_COMMIT.txt
+            frontend/build/staging-qa/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
