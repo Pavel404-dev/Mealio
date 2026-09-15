@@ -86,8 +86,12 @@ See [Railway staging](staging.md) for the project IaC, manual secrets, plan/appl
 workflow, verification, rollback, and $10 monthly budget. Infrastructure is
 prepared in the repository; provisioning and deployment remain user actions.
 
-Staging activation, Android distribution, manual E2E, n8n automation, and
-TestFlight are
-future phases. They are not current merge gates or deployment commitments. Until
-then, record manual E2E as `N/A — manual E2E is a future phase` unless an issue
-is explicitly preparing a future scenario.
+Internal Android staging QA APKs have a
+[manual build, download, and installation workflow](android-staging-qa.md).
+The user performs the first Actions run and downloaded-artifact verification
+after merge; local checks do not establish that the remote workflow passed.
+
+Staging activation, manual mobile E2E, n8n automation, production Android
+distribution, and TestFlight remain separate phases. They are not current merge
+gates or deployment commitments. Record manual E2E as
+`N/A — manual E2E is a future phase` unless an issue explicitly includes it.
