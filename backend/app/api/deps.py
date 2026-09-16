@@ -7,13 +7,14 @@ from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth_abuse import AuthAbuseAction, AuthAbuseDimension
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.security import decode_access_token, normalize_auth_abuse_identifier
 from app.db.session import get_db
 from app.integrations.email_verification_mailer import EmailVerificationMailer
 from app.integrations.email_verification_otp_mailer import (
     EmailVerificationOtpMailer,
 )
+from app.integrations.mailtrap_api_mailer import MailtrapApiMailer
 from app.integrations.openai_recipe_generation import OpenAIRecipeGenerationProvider
 from app.integrations.password_reset_mailer import PasswordResetMailer
 from app.integrations.password_reset_otp_mailer import PasswordResetOtpMailer
@@ -41,6 +42,37 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 _AUTH_ABUSE_LIMIT_DETAIL = "Too many authentication requests. Please try again later."
 _AUTH_ABUSE_UNAVAILABLE_DETAIL = "Authentication protection is unavailable"
+
+
+def _get_mailtrap_api_config(
+    settings: Settings,
+    *,
+    detail: str,
+) -> tuple[str, int, str] | None:
+    api_token = None
+    if settings.mailtrap_api_token is not None:
+        api_token = settings.mailtrap_api_token.get_secret_value().strip() or None
+
+    sandbox_id = settings.mailtrap_sandbox_id
+    if api_token is None and sandbox_id is None:
+        return None
+
+    from_email = (settings.smtp_from_email or "").strip()
+    if api_token is None or sandbox_id is None or not from_email:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+        )
+
+    try:
+        from_email = str(TypeAdapter(EmailStr).validate_python(from_email))
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+        ) from exc
+
+    return api_token, sandbox_id, from_email
 
 
 def get_direct_client_ip(request: Request) -> str:
@@ -130,9 +162,31 @@ def get_recipe_generation_provider() -> RecipeGenerationProvider:
 def get_email_verification_mailer() -> EmailVerificationMailer:
     settings = get_settings()
 
+    detail = "Email verification delivery is not configured"
+    mailtrap_config = _get_mailtrap_api_config(settings, detail=detail)
+    verification_url_base = (settings.email_verification_url_base or "").strip()
+    if mailtrap_config is not None:
+        if not verification_url_base:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=detail,
+            )
+        api_token, sandbox_id, from_email = mailtrap_config
+        try:
+            return MailtrapApiMailer(
+                api_token=api_token,
+                sandbox_id=sandbox_id,
+                from_email=from_email,
+                verification_url_base=verification_url_base,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=detail,
+            ) from exc
+
     host = (settings.smtp_host or "").strip()
     from_email = (settings.smtp_from_email or "").strip()
-    verification_url_base = (settings.email_verification_url_base or "").strip()
     username = (settings.smtp_username or "").strip() or None
     password = None
 
@@ -179,6 +233,16 @@ def get_email_verification_mailer() -> EmailVerificationMailer:
 def get_email_verification_otp_mailer() -> EmailVerificationOtpMailer:
     settings = get_settings()
 
+    detail = "Email verification code delivery is not configured"
+    mailtrap_config = _get_mailtrap_api_config(settings, detail=detail)
+    if mailtrap_config is not None:
+        api_token, sandbox_id, from_email = mailtrap_config
+        return MailtrapApiMailer(
+            api_token=api_token,
+            sandbox_id=sandbox_id,
+            from_email=from_email,
+        )
+
     host = (settings.smtp_host or "").strip()
     from_email = (settings.smtp_from_email or "").strip()
     username = (settings.smtp_username or "").strip() or None
@@ -220,9 +284,31 @@ def get_email_verification_otp_mailer() -> EmailVerificationOtpMailer:
 def get_password_reset_mailer() -> PasswordResetMailer:
     settings = get_settings()
 
+    detail = "Password reset delivery is not configured"
+    mailtrap_config = _get_mailtrap_api_config(settings, detail=detail)
+    reset_url_base = (settings.password_reset_url_base or "").strip()
+    if mailtrap_config is not None:
+        if not reset_url_base:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=detail,
+            )
+        api_token, sandbox_id, from_email = mailtrap_config
+        try:
+            return MailtrapApiMailer(
+                api_token=api_token,
+                sandbox_id=sandbox_id,
+                from_email=from_email,
+                reset_url_base=reset_url_base,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=detail,
+            ) from exc
+
     host = (settings.smtp_host or "").strip()
     from_email = (settings.smtp_from_email or "").strip()
-    reset_url_base = (settings.password_reset_url_base or "").strip()
     username = (settings.smtp_username or "").strip() or None
     password = None
 
@@ -268,6 +354,16 @@ def get_password_reset_mailer() -> PasswordResetMailer:
 
 def get_password_reset_otp_mailer() -> PasswordResetOtpMailer:
     settings = get_settings()
+
+    detail = "Password reset code delivery is not configured"
+    mailtrap_config = _get_mailtrap_api_config(settings, detail=detail)
+    if mailtrap_config is not None:
+        api_token, sandbox_id, from_email = mailtrap_config
+        return MailtrapApiMailer(
+            api_token=api_token,
+            sandbox_id=sandbox_id,
+            from_email=from_email,
+        )
 
     host = (settings.smtp_host or "").strip()
     from_email = (settings.smtp_from_email or "").strip()

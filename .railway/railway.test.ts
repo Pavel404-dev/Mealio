@@ -55,6 +55,22 @@ test("staging evaluates offline to the intended project graph", async () => {
           JWT_SECRET_KEY: { type: "sharedReference", name: "JWT_SECRET_KEY" },
           EMAIL_OTP_PEPPER: { type: "sharedReference", name: "EMAIL_OTP_PEPPER" },
           AUTH_ABUSE_PEPPER: { type: "sharedReference", name: "AUTH_ABUSE_PEPPER" },
+          MAILTRAP_API_TOKEN: {
+            type: "sharedReference",
+            name: "MAILTRAP_API_TOKEN",
+          },
+          MAILTRAP_SANDBOX_ID: {
+            type: "sharedReference",
+            name: "MAILTRAP_SANDBOX_ID",
+          },
+          SMTP_FROM_EMAIL: {
+            type: "sharedReference",
+            name: "SMTP_FROM_EMAIL",
+          },
+          EMAIL_VERIFICATION_URL_BASE: {
+            type: "sharedReference",
+            name: "EMAIL_VERIFICATION_URL_BASE",
+          },
         },
       },
     ],

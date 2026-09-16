@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_starttls: bool = True
 
+    mailtrap_api_token: SecretStr | None = None
+    mailtrap_sandbox_id: int | None = Field(default=None, ge=1)
+
     openai_api_key: SecretStr | None = None
     openai_model: str = Field(
         default="gpt-5.6-luna",
@@ -58,6 +61,13 @@ class Settings(BaseSettings):
         max_length=100,
     )
     ai_request_timeout_seconds: float = Field(default=30, gt=0, le=120)
+
+    @field_validator("mailtrap_sandbox_id", mode="before")
+    @classmethod
+    def normalize_empty_mailtrap_sandbox_id(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("email_otp_pepper", mode="before")
     @classmethod
