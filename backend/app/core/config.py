@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_starttls: bool = True
 
+    mailtrap_api_token: SecretStr | None = None
+    mailtrap_sandbox_id: int | None = Field(default=None, ge=1)
+
     openai_api_key: SecretStr | None = None
     openai_model: str = Field(
         default="gpt-5.6-luna",
