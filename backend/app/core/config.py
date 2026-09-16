@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     )
     ai_request_timeout_seconds: float = Field(default=30, gt=0, le=120)
 
+    @field_validator("mailtrap_sandbox_id", mode="before")
+    @classmethod
+    def normalize_empty_mailtrap_sandbox_id(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("email_otp_pepper", mode="before")
     @classmethod
     def normalize_empty_email_otp_pepper(cls, value: object) -> object:

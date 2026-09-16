@@ -84,10 +84,10 @@ does not run that Compose command.
 ## Runtime variables and manually supplied secrets
 
 Before the first apply, open **Project Settings → Shared Variables**, select
-`staging`, and add the three secret names below. The IaC uses `ctx.shared` to
-reference these existing values on the backend; it does not generate, read, or
-manage their plaintext. Unlike preserving a service variable that does not yet
-exist, shared references allow secrets to be supplied before service creation.
+`staging`, and add the required shared values below. The IaC uses `ctx.shared`
+to reference these existing values on the backend; it does not generate, read,
+or manage their plaintext. Unlike preserving a service variable that does not
+yet exist, shared references allow values to be supplied before service creation.
 Enter values only in Railway's private variable editor. Do not import the
 development defaults suggested from `.env.example`, put secrets in Git, or paste
 resolved variables into logs, issues, screenshots, or chat.
@@ -97,7 +97,11 @@ resolved variables into logs, issues, screenshots, or chat.
 | `DATABASE_URL` | Managed by IaC using PostgreSQL references below; do not supply a credential value manually |
 | `JWT_SECRET_KEY` | Required independent shared JWT signing secret, at least 32 characters |
 | `AUTH_ABUSE_PEPPER` | Required independent shared auth-abuse secret, at least 32 characters |
-| `EMAIL_OTP_PEPPER` | Independent shared OTP secret, at least 32 characters; required by this staging definition even when email delivery is disabled |
+| `EMAIL_OTP_PEPPER` | Independent shared OTP secret, at least 32 characters |
+| `MAILTRAP_API_TOKEN` | Secret API token from the controlled Mailtrap sandbox |
+| `MAILTRAP_SANDBOX_ID` | Numeric ID of the controlled Mailtrap sandbox |
+| `SMTP_FROM_EMAIL` | Sender address used by both Mailtrap API and SMTP delivery |
+| `EMAIL_VERIFICATION_URL_BASE` | Controlled staging-client destination for verification links |
 | `PORT` | Supplied at runtime by Railway; consumed by the Dockerfile command |
 
 Generate `JWT_SECRET_KEY`, `EMAIL_OTP_PEPPER`, and `AUTH_ABUSE_PEPPER` independently:
@@ -141,18 +145,17 @@ variables omitted from the desired state. No optional credentials are included.
 
 | Variable names | Behavior when omitted |
 | --- | --- |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM_EMAIL`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Without a configured mail transport, verification and password-reset emails cannot be delivered, including OTP emails. Delivery request endpoints return the existing configuration error. For authenticated SMTP, supply username and password together. |
-| `EMAIL_VERIFICATION_URL_BASE`, `PASSWORD_RESET_URL_BASE` | The corresponding link-based email flow is unavailable without its destination URL. OTP email flows do not require these URLs. Configure only destinations handled by a controlled staging client. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Optional SMTP fallback for environments where outbound SMTP is available. For authenticated SMTP, supply username and password together. |
+| `PASSWORD_RESET_URL_BASE` | Password-reset link delivery is unavailable without this destination URL. Password-reset OTP delivery does not require it. Configure only a destination handled by a controlled staging client. |
 | `OPENAI_API_KEY` | AI recipe preview generation is unavailable and returns the existing HTTP 503 configuration response. Other backend features and health checks remain available. |
 | `OPENAI_MODEL`, `AI_REQUEST_TIMEOUT_SECONDS` | The defaults in `app/core/config.py` apply when omitted; these variables only tune the optional AI integration. |
 
-Railway currently permits outbound SMTP only on Pro and above. Free, Trial, and
-Hobby block it; supplying SMTP credentials does not enable delivery there. The
-current backend has SMTP adapters. Hobby requires a transactional provider's
-HTTPS API, which needs a separate backend adapter implementation; configuring
-SMTP variables or just creating a provider account is insufficient. Keep mail
-delivery disabled for the $10 staging setup;
-do not upgrade to Pro just to enable SMTP. See
+Railway currently permits outbound SMTP only on Pro and above. Free, Trial,
+and Hobby block it, so staging uses the Mailtrap Sandbox HTTPS API configured by
+`MAILTRAP_API_TOKEN` and `MAILTRAP_SANDBOX_ID`. The backend prefers this API when
+both values are present and retains SMTP as a fallback for environments where
+outbound SMTP is available. This allows authentication email testing on Hobby
+without upgrading solely for SMTP access. See
 [outbound networking](https://docs.railway.com/networking/outbound-networking).
 
 Leave token lifetimes, OTP limits, JWT algorithm, and auth-abuse policies at their
@@ -212,9 +215,10 @@ as part of this repository change**:
    `production` environment by default; leave it unused. Do not duplicate an
    environment containing real data or secrets. See
    [environment creation](https://docs.railway.com/environments#create-an-environment).
-3. Create the three independent staging shared secrets as described above.
-   Keep SMTP and OpenAI unconfigured. Give Railway's GitHub integration access
-   to `Pavel404-dev/Mealio`. The reviewed change must reach `main` through the
+3. Create the three independent security secrets and the Mailtrap delivery
+   shared values described above. Keep SMTP credentials and OpenAI unconfigured.
+   Give Railway's GitHub integration access to `Pavel404-dev/Mealio`. The
+   reviewed change must reach `main` through the
    human-owned delivery workflow before the first backend deployment; the IaC
    deliberately does not deploy this uncommitted branch.
 4. From the repository root, run `railway login`, then `railway link`. Select

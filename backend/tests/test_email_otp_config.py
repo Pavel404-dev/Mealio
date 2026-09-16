@@ -52,6 +52,18 @@ def test_email_otp_config_rejects_jwt_secret_reuse() -> None:
         _settings(email_otp_pepper=JWT_SECRET)
 
 
+def test_mailtrap_sandbox_id_accepts_positive_integer() -> None:
+    settings = _settings(mailtrap_sandbox_id="4912297")
+
+    assert settings.mailtrap_sandbox_id == 4912297
+
+
+def test_mailtrap_sandbox_id_treats_blank_value_as_unconfigured() -> None:
+    settings = _settings(mailtrap_sandbox_id="   ")
+
+    assert settings.mailtrap_sandbox_id is None
+
+
 @pytest.mark.parametrize(
     ("field_name", "invalid_value"),
     [

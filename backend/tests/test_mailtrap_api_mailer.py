@@ -82,6 +82,64 @@ def test_mailtrap_api_mailer_sends_verification_otp(
     assert "2026-09-16 14:30 UTC" in str(payload["text"])
 
 
+def test_mailtrap_api_mailer_sends_password_reset_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(url: str, **kwargs: object) -> httpx.Response:
+        captured["url"] = url
+        captured.update(kwargs)
+        return httpx.Response(
+            200,
+            json={"success": True, "message_ids": ["message-id"]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("app.integrations.mailtrap_api_mailer.httpx.post", fake_post)
+
+    _mailer().send_password_reset(
+        recipient_email="person@example.com",
+        reset_token=SecretStr("password-reset-secret"),
+    )
+
+    assert captured["url"] == "https://sandbox.api.mailtrap.io/api/send/4912297"
+    payload = captured["json"]
+    assert isinstance(payload, dict)
+    assert payload["subject"] == "Reset your Mealio password"
+    assert payload["to"] == [{"email": "person@example.com"}]
+    assert "password-reset-secret" in str(payload["text"])
+    assert "https://staging.example.com/reset-password" in str(payload["text"])
+
+
+def test_mailtrap_api_mailer_sends_password_reset_otp(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(url: str, **kwargs: object) -> httpx.Response:
+        captured.update(kwargs)
+        return httpx.Response(
+            200,
+            json={"success": True, "message_ids": ["message-id"]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("app.integrations.mailtrap_api_mailer.httpx.post", fake_post)
+
+    _mailer().send_password_reset_otp(
+        recipient_email="person@example.com",
+        reset_code=SecretStr("654321"),
+        expires_at=datetime(2026, 9, 16, 15, 30, tzinfo=UTC),
+    )
+
+    payload = captured["json"]
+    assert isinstance(payload, dict)
+    assert payload["subject"] == "Reset your Mealio password"
+    assert "654321" in str(payload["text"])
+    assert "2026-09-16 15:30 UTC" in str(payload["text"])
+
+
 def test_mailtrap_api_mailer_rejects_naive_otp_expiration() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         _mailer().send_email_verification_otp(
