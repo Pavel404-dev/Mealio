@@ -443,6 +443,17 @@ class AuthRepository {
       return AuthFailure.passwordResetRequest();
     }
 
+    if ((requestKind == _AuthRequestKind.passwordResetConfirm ||
+            requestKind == _AuthRequestKind.passwordResetOtpConfirm) &&
+        statusCode == 400) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic> &&
+          data['detail'] ==
+              'New password must be different from the current password.') {
+        return AuthFailure.passwordResetPasswordReuse();
+      }
+    }
+
     if (requestKind == _AuthRequestKind.passwordResetConfirm) {
       if (statusCode == 400) {
         return AuthFailure.invalidPasswordReset();

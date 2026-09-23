@@ -11,6 +11,7 @@ enum AuthFailureType {
   passwordResetRequest,
   passwordResetInvalid,
   passwordResetValidation,
+  passwordResetPasswordReuse,
   passwordResetOtpRequest,
   passwordResetOtpInvalid,
   passwordResetOtpValidation,
@@ -110,6 +111,13 @@ class AuthFailure implements Exception {
     return const AuthFailure(
       type: AuthFailureType.passwordResetOtpRequest,
       message: 'Unable to send a password reset code. Please try again.',
+    );
+  }
+
+  factory AuthFailure.passwordResetPasswordReuse() {
+    return const AuthFailure(
+      type: AuthFailureType.passwordResetPasswordReuse,
+      message: 'New password must be different from the current password.',
     );
   }
 

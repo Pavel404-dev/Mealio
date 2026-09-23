@@ -57,6 +57,48 @@ void main() {
     );
   }
 
+  testWidgets('password reuse preserves form and allows retry', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      confirmPasswordResetHandler:
+          ({required token, required newPassword}) async {
+            if (newPassword == 'Mealio-password-123') {
+              throw AuthFailure.passwordResetPasswordReuse();
+            }
+          },
+    );
+    await openLoggedOutReset(tester, repository, token: 'test-reset-token');
+    await enterValidPassword(tester, 'Mealio-password-123');
+    final submit = find.byKey(const Key('reset-password-submit-button'));
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('New password must be different from the current password.'),
+      findsOneWidget,
+    );
+    expect(repository.logoutCalls, 0);
+    expect(find.text('Password reset link unavailable'), findsNothing);
+
+    for (final key in [
+      'reset-password-field',
+      'reset-password-confirm-field',
+    ]) {
+      final field = find.byKey(Key(key));
+      expect(
+        tester.widget<TextFormField>(field).controller?.text,
+        'Mealio-password-123',
+      );
+      await tester.enterText(field, 'Mealio-new-password-456');
+    }
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(repository.confirmPasswordResetCalls, 2);
+    expect(repository.lastPasswordResetToken, 'test-reset-token');
+    expect(find.text('Password reset complete'), findsOneWidget);
+  });
+
   testWidgets('login opens forgot-password flow', (tester) async {
     useLargeTestSurface(tester);
     final repository = FakeAuthRepository(restoreHandler: () async => null);

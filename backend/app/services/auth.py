@@ -466,6 +466,14 @@ class AuthService:
             if consumed_user_id != user.id:
                 raise invalid_reset_token_exception
 
+            if await run_in_threadpool(
+                verify_password, new_password, user.password_hash
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="New password must be different from the current password.",
+                )
+
             password_hash = await run_in_threadpool(
                 hash_password,
                 new_password,
@@ -507,10 +515,19 @@ class AuthService:
                 )
 
                 if confirmed:
+                    new_password = data.new_password.get_secret_value()
+                    if await run_in_threadpool(
+                        verify_password, new_password, user.password_hash
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="New password must be different from the current password.",
+                        )
+
                     now = datetime.now(UTC)
                     password_hash = await run_in_threadpool(
                         hash_password,
-                        data.new_password.get_secret_value(),
+                        new_password,
                     )
                     self.repository.set_password_hash(
                         user=user,

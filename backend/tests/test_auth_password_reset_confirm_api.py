@@ -103,6 +103,70 @@ def _assert_invalid_reset(response) -> None:
 
 
 @pytest.mark.asyncio
+async def test_confirm_reset_rejects_current_password_without_consuming_secret(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    mailer = FakePasswordResetMailer()
+    _use_fake_mailer(mailer)
+    registered_user = await _register_user(client)
+    user_id = uuid.UUID(registered_user["id"])
+    await _login(client)
+    secret = await _request_reset_token(client, mailer)
+    original_hash = await db_session.scalar(
+        select(User.password_hash).where(User.id == user_id)
+    )
+
+    response = await client.post(
+        CONFIRM_RESET_URL,
+        json={"token": secret, "new_password": OLD_PASSWORD},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "New password must be different from the current password."
+    }
+    db_session.expire_all()
+    record = (
+        await db_session.execute(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        )
+    ).scalar_one()
+    assert record.used_at is None
+    assert record.revoked_at is None
+    assert (
+        await db_session.scalar(select(User.password_hash).where(User.id == user_id))
+        == original_hash
+    )
+    sessions = (
+        (
+            await db_session.execute(
+                select(AuthSession).where(AuthSession.user_id == user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(sessions) == 1
+    assert sessions[0].revoked_at is None
+    await _login(client)
+
+    retry = await client.post(
+        CONFIRM_RESET_URL,
+        json={"token": secret, "new_password": NEW_PASSWORD},
+    )
+    assert retry.status_code == 204
+    await _login(client, password=NEW_PASSWORD)
+    db_session.expire_all()
+    record = (
+        await db_session.execute(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        )
+    ).scalar_one()
+    assert record.used_at is not None
+
+
+@pytest.mark.asyncio
 async def test_confirm_reset_changes_password_consumes_token_and_revokes_sessions(
     client: AsyncClient,
     db_session: AsyncSession,

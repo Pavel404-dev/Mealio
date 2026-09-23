@@ -62,6 +62,57 @@ void main() {
     );
   }
 
+  testWidgets('password reuse preserves form and allows retry', (tester) async {
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => null,
+      confirmPasswordResetOtpHandler:
+          ({required email, required code, required newPassword}) async {
+            if (newPassword == 'Mealio-password-123') {
+              throw AuthFailure.passwordResetPasswordReuse();
+            }
+          },
+    );
+    await openLoggedOutOtpReset(tester, repository);
+    await enterValidReset(tester, password: 'Mealio-password-123');
+    final submit = find.byKey(const Key('password-reset-otp-submit-button'));
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('New password must be different from the current password.'),
+      findsOneWidget,
+    );
+    expect(repository.logoutCalls, 0);
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('password-reset-otp-code-field')),
+          )
+          .controller
+          ?.text,
+      '001234',
+    );
+
+    for (final key in [
+      'password-reset-otp-password-field',
+      'password-reset-otp-confirm-password-field',
+    ]) {
+      final field = find.byKey(Key(key));
+      expect(
+        tester.widget<TextFormField>(field).controller?.text,
+        'Mealio-password-123',
+      );
+      await tester.enterText(field, 'Mealio-new-password-456');
+    }
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(repository.confirmPasswordResetOtpCalls, 2);
+    expect(repository.lastPasswordResetOtpCode, '001234');
+    expect(find.text('Password reset complete'), findsOneWidget);
+  });
+
   testWidgets('missing OTP reset email shows unavailable state', (
     tester,
   ) async {

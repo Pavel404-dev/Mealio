@@ -13,6 +13,7 @@ from app.main import app
 from app.models.auth_session import AuthSession
 from app.models.email_otp_challenge import EmailOtpChallenge, EmailOtpPurpose
 from app.models.password_reset_token import PasswordResetToken
+from app.models.user import User
 from app.repositories.password_reset_tokens import PasswordResetTokensRepository
 from app.services.email_otp_challenges import EmailOtpChallengeService
 
@@ -130,6 +131,78 @@ async def _request_link_token(
     response = await client.post(LINK_REQUEST_URL, json={"email": email})
     assert response.status_code == 202
     return mailer.calls[-1][1]
+
+
+@pytest.mark.asyncio
+async def test_confirm_reset_rejects_current_password_without_consuming_secret(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    mailer = FakePasswordResetOtpMailer()
+    _use_mailers(mailer)
+    registered_user = await _register_user(client)
+    user_id = uuid.UUID(registered_user["id"])
+    await _login(client)
+    secret = await _request_code(client, mailer)
+    original_hash = await db_session.scalar(
+        select(User.password_hash).where(User.id == user_id)
+    )
+
+    response = await client.post(
+        OTP_CONFIRM_URL,
+        json={
+            "email": "otp-reset-confirm@example.com",
+            "code": secret,
+            "new_password": OLD_PASSWORD,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "New password must be different from the current password."
+    }
+    db_session.expire_all()
+    record = (
+        await db_session.execute(
+            select(EmailOtpChallenge).where(EmailOtpChallenge.user_id == user_id)
+        )
+    ).scalar_one()
+    assert record.used_at is None
+    assert record.revoked_at is None
+    assert (
+        await db_session.scalar(select(User.password_hash).where(User.id == user_id))
+        == original_hash
+    )
+    sessions = (
+        (
+            await db_session.execute(
+                select(AuthSession).where(AuthSession.user_id == user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(sessions) == 1
+    assert sessions[0].revoked_at is None
+    await _login(client)
+
+    retry = await client.post(
+        OTP_CONFIRM_URL,
+        json={
+            "email": "otp-reset-confirm@example.com",
+            "code": secret,
+            "new_password": NEW_PASSWORD,
+        },
+    )
+    assert retry.status_code == 204
+    await _login(client, password=NEW_PASSWORD)
+    db_session.expire_all()
+    record = (
+        await db_session.execute(
+            select(EmailOtpChallenge).where(EmailOtpChallenge.user_id == user_id)
+        )
+    ).scalar_one()
+    assert record.used_at is not None
 
 
 @pytest.mark.asyncio
