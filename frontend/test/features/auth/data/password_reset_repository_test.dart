@@ -14,6 +14,84 @@ void main() {
     );
   }
 
+  for (final otp in [false, true]) {
+    test(
+      'password reuse mapping requires exact 400 detail (OTP: $otp)',
+      () async {
+        const detail =
+            'New password must be different from the current password.';
+        for (final entry in [
+          (400, {'detail': detail}, AuthFailureType.passwordResetPasswordReuse),
+          (
+            400,
+            {'detail': '$detail '},
+            otp
+                ? AuthFailureType.passwordResetOtpInvalid
+                : AuthFailureType.passwordResetInvalid,
+          ),
+          (
+            400,
+            {'detail': 'untrusted backend detail'},
+            otp
+                ? AuthFailureType.passwordResetOtpInvalid
+                : AuthFailureType.passwordResetInvalid,
+          ),
+          (
+            400,
+            {
+              'detail': [detail],
+            },
+            otp
+                ? AuthFailureType.passwordResetOtpInvalid
+                : AuthFailureType.passwordResetInvalid,
+          ),
+          (
+            400,
+            <String, Object>{},
+            otp
+                ? AuthFailureType.passwordResetOtpInvalid
+                : AuthFailureType.passwordResetInvalid,
+          ),
+          (
+            422,
+            {'detail': detail},
+            otp
+                ? AuthFailureType.passwordResetOtpValidation
+                : AuthFailureType.passwordResetValidation,
+          ),
+          (500, {'detail': detail}, AuthFailureType.unexpected),
+        ]) {
+          final adapter = FakeHttpClientAdapter()
+            ..enqueue(FakeHttpResponse(statusCode: entry.$1, body: entry.$2));
+          final repository = createRepository(adapter);
+          await expectLater(
+            otp
+                ? repository.confirmPasswordResetOtp(
+                    email: 'reset@example.com',
+                    code: '001234',
+                    newPassword: 'Mealio-password-123',
+                  )
+                : repository.confirmPasswordReset(
+                    token: 'test-reset-token',
+                    newPassword: 'Mealio-password-123',
+                  ),
+            throwsA(
+              isA<AuthFailure>()
+                  .having((failure) => failure.type, 'type', entry.$3)
+                  .having(
+                    (failure) => failure.message,
+                    'safe message',
+                    entry.$3 == AuthFailureType.passwordResetPasswordReuse
+                        ? equals(detail)
+                        : isNot(anyOf(contains(detail), contains('untrusted'))),
+                  ),
+            ),
+          );
+        }
+      },
+    );
+  }
+
   test(
     'password reset request accepts generic 202 and normalizes email',
     () async {
