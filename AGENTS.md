@@ -52,6 +52,22 @@ GoRouter, Dio, and flutter_secure_storage.
   or private configuration. Clearly synthetic, test-only values are allowed when
   required for deterministic tests and must be unusable outside test environments.
 
+## Code review rules
+
+- Report only actionable defects introduced or exposed by the change. Give the
+  narrowest relevant line range, a concrete failure path, its impact, and a safe
+  remediation. Avoid style-only findings and duplicates of automated checks.
+- Treat API routes, request and response fields, HTTP statuses, token semantics,
+  and Flutter failure mappings as compatibility surfaces. Preserve the existing
+  contract or introduce an explicit versioned migration path.
+- For authentication flows, require successful security mutations and one-time
+  credential consumption to commit atomically. Recoverable failures must roll
+  back without consuming valid reset tokens, OTP challenges, or attempt state.
+- Verify every user-owned read and mutation remains scoped to the authenticated
+  user, including repository queries, row locks, retries, and concurrent paths.
+- Require regression tests for the concrete failure path and a safe
+  counterexample. Green CI alone is not evidence that the change is correct.
+
 ## Backend conventions
 
 - Preserve the layered flow: endpoint -> service -> repository -> model/schema.
