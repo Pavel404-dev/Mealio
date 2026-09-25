@@ -9,10 +9,13 @@ Use disposable synthetic QA accounts and data.
 
 ## Build contract
 
-The workflow has only `workflow_dispatch`, with no automatic push or PR trigger,
-and limits `GITHUB_TOKEN` to `contents: read`. It checks out the full source
-commit selected by the manual run and disables persisted checkout credentials.
-Existing backend and frontend CI workflows remain separate.
+The workflow runs automatically when a push to `main` changes `frontend/**`
+or this workflow file, including matching PR merges. `workflow_dispatch` also
+allows a manual build. Backend-only changes do not trigger another APK build.
+The workflow limits `GITHUB_TOKEN` to `contents: read`, checks out the triggering
+commit, and disables persisted checkout credentials. Existing backend and
+frontend CI workflows remain separate. APK builds and Railway deployments can
+run in parallel; wait for the staging backend to be healthy before testing.
 
 | Tool | Version / source |
 | --- | --- |
@@ -59,23 +62,20 @@ versions, and Actions major-version tags can change between runs. The checksum
 identifies the APK from one particular run; it does not establish reproducibility
 across separate builds.
 
-## Run manually after merge
+## Build after merging frontend changes
 
-These are user actions after the reviewed workflow has been merged into `main`.
-[GitHub requires the workflow on the default branch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
+After a matching merge into `main`, open the repository's **Actions** tab and
+select **Android Staging QA APK**. Open the run for that merge and confirm its
+full commit SHA is the revision intended for QA. Wait for formatting, analysis,
+tests, APK build, checksum verification, and upload to succeed. If a step fails,
+inspect its logs; do not substitute an artifact from another run.
+
+For an optional manual build, click **Run workflow**, select `main`, and start
+the run. [GitHub requires the workflow on the default branch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
 for manual dispatch; the operator needs repository write access.
 
-1. Open the repository's **Actions** tab and select **Android Staging QA APK**.
-2. Click **Run workflow**, select `main`, and click **Run workflow** to start it.
-3. Open the new run and record its full commit SHA. Confirm that this is the
-   reviewed source revision intended for QA.
-4. Wait for formatting, analysis, tests, APK build, checksum verification, and
-   upload to finish successfully. If a step fails, inspect that run's logs;
-   do not substitute an artifact from another run.
-
-Creating the workflow and building locally do not prove that GitHub Actions has
-passed. The first successful manual run and downloaded-artifact verification
-remain post-merge checks for the user.
+The first successful automatic run and downloaded-artifact verification remain
+post-merge checks. The APK must still be downloaded and installed on the phone.
 
 ## Download and verify
 

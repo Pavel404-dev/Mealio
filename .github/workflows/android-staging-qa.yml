@@ -1,6 +1,12 @@
 name: Android Staging QA APK
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - ".github/workflows/android-staging-qa.yml"
   workflow_dispatch:
 
 permissions:
