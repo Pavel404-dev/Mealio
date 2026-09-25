@@ -284,3 +284,42 @@ This frontend authentication scope does not implement:
 - shopping lists;
 - nutrition analytics;
 - premium design, animations, or mascot.
+
+## Localization
+
+English, Russian, Ukrainian and Slovak are generated from `lib/l10n/app_*.arb`
+by Flutter `gen_l10n`. Running `flutter pub get` generates ignored Dart files in
+`lib/l10n/generated`; do not edit those files manually.
+
+The app chooses the first supported language in the system preference list
+(regional variants match by language), with English as the fallback. The language
+menu on Login and in the Home AppBar applies an override immediately. “System
+language” removes it and resumes following system changes. The override uses
+its own secure-storage key, `mealio_locale_override`, independent of token
+storage and logout. Read failures fall back to system selection; write failures
+keep the current selection for the session and show a localized notification.
+Writes are serialized and a delayed restore cannot overwrite a newer choice.
+
+Language does not determine country, currency, units or time zone. Pantry
+quantities remain grams, date-only displays retain ISO dates, and server ingredient
+names/categories remain unchanged. Repository failure messages stay compatible;
+presentation maps typed failures and pantry operation context to localized text.
+
+When adding UI text:
+
+1. Add a meaningful key in every ARB (en, ru, uk, sk).
+2. Declare matching typed placeholders in each catalog. Use ICU plurals for
+   counts, and pass opaque server/user strings as values rather than keys.
+3. Resolve text during widget build; retain state or typed failures rather than
+   storing translated strings.
+4. Run the catalog check, generation and affected tests:
+
+```bash
+dart run tool/check_l10n.dart
+flutter gen-l10n
+flutter test test/core/localization
+```
+
+The frontend CI runs the catalog check and generation before analysis/tests.
+The check rejects missing/extra/empty translations, inconsistent placeholder
+contracts and malformed ICU structures; `gen_l10n` validates generator syntax.

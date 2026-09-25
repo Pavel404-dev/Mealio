@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 import '../domain/auth_user.dart';
@@ -28,10 +29,8 @@ enum _ConfirmationStatus { idle, loading, success, invalid, error, syncError }
 class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   static const int _maximumTokenLength = 512;
   static final RegExp _otpPattern = RegExp(r'^[0-9]{6}$');
-  static const String _resendSuccessMessage =
-      'If verification is needed, instructions have been sent.';
-  static const String _otpRequestSuccessMessage =
-      'If verification is needed, a code has been sent.';
+  String get _resendSuccessMessage => context.l10n.verificationInstructionsSent;
+  String get _otpRequestSuccessMessage => context.l10n.verificationCodeSent;
 
   final TextEditingController _otpController = TextEditingController();
   final FocusNode _otpFocusNode = FocusNode();
@@ -40,11 +39,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   bool _isRefreshingStatus = false;
   bool _isRequestingOtp = false;
   bool _isConfirmingOtp = false;
-  String? _resendMessage;
+  bool _resendMessageVisible = false;
   AuthFailure? _resendFailure;
-  String? _statusMessage;
+  bool _statusMessageVisible = false;
   AuthFailure? _statusFailure;
-  String? _otpRequestMessage;
+  bool _otpRequestMessageVisible = false;
   AuthFailure? _otpRequestFailure;
   AuthFailure? _otpConfirmationFailure;
 
@@ -97,7 +96,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     setState(() {
       _verificationMode = _VerificationMode.otp;
-      _otpRequestMessage = null;
+      _otpRequestMessageVisible = false;
       _otpRequestFailure = null;
       _otpConfirmationFailure = null;
     });
@@ -118,7 +117,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     _otpFocusNode.unfocus();
     setState(() {
       _verificationMode = _VerificationMode.link;
-      _otpRequestMessage = null;
+      _otpRequestMessageVisible = false;
       _otpRequestFailure = null;
       _otpConfirmationFailure = null;
     });
@@ -131,7 +130,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     setState(() {
       _isRequestingOtp = true;
-      _otpRequestMessage = null;
+      _otpRequestMessageVisible = false;
       _otpRequestFailure = null;
     });
 
@@ -146,7 +145,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
       setState(() {
         _isRequestingOtp = false;
-        _otpRequestMessage = _otpRequestSuccessMessage;
+        _otpRequestMessageVisible = true;
       });
       _otpFocusNode.requestFocus();
     } on AuthFailure catch (failure) {
@@ -369,7 +368,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     setState(() {
       _isResending = true;
-      _resendMessage = null;
+      _resendMessageVisible = false;
       _resendFailure = null;
     });
 
@@ -384,7 +383,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
       setState(() {
         _isResending = false;
-        _resendMessage = _resendSuccessMessage;
+        _resendMessageVisible = true;
       });
     } on AuthFailure catch (failure) {
       if (!mounted) {
@@ -414,7 +413,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     setState(() {
       _isRefreshingStatus = true;
-      _statusMessage = null;
+      _statusMessageVisible = false;
       _statusFailure = null;
     });
 
@@ -430,7 +429,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       setState(() {
         _isRefreshingStatus = false;
         if (user?.emailVerified != true) {
-          _statusMessage = 'Your email is not verified yet.';
+          _statusMessageVisible = true;
         }
       });
     } on AuthFailure catch (failure) {
@@ -538,14 +537,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.mark_email_unread_outlined),
-        label: Text(_isResending ? 'Sending…' : 'Resend email'),
+        label: Text(
+          _isResending ? context.l10n.sending : context.l10n.resendEmail,
+        ),
       ),
       const SizedBox(height: 12),
       OutlinedButton.icon(
         key: const Key('verify-email-use-code-button'),
         onPressed: _showOtpMode,
         icon: const Icon(Icons.password_rounded),
-        label: const Text('Verify with code'),
+        label: Text(context.l10n.verifyWithCode),
       ),
       if (isAuthenticated) ...[
         const SizedBox(height: 12),
@@ -559,7 +560,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text("I've verified my email"),
+              : Text(context.l10n.alreadyVerified),
         ),
       ],
       const SizedBox(height: 12),
@@ -567,7 +568,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         key: const Key('verify-email-continue-button'),
         onPressed: () => _continue(isAuthenticated: isAuthenticated),
         child: Text(
-          isAuthenticated ? 'Continue to Mealio' : 'Continue to login',
+          isAuthenticated
+              ? context.l10n.continueToMealio
+              : context.l10n.continueToLogin,
         ),
       ),
     ];
@@ -575,9 +578,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return _buildShell(
       context,
       icon: Icons.mark_email_read_outlined,
-      title: 'Verify your email',
-      subtitle:
-          'Check your inbox and follow the verification link to confirm your email address.',
+      title: context.l10n.verifyEmail,
+      subtitle: context.l10n.verifyEmailDescription,
       children: [
         Container(
           width: double.infinity,
@@ -591,7 +593,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Verification email',
+                context.l10n.verificationEmail,
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 6),
@@ -605,16 +607,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         ),
         const SizedBox(height: 18),
         Text(
-          'The initial verification email is requested automatically when your account is created. You only need Resend if you want another verification email.',
+          context.l10n.verificationInitialHint,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        if (_resendMessage != null) ...[
+        if (_resendMessageVisible) ...[
           const SizedBox(height: 18),
           _buildInfoMessage(
             context,
             key: const Key('verify-email-resend-success'),
             icon: Icons.info_outline_rounded,
-            message: _resendMessage!,
+            message: _resendSuccessMessage,
           ),
         ],
         if (_resendFailure != null) ...[
@@ -622,16 +624,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           _buildErrorMessage(
             context,
             key: const Key('verify-email-resend-error'),
-            message: _resendFailure!.message,
+            message: _resendFailure!.localized(context.l10n),
           ),
         ],
-        if (_statusMessage != null) ...[
+        if (_statusMessageVisible) ...[
           const SizedBox(height: 18),
           _buildInfoMessage(
             context,
             key: const Key('verify-email-status-message'),
             icon: Icons.schedule_rounded,
-            message: _statusMessage!,
+            message: context.l10n.emailNotVerified,
           ),
         ],
         if (_statusFailure != null) ...[
@@ -639,7 +641,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           _buildErrorMessage(
             context,
             key: const Key('verify-email-status-error'),
-            message: _statusFailure!.message,
+            message: _statusFailure!.localized(context.l10n),
           ),
         ],
         const SizedBox(height: 28),
@@ -659,8 +661,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return _buildShell(
       context,
       icon: Icons.password_rounded,
-      title: 'Verify with code',
-      subtitle: 'Request a six-digit verification code, then enter it below.',
+      title: context.l10n.verifyWithCode,
+      subtitle: context.l10n.verifyCodeDescription,
       children: [
         Container(
           width: double.infinity,
@@ -674,7 +676,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Email address',
+                context.l10n.emailAddress,
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 6),
@@ -698,15 +700,19 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.mark_email_unread_outlined),
-          label: Text(_isRequestingOtp ? 'Sending…' : 'Send verification code'),
+          label: Text(
+            _isRequestingOtp
+                ? context.l10n.sending
+                : context.l10n.sendVerificationCode,
+          ),
         ),
-        if (_otpRequestMessage != null) ...[
+        if (_otpRequestMessageVisible) ...[
           const SizedBox(height: 18),
           _buildInfoMessage(
             context,
             key: const Key('verify-email-otp-request-success'),
             icon: Icons.info_outline_rounded,
-            message: _otpRequestMessage!,
+            message: _otpRequestSuccessMessage,
           ),
         ],
         if (_otpRequestFailure != null) ...[
@@ -714,7 +720,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           _buildErrorMessage(
             context,
             key: const Key('verify-email-otp-request-error'),
-            message: _otpRequestFailure!.message,
+            message: _otpRequestFailure!.localized(context.l10n),
           ),
         ],
         const SizedBox(height: 22),
@@ -743,9 +749,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               unawaited(_confirmOtp(email));
             }
           },
-          decoration: const InputDecoration(
-            labelText: 'Six-digit verification code',
-            hintText: '000000',
+          decoration: InputDecoration(
+            labelText: context.l10n.verificationCodeLabel,
+            hintText: context.l10n.otpHint,
             prefixIcon: Icon(Icons.pin_outlined),
           ),
         ),
@@ -754,7 +760,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           _buildErrorMessage(
             context,
             key: const Key('verify-email-otp-confirm-error'),
-            message: _otpConfirmationFailure!.message,
+            message: _otpConfirmationFailure!.localized(context.l10n),
           ),
         ],
         const SizedBox(height: 18),
@@ -770,13 +776,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Confirm code'),
+              : Text(context.l10n.confirmCode),
         ),
         const SizedBox(height: 12),
         OutlinedButton(
           key: const Key('verify-email-use-link-button'),
           onPressed: operationInProgress ? null : _showLinkMode,
-          child: const Text('Use verification link'),
+          child: Text(context.l10n.useVerificationLink),
         ),
         const SizedBox(height: 12),
         TextButton(
@@ -785,7 +791,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ? null
               : () => _continue(isAuthenticated: isAuthenticated),
           child: Text(
-            isAuthenticated ? 'Continue to Mealio' : 'Continue to login',
+            isAuthenticated
+                ? context.l10n.continueToMealio
+                : context.l10n.continueToLogin,
           ),
         ),
       ],
@@ -802,8 +810,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         return _buildShell(
           context,
           icon: Icons.verified_outlined,
-          title: 'Verifying your email',
-          subtitle: 'Mealio is securely confirming your verification link.',
+          title: context.l10n.verifyingEmail,
+          subtitle: context.l10n.verifyingEmailDescription,
           children: const [
             SizedBox(height: 12),
             Center(
@@ -822,17 +830,20 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       case _ConfirmationStatus.invalid:
         return _buildConfirmationError(
           context,
-          title: 'Verification link unavailable',
-          message: AuthFailure.invalidEmailVerification().message,
+          title: context.l10n.verificationLinkUnavailable,
+          message: AuthFailure.invalidEmailVerification().localized(
+            context.l10n,
+          ),
           isAuthenticated: isAuthenticated,
           retryable: false,
         );
       case _ConfirmationStatus.error:
         return _buildConfirmationError(
           context,
-          title: 'Could not verify email',
-          message:
-              _confirmationFailure?.message ?? AuthFailure.unexpected().message,
+          title: context.l10n.couldNotVerifyEmail,
+          message: (_confirmationFailure ?? AuthFailure.unexpected()).localized(
+            context.l10n,
+          ),
           isAuthenticated: isAuthenticated,
           retryable: _isUsableToken(widget.token ?? ''),
         );
@@ -840,16 +851,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         return _buildShell(
           context,
           icon: Icons.verified_rounded,
-          title: 'Email verified',
-          subtitle:
-              'Your verification was accepted, but Mealio could not refresh your signed-in account.',
+          title: context.l10n.emailVerified,
+          subtitle: context.l10n.verificationSyncError,
           children: [
             _buildInfoMessage(
               context,
               key: const Key('verify-email-sync-message'),
               icon: Icons.sync_problem_rounded,
-              message:
-                  'Your email is verified on the server. Refresh your account state before continuing.',
+              message: context.l10n.verificationSyncHint,
             ),
             const SizedBox(height: 24),
             FilledButton(
@@ -862,14 +871,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Refresh account'),
+                  : Text(context.l10n.refreshAccount),
             ),
             const SizedBox(height: 12),
             TextButton(
               key: const Key('verify-email-sync-continue-button'),
               onPressed: () => _continue(isAuthenticated: isAuthenticated),
               child: Text(
-                isAuthenticated ? 'Continue to Mealio' : 'Go to login',
+                isAuthenticated
+                    ? context.l10n.continueToMealio
+                    : context.l10n.goToLogin,
               ),
             ),
           ],
@@ -887,9 +898,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return _buildShell(
       context,
       icon: Icons.verified_rounded,
-      title: 'Email verified',
-      subtitle:
-          'Your email address is confirmed. You can continue using Mealio.',
+      title: context.l10n.emailVerified,
+      subtitle: context.l10n.emailVerifiedDescription,
       children: [
         if (email != null) ...[
           _buildInfoMessage(
@@ -903,7 +913,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         FilledButton(
           key: const Key('verify-email-success-continue-button'),
           onPressed: () => _continue(isAuthenticated: isAuthenticated),
-          child: Text(isAuthenticated ? 'Continue to Mealio' : 'Go to login'),
+          child: Text(
+            isAuthenticated
+                ? context.l10n.continueToMealio
+                : context.l10n.goToLogin,
+          ),
         ),
       ],
     );
@@ -916,14 +930,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return _buildShell(
       context,
       icon: Icons.link_off_rounded,
-      title: 'Verification link unavailable',
-      subtitle:
-          'Open the verification link from your email, or return to Mealio and request another email.',
+      title: context.l10n.verificationLinkUnavailable,
+      subtitle: context.l10n.missingVerificationLink,
       children: [
         FilledButton(
           key: const Key('verify-email-missing-continue-button'),
           onPressed: () => _continue(isAuthenticated: isAuthenticated),
-          child: Text(isAuthenticated ? 'Continue to Mealio' : 'Go to login'),
+          child: Text(
+            isAuthenticated
+                ? context.l10n.continueToMealio
+                : context.l10n.goToLogin,
+          ),
         ),
       ],
     );
@@ -957,14 +974,18 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               });
               unawaited(_confirmEmail(token));
             },
-            child: const Text('Try again'),
+            child: Text(context.l10n.tryAgain),
           ),
           const SizedBox(height: 12),
         ],
         TextButton(
           key: const Key('verify-email-error-continue-button'),
           onPressed: () => _continue(isAuthenticated: isAuthenticated),
-          child: Text(isAuthenticated ? 'Continue to Mealio' : 'Go to login'),
+          child: Text(
+            isAuthenticated
+                ? context.l10n.continueToMealio
+                : context.l10n.goToLogin,
+          ),
         ),
       ],
     );

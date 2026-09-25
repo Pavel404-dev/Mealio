@@ -9,6 +9,7 @@ import 'package:mealio/features/pantry/domain/pantry_failure.dart';
 import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/edit_pantry_item_screen.dart';
 import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
+import 'package:mealio/l10n/generated/app_localizations.dart';
 
 void main() {
   final item = _item(expiresAt: DateTime.parse('2026-10-01T00:00:00Z'));
@@ -632,7 +633,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [pantryRepositoryProvider.overrideWithValue(repository)],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -686,7 +691,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [pantryRepositoryProvider.overrideWithValue(repository)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -804,8 +813,11 @@ class _RoutedEditScreenState extends State<_RoutedEditScreen> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      MaterialApp.router(routerConfig: _router);
+  Widget build(BuildContext context) => MaterialApp.router(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: _router,
+  );
 }
 
 Future<void> _selectDate(WidgetTester tester, DateTime selected) async {

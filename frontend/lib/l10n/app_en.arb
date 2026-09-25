@@ -1,0 +1,682 @@
+{
+  "@@locale": "en",
+  "emailRequired": "Email is required.",
+  "@emailRequired": {
+    "description": "emailRequired"
+  },
+  "emailInvalid": "Enter a valid email address.",
+  "@emailInvalid": {
+    "description": "emailInvalid"
+  },
+  "passwordRequired": "Password is required.",
+  "@passwordRequired": {
+    "description": "passwordRequired"
+  },
+  "passwordWhitespace": "Password cannot contain only whitespace.",
+  "@passwordWhitespace": {
+    "description": "passwordWhitespace"
+  },
+  "passwordMinimum": "Password must be at least {count, plural, one{{count} character} other{{count} characters}}.",
+  "@passwordMinimum": {
+    "description": "passwordMinimum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordMaximum": "Password must be {count, plural, one{{count} character} other{{count} characters}} or fewer.",
+  "@passwordMaximum": {
+    "description": "passwordMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fullNameMaximum": "Full name must be {count, plural, one{{count} character} other{{count} characters}} or fewer.",
+  "@fullNameMaximum": {
+    "description": "fullNameMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordConfirmRequired": "Please confirm your password.",
+  "@passwordConfirmRequired": {
+    "description": "passwordConfirmRequired"
+  },
+  "passwordMismatch": "Passwords do not match.",
+  "@passwordMismatch": {
+    "description": "passwordMismatch"
+  },
+  "welcome": "Welcome to Mealio",
+  "@welcome": {
+    "description": "welcome"
+  },
+  "loginDescription": "Sign in to manage your pantry, recipes and meal plans.",
+  "@loginDescription": {
+    "description": "loginDescription"
+  },
+  "accountCreated": "Account created successfully. You can now sign in.",
+  "@accountCreated": {
+    "description": "accountCreated"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "email"
+  },
+  "emailHint": "you@example.com",
+  "@emailHint": {
+    "description": "emailHint"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "password"
+  },
+  "showPassword": "Show password",
+  "@showPassword": {
+    "description": "showPassword"
+  },
+  "hidePassword": "Hide password",
+  "@hidePassword": {
+    "description": "hidePassword"
+  },
+  "forgotPassword": "Forgot password?",
+  "@forgotPassword": {
+    "description": "forgotPassword"
+  },
+  "login": "Login",
+  "@login": {
+    "description": "login"
+  },
+  "newAccount": "New to Mealio? Create an account",
+  "@newAccount": {
+    "description": "newAccount"
+  },
+  "backToLogin": "Back to login",
+  "@backToLogin": {
+    "description": "backToLogin"
+  },
+  "createAccountTitle": "Create your Mealio account",
+  "@createAccountTitle": {
+    "description": "createAccountTitle"
+  },
+  "createAccountDescription": "Create an account to start building your pantry and meal plans.",
+  "@createAccountDescription": {
+    "description": "createAccountDescription"
+  },
+  "fullName": "Full name (optional)",
+  "@fullName": {
+    "description": "fullName"
+  },
+  "passwordHint": "Use 15–128 characters.",
+  "@passwordHint": {
+    "description": "passwordHint"
+  },
+  "confirmPassword": "Confirm password",
+  "@confirmPassword": {
+    "description": "confirmPassword"
+  },
+  "showPasswordConfirmation": "Show password confirmation",
+  "@showPasswordConfirmation": {
+    "description": "showPasswordConfirmation"
+  },
+  "hidePasswordConfirmation": "Hide password confirmation",
+  "@hidePasswordConfirmation": {
+    "description": "hidePasswordConfirmation"
+  },
+  "createAccount": "Create account",
+  "@createAccount": {
+    "description": "createAccount"
+  },
+  "existingAccount": "Already have an account? Login",
+  "@existingAccount": {
+    "description": "existingAccount"
+  },
+  "resetInstructionsSent": "If an account with that email exists, password reset instructions have been sent.",
+  "@resetInstructionsSent": {
+    "description": "resetInstructionsSent"
+  },
+  "checkEmail": "Check your email",
+  "@checkEmail": {
+    "description": "checkEmail"
+  },
+  "forgotPasswordDescription": "Enter your email and Mealio will send a six-digit password reset code if an account exists.",
+  "@forgotPasswordDescription": {
+    "description": "forgotPasswordDescription"
+  },
+  "sendResetCode": "Send reset code",
+  "@sendResetCode": {
+    "description": "sendResetCode"
+  },
+  "sendResetLink": "Send reset link instead",
+  "@sendResetLink": {
+    "description": "sendResetLink"
+  },
+  "resetCodeSent": "If an account with that email exists, a password reset code has been sent.",
+  "@resetCodeSent": {
+    "description": "resetCodeSent"
+  },
+  "otpInvalidInput": "Enter the six-digit code from your email.",
+  "@otpInvalidInput": {
+    "description": "otpInvalidInput"
+  },
+  "back": "Back",
+  "@back": {
+    "description": "back"
+  },
+  "resetWithCode": "Reset with a code",
+  "@resetWithCode": {
+    "description": "resetWithCode"
+  },
+  "resetWithCodeDescription": "Enter the six-digit code from your email and choose a new password.",
+  "@resetWithCodeDescription": {
+    "description": "resetWithCodeDescription"
+  },
+  "emailAddress": "Email address",
+  "@emailAddress": {
+    "description": "emailAddress"
+  },
+  "resetCodeLabel": "Six-digit reset code",
+  "@resetCodeLabel": {
+    "description": "resetCodeLabel"
+  },
+  "otpHint": "000000",
+  "@otpHint": {
+    "description": "otpHint"
+  },
+  "newPassword": "New password",
+  "@newPassword": {
+    "description": "newPassword"
+  },
+  "confirmNewPassword": "Confirm new password",
+  "@confirmNewPassword": {
+    "description": "confirmNewPassword"
+  },
+  "resetPassword": "Reset password",
+  "@resetPassword": {
+    "description": "resetPassword"
+  },
+  "sending": "Sending…",
+  "@sending": {
+    "description": "sending"
+  },
+  "resendCode": "Resend code",
+  "@resendCode": {
+    "description": "resendCode"
+  },
+  "resetCodeUnavailable": "Password reset code unavailable",
+  "@resetCodeUnavailable": {
+    "description": "resetCodeUnavailable"
+  },
+  "requestResetCodeDescription": "Request a new password reset code to continue.",
+  "@requestResetCodeDescription": {
+    "description": "requestResetCodeDescription"
+  },
+  "requestNewCode": "Request a new code",
+  "@requestNewCode": {
+    "description": "requestNewCode"
+  },
+  "resetComplete": "Password reset complete",
+  "@resetComplete": {
+    "description": "resetComplete"
+  },
+  "resetCompleteDescription": "Your password has been changed. Sign in again with your new password.",
+  "@resetCompleteDescription": {
+    "description": "resetCompleteDescription"
+  },
+  "goToLogin": "Go to login",
+  "@goToLogin": {
+    "description": "goToLogin"
+  },
+  "newPasswordTitle": "Create a new password",
+  "@newPasswordTitle": {
+    "description": "newPasswordTitle"
+  },
+  "newPasswordDescription": "Choose a new password for your Mealio account.",
+  "@newPasswordDescription": {
+    "description": "newPasswordDescription"
+  },
+  "resetLinkUnavailable": "Password reset link unavailable",
+  "@resetLinkUnavailable": {
+    "description": "resetLinkUnavailable"
+  },
+  "requestNewResetLink": "Request a new reset link",
+  "@requestNewResetLink": {
+    "description": "requestNewResetLink"
+  },
+  "verificationInstructionsSent": "If verification is needed, instructions have been sent.",
+  "@verificationInstructionsSent": {
+    "description": "verificationInstructionsSent"
+  },
+  "verificationCodeSent": "If verification is needed, a code has been sent.",
+  "@verificationCodeSent": {
+    "description": "verificationCodeSent"
+  },
+  "emailNotVerified": "Your email is not verified yet.",
+  "@emailNotVerified": {
+    "description": "emailNotVerified"
+  },
+  "resendEmail": "Resend email",
+  "@resendEmail": {
+    "description": "resendEmail"
+  },
+  "verifyWithCode": "Verify with code",
+  "@verifyWithCode": {
+    "description": "verifyWithCode"
+  },
+  "alreadyVerified": "I've verified my email",
+  "@alreadyVerified": {
+    "description": "alreadyVerified"
+  },
+  "continueToMealio": "Continue to Mealio",
+  "@continueToMealio": {
+    "description": "continueToMealio"
+  },
+  "continueToLogin": "Continue to login",
+  "@continueToLogin": {
+    "description": "continueToLogin"
+  },
+  "verifyEmail": "Verify your email",
+  "@verifyEmail": {
+    "description": "verifyEmail"
+  },
+  "verifyEmailDescription": "Check your inbox and follow the verification link to confirm your email address.",
+  "@verifyEmailDescription": {
+    "description": "verifyEmailDescription"
+  },
+  "verificationEmail": "Verification email",
+  "@verificationEmail": {
+    "description": "verificationEmail"
+  },
+  "verificationInitialHint": "The initial verification email is requested automatically when your account is created. You only need Resend if you want another verification email.",
+  "@verificationInitialHint": {
+    "description": "verificationInitialHint"
+  },
+  "verifyCodeDescription": "Request a six-digit verification code, then enter it below.",
+  "@verifyCodeDescription": {
+    "description": "verifyCodeDescription"
+  },
+  "sendVerificationCode": "Send verification code",
+  "@sendVerificationCode": {
+    "description": "sendVerificationCode"
+  },
+  "verificationCodeLabel": "Six-digit verification code",
+  "@verificationCodeLabel": {
+    "description": "verificationCodeLabel"
+  },
+  "confirmCode": "Confirm code",
+  "@confirmCode": {
+    "description": "confirmCode"
+  },
+  "useVerificationLink": "Use verification link",
+  "@useVerificationLink": {
+    "description": "useVerificationLink"
+  },
+  "verifyingEmail": "Verifying your email",
+  "@verifyingEmail": {
+    "description": "verifyingEmail"
+  },
+  "verifyingEmailDescription": "Mealio is securely confirming your verification link.",
+  "@verifyingEmailDescription": {
+    "description": "verifyingEmailDescription"
+  },
+  "verificationLinkUnavailable": "Verification link unavailable",
+  "@verificationLinkUnavailable": {
+    "description": "verificationLinkUnavailable"
+  },
+  "couldNotVerifyEmail": "Could not verify email",
+  "@couldNotVerifyEmail": {
+    "description": "couldNotVerifyEmail"
+  },
+  "emailVerified": "Email verified",
+  "@emailVerified": {
+    "description": "emailVerified"
+  },
+  "verificationSyncError": "Your verification was accepted, but Mealio could not refresh your signed-in account.",
+  "@verificationSyncError": {
+    "description": "verificationSyncError"
+  },
+  "verificationSyncHint": "Your email is verified on the server. Refresh your account state before continuing.",
+  "@verificationSyncHint": {
+    "description": "verificationSyncHint"
+  },
+  "refreshAccount": "Refresh account",
+  "@refreshAccount": {
+    "description": "refreshAccount"
+  },
+  "emailVerifiedDescription": "Your email address is confirmed. You can continue using Mealio.",
+  "@emailVerifiedDescription": {
+    "description": "emailVerifiedDescription"
+  },
+  "missingVerificationLink": "Open the verification link from your email, or return to Mealio and request another email.",
+  "@missingVerificationLink": {
+    "description": "missingVerificationLink"
+  },
+  "tryAgain": "Try again",
+  "@tryAgain": {
+    "description": "tryAgain"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "logout"
+  },
+  "greeting": "Good to see you",
+  "@greeting": {
+    "description": "greeting"
+  },
+  "dashboardDescription": "Your Mealio dashboard is ready for the first real features.",
+  "@dashboardDescription": {
+    "description": "dashboardDescription"
+  },
+  "pantry": "Pantry",
+  "@pantry": {
+    "description": "pantry"
+  },
+  "pantryDescription": "Track ingredients available at home.",
+  "@pantryDescription": {
+    "description": "pantryDescription"
+  },
+  "aiRecipe": "AI Recipe",
+  "@aiRecipe": {
+    "description": "aiRecipe"
+  },
+  "aiRecipeDescription": "Generate recipe ideas using your preferences.",
+  "@aiRecipeDescription": {
+    "description": "aiRecipeDescription"
+  },
+  "mealPlan": "Meal Plan",
+  "@mealPlan": {
+    "description": "mealPlan"
+  },
+  "mealPlanDescription": "Organise meals across your week.",
+  "@mealPlanDescription": {
+    "description": "mealPlanDescription"
+  },
+  "shoppingList": "Shopping List",
+  "@shoppingList": {
+    "description": "shoppingList"
+  },
+  "shoppingListDescription": "Prepare ingredients for your planned meals.",
+  "@shoppingListDescription": {
+    "description": "shoppingListDescription"
+  },
+  "splashTagline": "Plan meals. Use what you have. Eat better.",
+  "@splashTagline": {
+    "description": "splashTagline"
+  },
+  "addIngredient": "Add ingredient",
+  "@addIngredient": {
+    "description": "addIngredient"
+  },
+  "pantryEmpty": "Your pantry is empty",
+  "@pantryEmpty": {
+    "description": "pantryEmpty"
+  },
+  "pantryEmptyDescription": "Ingredients you have at home will appear here.",
+  "@pantryEmptyDescription": {
+    "description": "pantryEmptyDescription"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "retry"
+  },
+  "selectIngredient": "Select an ingredient.",
+  "@selectIngredient": {
+    "description": "selectIngredient"
+  },
+  "searchIngredients": "Search ingredients",
+  "@searchIngredients": {
+    "description": "searchIngredients"
+  },
+  "quantityLabel": "Quantity (g)",
+  "@quantityLabel": {
+    "description": "quantityLabel"
+  },
+  "quantityHint": "500.25",
+  "@quantityHint": {
+    "description": "quantityHint"
+  },
+  "expiryOptional": "Expiration date (optional)",
+  "@expiryOptional": {
+    "description": "expiryOptional"
+  },
+  "clearExpiry": "Clear expiration date",
+  "@clearExpiry": {
+    "description": "clearExpiry"
+  },
+  "addToPantry": "Add to pantry",
+  "@addToPantry": {
+    "description": "addToPantry"
+  },
+  "noIngredients": "No ingredients found.",
+  "@noIngredients": {
+    "description": "noIngredients"
+  },
+  "deletePantryTitle": "Delete pantry item?",
+  "@deletePantryTitle": {
+    "description": "deletePantryTitle"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "cancel"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "delete"
+  },
+  "editIngredient": "Edit ingredient",
+  "@editIngredient": {
+    "description": "editIngredient"
+  },
+  "saveChanges": "Save changes",
+  "@saveChanges": {
+    "description": "saveChanges"
+  },
+  "deleteFromPantry": "Delete from pantry",
+  "@deleteFromPantry": {
+    "description": "deleteFromPantry"
+  },
+  "quantityRequired": "Quantity is required.",
+  "@quantityRequired": {
+    "description": "quantityRequired"
+  },
+  "quantityInvalid": "Enter up to 8 digits and 2 decimal places.",
+  "@quantityInvalid": {
+    "description": "quantityInvalid"
+  },
+  "quantityPositive": "Quantity must be greater than zero.",
+  "@quantityPositive": {
+    "description": "quantityPositive"
+  },
+  "language": "Language",
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English language name in the selector. Keep the native name in every locale."
+  },
+  "languageRussian": "Русский",
+  "@languageRussian": {
+    "description": "Russian language name in the selector. Keep the native name in every locale."
+  },
+  "languageUkrainian": "Українська",
+  "@languageUkrainian": {
+    "description": "Ukrainian language name in the selector. Keep the native name in every locale."
+  },
+  "languageSlovak": "Slovenčina",
+  "@languageSlovak": {
+    "description": "Slovak language name in the selector. Keep the native name in every locale."
+  },
+  "@language": {
+    "description": "language"
+  },
+  "systemLanguage": "System language",
+  "@systemLanguage": {
+    "description": "systemLanguage"
+  },
+  "languageSaveFailed": "Language changed for this session, but could not be saved. Please try again.",
+  "@languageSaveFailed": {
+    "description": "languageSaveFailed"
+  },
+  "authInvalidCredentials": "Invalid email or password.",
+  "@authInvalidCredentials": {
+    "description": "authInvalidCredentials"
+  },
+  "authValidation": "Please check the entered email and password.",
+  "@authValidation": {
+    "description": "authValidation"
+  },
+  "authDuplicateEmail": "An account with this email already exists.",
+  "@authDuplicateEmail": {
+    "description": "authDuplicateEmail"
+  },
+  "authRegistrationValidation": "Please check the registration details.",
+  "@authRegistrationValidation": {
+    "description": "authRegistrationValidation"
+  },
+  "authEmailVerificationInvalid": "This verification link is invalid or has expired.",
+  "@authEmailVerificationInvalid": {
+    "description": "authEmailVerificationInvalid"
+  },
+  "authEmailVerificationRequest": "Unable to resend verification email. Please try again.",
+  "@authEmailVerificationRequest": {
+    "description": "authEmailVerificationRequest"
+  },
+  "authEmailVerificationOtpRequest": "Unable to request a verification code. Please try again.",
+  "@authEmailVerificationOtpRequest": {
+    "description": "authEmailVerificationOtpRequest"
+  },
+  "authEmailVerificationOtpInvalid": "Invalid or expired verification code.",
+  "@authEmailVerificationOtpInvalid": {
+    "description": "authEmailVerificationOtpInvalid"
+  },
+  "rateLimited": "Too many requests. Please try again later.",
+  "@rateLimited": {
+    "description": "rateLimited"
+  },
+  "authPasswordResetRequest": "Unable to send password reset instructions. Please try again.",
+  "@authPasswordResetRequest": {
+    "description": "authPasswordResetRequest"
+  },
+  "authPasswordResetInvalid": "This password reset link is invalid or has expired.",
+  "@authPasswordResetInvalid": {
+    "description": "authPasswordResetInvalid"
+  },
+  "authPasswordResetValidation": "Please check the new password and try again.",
+  "@authPasswordResetValidation": {
+    "description": "authPasswordResetValidation"
+  },
+  "authPasswordResetOtpRequest": "Unable to send a password reset code. Please try again.",
+  "@authPasswordResetOtpRequest": {
+    "description": "authPasswordResetOtpRequest"
+  },
+  "authPasswordResetPasswordReuse": "New password must be different from the current password.",
+  "@authPasswordResetPasswordReuse": {
+    "description": "authPasswordResetPasswordReuse"
+  },
+  "authPasswordResetOtpInvalid": "Invalid or expired password reset code.",
+  "@authPasswordResetOtpInvalid": {
+    "description": "authPasswordResetOtpInvalid"
+  },
+  "authPasswordResetOtpValidation": "Please check the code and new password, then try again.",
+  "@authPasswordResetOtpValidation": {
+    "description": "authPasswordResetOtpValidation"
+  },
+  "connectionError": "Unable to connect to the server. Please try again.",
+  "@connectionError": {
+    "description": "connectionError"
+  },
+  "unexpectedError": "Something went wrong. Please try again.",
+  "@unexpectedError": {
+    "description": "unexpectedError"
+  },
+  "pantryLoadError": "Unable to load your pantry. Please try again.",
+  "@pantryLoadError": {
+    "description": "pantryLoadError"
+  },
+  "pantrySearchError": "Unable to load ingredients. Please try again.",
+  "@pantrySearchError": {
+    "description": "pantrySearchError"
+  },
+  "pantryCreateError": "Unable to add this ingredient. Please try again.",
+  "@pantryCreateError": {
+    "description": "pantryCreateError"
+  },
+  "pantryDuplicate": "This ingredient is already in your pantry.",
+  "@pantryDuplicate": {
+    "description": "pantryDuplicate"
+  },
+  "ingredientUnavailable": "This ingredient is no longer available.",
+  "@ingredientUnavailable": {
+    "description": "ingredientUnavailable"
+  },
+  "pantryItemUnavailable": "This pantry item is no longer available.",
+  "@pantryItemUnavailable": {
+    "description": "pantryItemUnavailable"
+  },
+  "pantryValidation": "Check the entered values and try again.",
+  "@pantryValidation": {
+    "description": "pantryValidation"
+  },
+  "pantryAuthentication": "Your session is no longer valid. Please sign in again.",
+  "@pantryAuthentication": {
+    "description": "pantryAuthentication"
+  },
+  "pantryUpdateError": "Unable to update this pantry item. Please try again.",
+  "@pantryUpdateError": {
+    "description": "pantryUpdateError"
+  },
+  "pantryDeleteError": "Unable to delete this pantry item. Please try again.",
+  "@pantryDeleteError": {
+    "description": "pantryDeleteError"
+  },
+  "greetingNamed": "Good to see you, {name}",
+  "@greetingNamed": {
+    "description": "greetingNamed",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "featureComingSoon": "{feature} will be implemented in a future PR.",
+  "@featureComingSoon": {
+    "description": "featureComingSoon",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePantryConfirmation": "Remove {name} from your pantry?",
+  "@deletePantryConfirmation": {
+    "description": "deletePantryConfirmation",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityGrams": "{quantity} g",
+  "@quantityGrams": {
+    "description": "quantityGrams",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityWithExpiry": "{quantity} g\nExpires {date}",
+  "@quantityWithExpiry": {
+    "description": "quantityWithExpiry",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
+}

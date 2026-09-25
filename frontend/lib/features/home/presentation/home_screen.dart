@@ -3,15 +3,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
+import '../../../core/localization/language_button.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/auth_controller.dart';
+
+enum _HomeFeature { aiRecipe, mealPlan, shoppingList }
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  void _showPlaceholder(BuildContext context, String feature) {
+  void _showPlaceholder(BuildContext context, _HomeFeature feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be implemented in a future PR.')),
+      SnackBar(
+        content: Builder(
+          builder: (context) {
+            final name = switch (feature) {
+              _HomeFeature.aiRecipe => context.l10n.aiRecipe,
+              _HomeFeature.mealPlan => context.l10n.mealPlan,
+              _HomeFeature.shoppingList => context.l10n.shoppingList,
+            };
+            return Text(context.l10n.featureComingSoon(name));
+          },
+        ),
+      ),
     );
   }
 
@@ -23,17 +38,23 @@ class HomeScreen extends ConsumerWidget {
         return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Builder(
+            builder: (context) => Text(failure.localized(context.l10n)),
+          ),
+        ),
+      );
     } catch (_) {
       if (!context.mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
+        SnackBar(
+          content: Builder(
+            builder: (context) => Text(context.l10n.unexpectedError),
+          ),
         ),
       );
     }
@@ -52,9 +73,10 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mealio'),
         actions: [
+          const LanguageButton(),
           IconButton(
             key: const Key('home-logout-button'),
-            tooltip: 'Logout',
+            tooltip: context.l10n.logout,
             onPressed: () async {
               await _logout(context, ref);
             },
@@ -69,21 +91,21 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               greetingTarget == null
-                  ? 'Good to see you'
-                  : 'Good to see you, $greetingTarget',
+                  ? context.l10n.greeting
+                  : context.l10n.greetingNamed(greetingTarget),
               key: const Key('home-greeting'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Your Mealio dashboard is ready for the first real features.',
+              context.l10n.dashboardDescription,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 28),
             _FeatureCard(
               key: const Key('pantry-card'),
-              title: 'Pantry',
-              description: 'Track ingredients available at home.',
+              title: context.l10n.pantry,
+              description: context.l10n.pantryDescription,
               icon: Icons.kitchen_outlined,
               accentColor: AppColors.sage,
               onTap: () => context.push('/pantry'),
@@ -91,29 +113,29 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 14),
             _FeatureCard(
               key: const Key('ai-recipe-card'),
-              title: 'AI Recipe',
-              description: 'Generate recipe ideas using your preferences.',
+              title: context.l10n.aiRecipe,
+              description: context.l10n.aiRecipeDescription,
               icon: Icons.auto_awesome_rounded,
               accentColor: AppColors.peach,
-              onTap: () => _showPlaceholder(context, 'AI Recipe'),
+              onTap: () => _showPlaceholder(context, _HomeFeature.aiRecipe),
             ),
             const SizedBox(height: 14),
             _FeatureCard(
               key: const Key('meal-plan-card'),
-              title: 'Meal Plan',
-              description: 'Organise meals across your week.',
+              title: context.l10n.mealPlan,
+              description: context.l10n.mealPlanDescription,
               icon: Icons.calendar_month_outlined,
               accentColor: const Color(0xFFB7C9E2),
-              onTap: () => _showPlaceholder(context, 'Meal Plan'),
+              onTap: () => _showPlaceholder(context, _HomeFeature.mealPlan),
             ),
             const SizedBox(height: 14),
             _FeatureCard(
               key: const Key('shopping-list-card'),
-              title: 'Shopping List',
-              description: 'Prepare ingredients for your planned meals.',
+              title: context.l10n.shoppingList,
+              description: context.l10n.shoppingListDescription,
               icon: Icons.shopping_basket_outlined,
               accentColor: const Color(0xFFD8C4E8),
-              onTap: () => _showPlaceholder(context, 'Shopping List'),
+              onTap: () => _showPlaceholder(context, _HomeFeature.shoppingList),
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/pantry_repository.dart';
 import '../domain/pantry_failure.dart';
 import '../domain/pantry_item.dart';
@@ -32,7 +33,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
   DateTime? _expiresAt;
   PantryFailure? _searchFailure;
   PantryFailure? _submitFailure;
-  String? _ingredientError;
+  bool _showIngredientError = false;
   String _normalizedInputQuery = '';
   String? _lastRequestedQuery;
   int _searchGeneration = 0;
@@ -121,7 +122,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
   void _selectIngredient(Ingredient ingredient) {
     setState(() {
       _selectedIngredient = ingredient;
-      _ingredientError = null;
+      _showIngredientError = false;
       _submitFailure = null;
     });
   }
@@ -155,11 +156,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
       return;
     }
     final ingredient = _selectedIngredient;
-    setState(
-      () => _ingredientError = ingredient == null
-          ? 'Select an ingredient.'
-          : null,
-    );
+    setState(() => _showIngredientError = ingredient == null);
     final isFormValid = _formKey.currentState!.validate();
     if (ingredient == null || !isFormValid) {
       return;
@@ -224,7 +221,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
       child: Scaffold(
         key: const Key('add-pantry-item-screen'),
         appBar: AppBar(
-          title: const Text('Add ingredient'),
+          title: Text(context.l10n.addIngredient),
           leading: IconButton(
             key: const Key('add-pantry-back-button'),
             onPressed: _isSubmitting ? null : _cancel,
@@ -232,7 +229,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
           ),
         ),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -242,8 +239,8 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                   controller: _searchController,
                   enabled: !_isSubmitting,
                   textInputAction: TextInputAction.search,
-                  decoration: const InputDecoration(
-                    labelText: 'Search ingredients',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.searchIngredients,
                     prefixIcon: Icon(Icons.search),
                   ),
                 ),
@@ -260,11 +257,11 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                           : Text(_selectedIngredient!.category!),
                     ),
                   ),
-                if (_ingredientError != null)
+                if (_showIngredientError)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      _ingredientError!,
+                      context.l10n.selectIngredient,
                       key: const Key('ingredient-validation-error'),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
@@ -277,7 +274,8 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                   key: const Key('pantry-quantity-field'),
                   controller: _quantityController,
                   enabled: !_isSubmitting,
-                  validator: PantryQuantity.validate,
+                  validator: (value) =>
+                      localizedQuantityError(value, context.l10n),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -288,9 +286,9 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                     }
                   },
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity (g)',
-                    hintText: '500.25',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.quantityLabel,
+                    hintText: context.l10n.quantityHint,
                     prefixIcon: Icon(Icons.scale_outlined),
                   ),
                 ),
@@ -301,7 +299,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                   icon: const Icon(Icons.event_outlined),
                   label: Text(
                     _expiresAt == null
-                        ? 'Expiration date (optional)'
+                        ? context.l10n.expiryOptional
                         : _formatDate(_expiresAt!),
                   ),
                 ),
@@ -314,12 +312,15 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                             _expiresAt = null;
                             _submitFailure = null;
                           }),
-                    child: const Text('Clear expiration date'),
+                    child: Text(context.l10n.clearExpiry),
                   ),
                 if (_submitFailure != null) ...[
                   const SizedBox(height: 12),
                   Text(
-                    _submitFailure!.message,
+                    _submitFailure!.localized(
+                      context.l10n,
+                      PantryOperation.create,
+                    ),
                     key: const Key('add-pantry-error-message'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -337,7 +338,7 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Add to pantry'),
+                      : Text(context.l10n.addToPantry),
                 ),
               ],
             ),
@@ -362,22 +363,25 @@ class _AddPantryItemScreenState extends ConsumerState<AddPantryItemScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(failure.message, textAlign: TextAlign.center),
+            Text(
+              failure.localized(context.l10n, PantryOperation.search),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             FilledButton(
               key: const Key('ingredient-search-retry-button'),
               onPressed: () =>
                   _loadIngredients(_lastRequestedQuery ?? '', force: true),
-              child: const Text('Retry'),
+              child: Text(context.l10n.retry),
             ),
           ],
         ),
       );
     }
     if (_ingredients.isEmpty) {
-      return const Center(
-        key: Key('ingredient-search-empty'),
-        child: Text('No ingredients found.'),
+      return Center(
+        key: const Key('ingredient-search-empty'),
+        child: Text(context.l10n.noIngredients),
       );
     }
     return ListView.builder(

@@ -1,0 +1,682 @@
+{
+  "@@locale": "uk",
+  "emailRequired": "Вкажіть email.",
+  "@emailRequired": {
+    "description": "emailRequired"
+  },
+  "emailInvalid": "Введіть коректний email.",
+  "@emailInvalid": {
+    "description": "emailInvalid"
+  },
+  "passwordRequired": "Вкажіть пароль.",
+  "@passwordRequired": {
+    "description": "passwordRequired"
+  },
+  "passwordWhitespace": "Пароль не може складатися лише з пробілів.",
+  "@passwordWhitespace": {
+    "description": "passwordWhitespace"
+  },
+  "passwordMinimum": "Пароль має містити щонайменше {count, plural, one{{count} символ} few{{count} символи} many{{count} символів} other{{count} символа}}.",
+  "@passwordMinimum": {
+    "description": "passwordMinimum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordMaximum": "Пароль має містити не більше {count, plural, one{{count} символу} few{{count} символів} many{{count} символів} other{{count} символа}}.",
+  "@passwordMaximum": {
+    "description": "passwordMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fullNameMaximum": "Ім’я має містити не більше {count, plural, one{{count} символу} few{{count} символів} many{{count} символів} other{{count} символа}}.",
+  "@fullNameMaximum": {
+    "description": "fullNameMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordConfirmRequired": "Підтвердьте пароль.",
+  "@passwordConfirmRequired": {
+    "description": "passwordConfirmRequired"
+  },
+  "passwordMismatch": "Паролі не збігаються.",
+  "@passwordMismatch": {
+    "description": "passwordMismatch"
+  },
+  "welcome": "Вітаємо в Mealio",
+  "@welcome": {
+    "description": "welcome"
+  },
+  "loginDescription": "Увійдіть, щоб керувати запасами, рецептами та планами харчування.",
+  "@loginDescription": {
+    "description": "loginDescription"
+  },
+  "accountCreated": "Обліковий запис створено. Тепер можна увійти.",
+  "@accountCreated": {
+    "description": "accountCreated"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "email"
+  },
+  "emailHint": "you@example.com",
+  "@emailHint": {
+    "description": "emailHint"
+  },
+  "password": "Пароль",
+  "@password": {
+    "description": "password"
+  },
+  "showPassword": "Показати пароль",
+  "@showPassword": {
+    "description": "showPassword"
+  },
+  "hidePassword": "Приховати пароль",
+  "@hidePassword": {
+    "description": "hidePassword"
+  },
+  "forgotPassword": "Забули пароль?",
+  "@forgotPassword": {
+    "description": "forgotPassword"
+  },
+  "login": "Увійти",
+  "@login": {
+    "description": "login"
+  },
+  "newAccount": "Уперше в Mealio? Створіть обліковий запис",
+  "@newAccount": {
+    "description": "newAccount"
+  },
+  "backToLogin": "Повернутися до входу",
+  "@backToLogin": {
+    "description": "backToLogin"
+  },
+  "createAccountTitle": "Створіть обліковий запис Mealio",
+  "@createAccountTitle": {
+    "description": "createAccountTitle"
+  },
+  "createAccountDescription": "Створіть обліковий запис, щоб вести запаси й планувати харчування.",
+  "@createAccountDescription": {
+    "description": "createAccountDescription"
+  },
+  "fullName": "Повне ім’я (необов’язково)",
+  "@fullName": {
+    "description": "fullName"
+  },
+  "passwordHint": "Використовуйте 15–128 символів.",
+  "@passwordHint": {
+    "description": "passwordHint"
+  },
+  "confirmPassword": "Підтвердьте пароль",
+  "@confirmPassword": {
+    "description": "confirmPassword"
+  },
+  "showPasswordConfirmation": "Показати підтвердження пароля",
+  "@showPasswordConfirmation": {
+    "description": "showPasswordConfirmation"
+  },
+  "hidePasswordConfirmation": "Приховати підтвердження пароля",
+  "@hidePasswordConfirmation": {
+    "description": "hidePasswordConfirmation"
+  },
+  "createAccount": "Створити обліковий запис",
+  "@createAccount": {
+    "description": "createAccount"
+  },
+  "existingAccount": "Уже маєте обліковий запис? Увійдіть",
+  "@existingAccount": {
+    "description": "existingAccount"
+  },
+  "resetInstructionsSent": "Якщо обліковий запис із таким email існує, інструкції зі скидання пароля надіслано.",
+  "@resetInstructionsSent": {
+    "description": "resetInstructionsSent"
+  },
+  "checkEmail": "Перевірте пошту",
+  "@checkEmail": {
+    "description": "checkEmail"
+  },
+  "forgotPasswordDescription": "Введіть email. Якщо обліковий запис існує, Mealio надішле шестизначний код скидання пароля.",
+  "@forgotPasswordDescription": {
+    "description": "forgotPasswordDescription"
+  },
+  "sendResetCode": "Надіслати код скидання",
+  "@sendResetCode": {
+    "description": "sendResetCode"
+  },
+  "sendResetLink": "Надіслати посилання замість коду",
+  "@sendResetLink": {
+    "description": "sendResetLink"
+  },
+  "resetCodeSent": "Якщо обліковий запис із таким email існує, код скидання пароля надіслано.",
+  "@resetCodeSent": {
+    "description": "resetCodeSent"
+  },
+  "otpInvalidInput": "Введіть шестизначний код із листа.",
+  "@otpInvalidInput": {
+    "description": "otpInvalidInput"
+  },
+  "back": "Назад",
+  "@back": {
+    "description": "back"
+  },
+  "resetWithCode": "Скинути пароль за кодом",
+  "@resetWithCode": {
+    "description": "resetWithCode"
+  },
+  "resetWithCodeDescription": "Введіть шестизначний код із листа й виберіть новий пароль.",
+  "@resetWithCodeDescription": {
+    "description": "resetWithCodeDescription"
+  },
+  "emailAddress": "Адреса email",
+  "@emailAddress": {
+    "description": "emailAddress"
+  },
+  "resetCodeLabel": "Шестизначний код скидання",
+  "@resetCodeLabel": {
+    "description": "resetCodeLabel"
+  },
+  "otpHint": "000000",
+  "@otpHint": {
+    "description": "otpHint"
+  },
+  "newPassword": "Новий пароль",
+  "@newPassword": {
+    "description": "newPassword"
+  },
+  "confirmNewPassword": "Підтвердьте новий пароль",
+  "@confirmNewPassword": {
+    "description": "confirmNewPassword"
+  },
+  "resetPassword": "Скинути пароль",
+  "@resetPassword": {
+    "description": "resetPassword"
+  },
+  "sending": "Надсилання…",
+  "@sending": {
+    "description": "sending"
+  },
+  "resendCode": "Надіслати код повторно",
+  "@resendCode": {
+    "description": "resendCode"
+  },
+  "resetCodeUnavailable": "Код скидання пароля недоступний",
+  "@resetCodeUnavailable": {
+    "description": "resetCodeUnavailable"
+  },
+  "requestResetCodeDescription": "Запросіть новий код скидання пароля, щоб продовжити.",
+  "@requestResetCodeDescription": {
+    "description": "requestResetCodeDescription"
+  },
+  "requestNewCode": "Запросити новий код",
+  "@requestNewCode": {
+    "description": "requestNewCode"
+  },
+  "resetComplete": "Пароль змінено",
+  "@resetComplete": {
+    "description": "resetComplete"
+  },
+  "resetCompleteDescription": "Пароль змінено. Увійдіть знову з новим паролем.",
+  "@resetCompleteDescription": {
+    "description": "resetCompleteDescription"
+  },
+  "goToLogin": "Перейти до входу",
+  "@goToLogin": {
+    "description": "goToLogin"
+  },
+  "newPasswordTitle": "Створіть новий пароль",
+  "@newPasswordTitle": {
+    "description": "newPasswordTitle"
+  },
+  "newPasswordDescription": "Виберіть новий пароль для облікового запису Mealio.",
+  "@newPasswordDescription": {
+    "description": "newPasswordDescription"
+  },
+  "resetLinkUnavailable": "Посилання для скидання пароля недоступне",
+  "@resetLinkUnavailable": {
+    "description": "resetLinkUnavailable"
+  },
+  "requestNewResetLink": "Запросити нове посилання для скидання",
+  "@requestNewResetLink": {
+    "description": "requestNewResetLink"
+  },
+  "verificationInstructionsSent": "Якщо підтвердження потрібне, інструкції надіслано.",
+  "@verificationInstructionsSent": {
+    "description": "verificationInstructionsSent"
+  },
+  "verificationCodeSent": "Якщо підтвердження потрібне, код надіслано.",
+  "@verificationCodeSent": {
+    "description": "verificationCodeSent"
+  },
+  "emailNotVerified": "Ваш email ще не підтверджено.",
+  "@emailNotVerified": {
+    "description": "emailNotVerified"
+  },
+  "resendEmail": "Надіслати лист повторно",
+  "@resendEmail": {
+    "description": "resendEmail"
+  },
+  "verifyWithCode": "Підтвердити кодом",
+  "@verifyWithCode": {
+    "description": "verifyWithCode"
+  },
+  "alreadyVerified": "Я підтвердив email",
+  "@alreadyVerified": {
+    "description": "alreadyVerified"
+  },
+  "continueToMealio": "Перейти до Mealio",
+  "@continueToMealio": {
+    "description": "continueToMealio"
+  },
+  "continueToLogin": "Перейти до входу",
+  "@continueToLogin": {
+    "description": "continueToLogin"
+  },
+  "verifyEmail": "Підтвердьте email",
+  "@verifyEmail": {
+    "description": "verifyEmail"
+  },
+  "verifyEmailDescription": "Перевірте пошту й перейдіть за посиланням, щоб підтвердити email.",
+  "@verifyEmailDescription": {
+    "description": "verifyEmailDescription"
+  },
+  "verificationEmail": "Email для підтвердження",
+  "@verificationEmail": {
+    "description": "verificationEmail"
+  },
+  "verificationInitialHint": "Перший лист для підтвердження запитується під час створення облікового запису. Повторне надсилання потрібне, лише якщо ви хочете отримати ще один лист.",
+  "@verificationInitialHint": {
+    "description": "verificationInitialHint"
+  },
+  "verifyCodeDescription": "Запросіть шестизначний код підтвердження та введіть його нижче.",
+  "@verifyCodeDescription": {
+    "description": "verifyCodeDescription"
+  },
+  "sendVerificationCode": "Надіслати код підтвердження",
+  "@sendVerificationCode": {
+    "description": "sendVerificationCode"
+  },
+  "verificationCodeLabel": "Шестизначний код підтвердження",
+  "@verificationCodeLabel": {
+    "description": "verificationCodeLabel"
+  },
+  "confirmCode": "Підтвердити код",
+  "@confirmCode": {
+    "description": "confirmCode"
+  },
+  "useVerificationLink": "Використати посилання для підтвердження",
+  "@useVerificationLink": {
+    "description": "useVerificationLink"
+  },
+  "verifyingEmail": "Підтверджуємо email",
+  "@verifyingEmail": {
+    "description": "verifyingEmail"
+  },
+  "verifyingEmailDescription": "Mealio перевіряє ваше посилання для підтвердження.",
+  "@verifyingEmailDescription": {
+    "description": "verifyingEmailDescription"
+  },
+  "verificationLinkUnavailable": "Посилання для підтвердження недоступне",
+  "@verificationLinkUnavailable": {
+    "description": "verificationLinkUnavailable"
+  },
+  "couldNotVerifyEmail": "Не вдалося підтвердити email",
+  "@couldNotVerifyEmail": {
+    "description": "couldNotVerifyEmail"
+  },
+  "emailVerified": "Email підтверджено",
+  "@emailVerified": {
+    "description": "emailVerified"
+  },
+  "verificationSyncError": "Підтвердження прийнято, але Mealio не вдалося оновити дані вашого облікового запису.",
+  "@verificationSyncError": {
+    "description": "verificationSyncError"
+  },
+  "verificationSyncHint": "Email підтверджено на сервері. Оновіть дані облікового запису перед продовженням.",
+  "@verificationSyncHint": {
+    "description": "verificationSyncHint"
+  },
+  "refreshAccount": "Оновити обліковий запис",
+  "@refreshAccount": {
+    "description": "refreshAccount"
+  },
+  "emailVerifiedDescription": "Ваш email підтверджено. Можна продовжити користуватися Mealio.",
+  "@emailVerifiedDescription": {
+    "description": "emailVerifiedDescription"
+  },
+  "missingVerificationLink": "Відкрийте посилання для підтвердження з листа або поверніться до Mealio й запросіть новий лист.",
+  "@missingVerificationLink": {
+    "description": "missingVerificationLink"
+  },
+  "tryAgain": "Спробувати знову",
+  "@tryAgain": {
+    "description": "tryAgain"
+  },
+  "logout": "Вийти",
+  "@logout": {
+    "description": "logout"
+  },
+  "greeting": "Раді вас бачити",
+  "@greeting": {
+    "description": "greeting"
+  },
+  "dashboardDescription": "Ваша панель Mealio готова до перших функцій.",
+  "@dashboardDescription": {
+    "description": "dashboardDescription"
+  },
+  "pantry": "Запаси",
+  "@pantry": {
+    "description": "pantry"
+  },
+  "pantryDescription": "Стежте за продуктами, які є вдома.",
+  "@pantryDescription": {
+    "description": "pantryDescription"
+  },
+  "aiRecipe": "AI-рецепт",
+  "@aiRecipe": {
+    "description": "aiRecipe"
+  },
+  "aiRecipeDescription": "Отримуйте ідеї рецептів з урахуванням ваших уподобань.",
+  "@aiRecipeDescription": {
+    "description": "aiRecipeDescription"
+  },
+  "mealPlan": "План харчування",
+  "@mealPlan": {
+    "description": "mealPlan"
+  },
+  "mealPlanDescription": "Плануйте харчування на тиждень.",
+  "@mealPlanDescription": {
+    "description": "mealPlanDescription"
+  },
+  "shoppingList": "Список покупок",
+  "@shoppingList": {
+    "description": "shoppingList"
+  },
+  "shoppingListDescription": "Підготуйте продукти для запланованих страв.",
+  "@shoppingListDescription": {
+    "description": "shoppingListDescription"
+  },
+  "splashTagline": "Плануйте харчування. Використовуйте запаси. Харчуйтеся краще.",
+  "@splashTagline": {
+    "description": "splashTagline"
+  },
+  "addIngredient": "Додати продукт",
+  "@addIngredient": {
+    "description": "addIngredient"
+  },
+  "pantryEmpty": "У вас поки немає запасів",
+  "@pantryEmpty": {
+    "description": "pantryEmpty"
+  },
+  "pantryEmptyDescription": "Тут з’являться продукти, які є у вас удома.",
+  "@pantryEmptyDescription": {
+    "description": "pantryEmptyDescription"
+  },
+  "retry": "Повторити",
+  "@retry": {
+    "description": "retry"
+  },
+  "selectIngredient": "Виберіть продукт.",
+  "@selectIngredient": {
+    "description": "selectIngredient"
+  },
+  "searchIngredients": "Пошук продуктів",
+  "@searchIngredients": {
+    "description": "searchIngredients"
+  },
+  "quantityLabel": "Кількість (г)",
+  "@quantityLabel": {
+    "description": "quantityLabel"
+  },
+  "quantityHint": "500.25",
+  "@quantityHint": {
+    "description": "quantityHint"
+  },
+  "expiryOptional": "Термін придатності (необов’язково)",
+  "@expiryOptional": {
+    "description": "expiryOptional"
+  },
+  "clearExpiry": "Прибрати термін придатності",
+  "@clearExpiry": {
+    "description": "clearExpiry"
+  },
+  "addToPantry": "Додати до запасів",
+  "@addToPantry": {
+    "description": "addToPantry"
+  },
+  "noIngredients": "Продуктів не знайдено.",
+  "@noIngredients": {
+    "description": "noIngredients"
+  },
+  "deletePantryTitle": "Видалити продукт із запасів?",
+  "@deletePantryTitle": {
+    "description": "deletePantryTitle"
+  },
+  "cancel": "Скасувати",
+  "@cancel": {
+    "description": "cancel"
+  },
+  "delete": "Видалити",
+  "@delete": {
+    "description": "delete"
+  },
+  "editIngredient": "Змінити продукт",
+  "@editIngredient": {
+    "description": "editIngredient"
+  },
+  "saveChanges": "Зберегти зміни",
+  "@saveChanges": {
+    "description": "saveChanges"
+  },
+  "deleteFromPantry": "Видалити із запасів",
+  "@deleteFromPantry": {
+    "description": "deleteFromPantry"
+  },
+  "quantityRequired": "Вкажіть кількість.",
+  "@quantityRequired": {
+    "description": "quantityRequired"
+  },
+  "quantityInvalid": "Введіть до 8 цифр і до 2 знаків після коми.",
+  "@quantityInvalid": {
+    "description": "quantityInvalid"
+  },
+  "quantityPositive": "Кількість має бути більшою за нуль.",
+  "@quantityPositive": {
+    "description": "quantityPositive"
+  },
+  "language": "Мова",
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English language name in the selector. Keep the native name in every locale."
+  },
+  "languageRussian": "Русский",
+  "@languageRussian": {
+    "description": "Russian language name in the selector. Keep the native name in every locale."
+  },
+  "languageUkrainian": "Українська",
+  "@languageUkrainian": {
+    "description": "Ukrainian language name in the selector. Keep the native name in every locale."
+  },
+  "languageSlovak": "Slovenčina",
+  "@languageSlovak": {
+    "description": "Slovak language name in the selector. Keep the native name in every locale."
+  },
+  "@language": {
+    "description": "language"
+  },
+  "systemLanguage": "Мова системи",
+  "@systemLanguage": {
+    "description": "systemLanguage"
+  },
+  "languageSaveFailed": "Мову змінено на цей запуск, але зберегти налаштування не вдалося. Спробуйте знову.",
+  "@languageSaveFailed": {
+    "description": "languageSaveFailed"
+  },
+  "authInvalidCredentials": "Неправильний email або пароль.",
+  "@authInvalidCredentials": {
+    "description": "authInvalidCredentials"
+  },
+  "authValidation": "Перевірте введені email і пароль.",
+  "@authValidation": {
+    "description": "authValidation"
+  },
+  "authDuplicateEmail": "Обліковий запис із таким email уже існує.",
+  "@authDuplicateEmail": {
+    "description": "authDuplicateEmail"
+  },
+  "authRegistrationValidation": "Перевірте реєстраційні дані.",
+  "@authRegistrationValidation": {
+    "description": "authRegistrationValidation"
+  },
+  "authEmailVerificationInvalid": "Посилання для підтвердження недійсне або термін його дії минув.",
+  "@authEmailVerificationInvalid": {
+    "description": "authEmailVerificationInvalid"
+  },
+  "authEmailVerificationRequest": "Не вдалося повторно надіслати лист підтвердження. Спробуйте знову.",
+  "@authEmailVerificationRequest": {
+    "description": "authEmailVerificationRequest"
+  },
+  "authEmailVerificationOtpRequest": "Не вдалося запросити код підтвердження. Спробуйте знову.",
+  "@authEmailVerificationOtpRequest": {
+    "description": "authEmailVerificationOtpRequest"
+  },
+  "authEmailVerificationOtpInvalid": "Код підтвердження недійсний або термін його дії минув.",
+  "@authEmailVerificationOtpInvalid": {
+    "description": "authEmailVerificationOtpInvalid"
+  },
+  "rateLimited": "Забагато запитів. Спробуйте пізніше.",
+  "@rateLimited": {
+    "description": "rateLimited"
+  },
+  "authPasswordResetRequest": "Не вдалося надіслати інструкції зі скидання пароля. Спробуйте знову.",
+  "@authPasswordResetRequest": {
+    "description": "authPasswordResetRequest"
+  },
+  "authPasswordResetInvalid": "Посилання для скидання пароля недійсне або термін його дії минув.",
+  "@authPasswordResetInvalid": {
+    "description": "authPasswordResetInvalid"
+  },
+  "authPasswordResetValidation": "Перевірте новий пароль і спробуйте знову.",
+  "@authPasswordResetValidation": {
+    "description": "authPasswordResetValidation"
+  },
+  "authPasswordResetOtpRequest": "Не вдалося надіслати код скидання пароля. Спробуйте знову.",
+  "@authPasswordResetOtpRequest": {
+    "description": "authPasswordResetOtpRequest"
+  },
+  "authPasswordResetPasswordReuse": "Новий пароль має відрізнятися від поточного.",
+  "@authPasswordResetPasswordReuse": {
+    "description": "authPasswordResetPasswordReuse"
+  },
+  "authPasswordResetOtpInvalid": "Код скидання пароля недійсний або термін його дії минув.",
+  "@authPasswordResetOtpInvalid": {
+    "description": "authPasswordResetOtpInvalid"
+  },
+  "authPasswordResetOtpValidation": "Перевірте код і новий пароль, а потім спробуйте знову.",
+  "@authPasswordResetOtpValidation": {
+    "description": "authPasswordResetOtpValidation"
+  },
+  "connectionError": "Не вдалося підключитися до сервера. Спробуйте знову.",
+  "@connectionError": {
+    "description": "connectionError"
+  },
+  "unexpectedError": "Щось пішло не так. Спробуйте знову.",
+  "@unexpectedError": {
+    "description": "unexpectedError"
+  },
+  "pantryLoadError": "Не вдалося завантажити запаси. Спробуйте знову.",
+  "@pantryLoadError": {
+    "description": "pantryLoadError"
+  },
+  "pantrySearchError": "Не вдалося завантажити продукти. Спробуйте знову.",
+  "@pantrySearchError": {
+    "description": "pantrySearchError"
+  },
+  "pantryCreateError": "Не вдалося додати продукт. Спробуйте знову.",
+  "@pantryCreateError": {
+    "description": "pantryCreateError"
+  },
+  "pantryDuplicate": "Цей продукт уже є в запасах.",
+  "@pantryDuplicate": {
+    "description": "pantryDuplicate"
+  },
+  "ingredientUnavailable": "Цей продукт більше недоступний.",
+  "@ingredientUnavailable": {
+    "description": "ingredientUnavailable"
+  },
+  "pantryItemUnavailable": "Цей запис у запасах більше недоступний.",
+  "@pantryItemUnavailable": {
+    "description": "pantryItemUnavailable"
+  },
+  "pantryValidation": "Перевірте введені значення та спробуйте знову.",
+  "@pantryValidation": {
+    "description": "pantryValidation"
+  },
+  "pantryAuthentication": "Сеанс завершено. Увійдіть знову.",
+  "@pantryAuthentication": {
+    "description": "pantryAuthentication"
+  },
+  "pantryUpdateError": "Не вдалося змінити продукт у запасах. Спробуйте знову.",
+  "@pantryUpdateError": {
+    "description": "pantryUpdateError"
+  },
+  "pantryDeleteError": "Не вдалося видалити продукт із запасів. Спробуйте знову.",
+  "@pantryDeleteError": {
+    "description": "pantryDeleteError"
+  },
+  "greetingNamed": "Раді вас бачити, {name}",
+  "@greetingNamed": {
+    "description": "greetingNamed",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "featureComingSoon": "{feature} з’явиться в одному з наступних оновлень.",
+  "@featureComingSoon": {
+    "description": "featureComingSoon",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePantryConfirmation": "Видалити {name} із запасів?",
+  "@deletePantryConfirmation": {
+    "description": "deletePantryConfirmation",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityGrams": "{quantity} г",
+  "@quantityGrams": {
+    "description": "quantityGrams",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityWithExpiry": "{quantity} г\nПридатний до {date}",
+  "@quantityWithExpiry": {
+    "description": "quantityWithExpiry",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
+}

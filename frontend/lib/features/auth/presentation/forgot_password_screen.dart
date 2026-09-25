@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 
@@ -16,8 +17,7 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-  static const String _successMessage =
-      'If an account with that email exists, password reset instructions have been sent.';
+  String get _successMessage => context.l10n.resetInstructionsSent;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
@@ -37,11 +37,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final email = value?.trim() ?? '';
 
     if (email.isEmpty) {
-      return 'Email is required.';
+      return context.l10n.emailRequired;
     }
 
     if (!_emailPattern.hasMatch(email)) {
-      return 'Enter a valid email address.';
+      return context.l10n.emailInvalid;
     }
 
     return null;
@@ -167,7 +167,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       child: Scaffold(
         key: const Key('forgot-password-screen'),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: Center(
               child: ConstrainedBox(
@@ -179,7 +179,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       alignment: Alignment.centerLeft,
                       child: IconButton(
                         key: const Key('forgot-password-back-button'),
-                        tooltip: 'Back to login',
+                        tooltip: context.l10n.backToLogin,
                         onPressed: _isSubmitting ? null : _goBack,
                         icon: const Icon(Icons.arrow_back_rounded),
                       ),
@@ -203,14 +203,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      _isComplete ? 'Check your email' : 'Forgot password?',
+                      _isComplete
+                          ? context.l10n.checkEmail
+                          : context.l10n.forgotPassword,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 10),
                     Text(
                       _isComplete
                           ? _successMessage
-                          : 'Enter your email and Mealio will send a six-digit password reset code if an account exists.',
+                          : context.l10n.forgotPasswordDescription,
                       key: _isComplete
                           ? const Key('forgot-password-success-message')
                           : null,
@@ -226,16 +228,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         textInputAction: TextInputAction.done,
                         autofillHints: const [AutofillHints.email],
                         onFieldSubmitted: (_) => _requestOtp(),
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          hintText: 'you@example.com',
+                        decoration: InputDecoration(
+                          labelText: context.l10n.email,
+                          hintText: context.l10n.emailHint,
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
                       ),
                       if (_failure != null) ...[
                         const SizedBox(height: 16),
                         Text(
-                          _failure!.message,
+                          _failure!.localized(context.l10n),
                           key: const Key('forgot-password-error-message'),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
@@ -255,7 +257,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Send reset code'),
+                            : Text(context.l10n.sendResetCode),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
@@ -272,14 +274,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Send reset link instead'),
+                            : Text(context.l10n.sendResetLink),
                       ),
                     ] else ...[
                       const SizedBox(height: 28),
                       FilledButton(
                         key: const Key('forgot-password-login-button'),
                         onPressed: () => context.go('/login'),
-                        child: const Text('Back to login'),
+                        child: Text(context.l10n.backToLogin),
                       ),
                     ],
                   ],

@@ -8,6 +8,7 @@ import 'package:mealio/features/pantry/domain/pantry_failure.dart';
 import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/pantry_providers.dart';
 import 'package:mealio/features/pantry/presentation/pantry_screen.dart';
+import 'package:mealio/l10n/generated/app_localizations.dart';
 
 void main() {
   final pantryItem = PantryItem(
@@ -31,7 +32,11 @@ void main() {
     return ProviderScope(
       key: UniqueKey(),
       overrides: [pantryItemsProvider.overrideWith((ref) => load())],
-      child: const MaterialApp(home: PantryScreen()),
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PantryScreen(),
+      ),
     );
   }
 
@@ -88,7 +93,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [pantryItemsProvider.overrideWith((ref) async => [])],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -161,7 +170,11 @@ void main() {
         overrides: [
           pantryItemsProvider.overrideWith((ref) async => [pantryItem]),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();

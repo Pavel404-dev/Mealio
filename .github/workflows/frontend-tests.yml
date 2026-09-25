@@ -31,6 +31,12 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      - name: Check localization catalogs
+        working-directory: frontend
+        run: |
+          dart run tool/check_l10n.dart
+          flutter gen-l10n
+
       - name: Check frontend formatting
         working-directory: frontend
         run: dart format --output=none --set-exit-if-changed .

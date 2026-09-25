@@ -9,6 +9,7 @@ import 'package:mealio/features/pantry/domain/pantry_failure.dart';
 import 'package:mealio/features/pantry/domain/pantry_item.dart';
 import 'package:mealio/features/pantry/presentation/add_pantry_item_screen.dart';
 import 'package:mealio/features/pantry/presentation/pantry_screen.dart';
+import 'package:mealio/l10n/generated/app_localizations.dart';
 
 void main() {
   final oats = Ingredient(
@@ -29,7 +30,11 @@ void main() {
   Widget createScreen(_FakePantryRepository repository) {
     return ProviderScope(
       overrides: [pantryRepositoryProvider.overrideWithValue(repository)],
-      child: const MaterialApp(home: AddPantryItemScreen()),
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AddPantryItemScreen(),
+      ),
     );
   }
 
@@ -424,7 +429,13 @@ void main() {
     );
     await tester.pumpWidget(createScreen(repository));
     await tester.pump();
-    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    await tester.pumpWidget(
+      const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SizedBox(),
+      ),
+    );
     completer.complete([oats]);
     await tester.pump();
     expect(tester.takeException(), isNull);
@@ -457,7 +468,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [pantryRepositoryProvider.overrideWithValue(repository)],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
