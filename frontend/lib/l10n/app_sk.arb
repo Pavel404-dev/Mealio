@@ -1,0 +1,682 @@
+{
+  "@@locale": "sk",
+  "emailRequired": "Zadajte e-mail.",
+  "@emailRequired": {
+    "description": "emailRequired"
+  },
+  "emailInvalid": "Zadajte platnú e-mailovú adresu.",
+  "@emailInvalid": {
+    "description": "emailInvalid"
+  },
+  "passwordRequired": "Zadajte heslo.",
+  "@passwordRequired": {
+    "description": "passwordRequired"
+  },
+  "passwordWhitespace": "Heslo nemôže obsahovať iba medzery.",
+  "@passwordWhitespace": {
+    "description": "passwordWhitespace"
+  },
+  "passwordMinimum": "Heslo musí obsahovať aspoň {count, plural, one{{count} znak} few{{count} znaky} other{{count} znakov}}.",
+  "@passwordMinimum": {
+    "description": "passwordMinimum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordMaximum": "Heslo môže obsahovať najviac {count, plural, one{{count} znak} few{{count} znaky} other{{count} znakov}}.",
+  "@passwordMaximum": {
+    "description": "passwordMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fullNameMaximum": "Meno môže obsahovať najviac {count, plural, one{{count} znak} few{{count} znaky} other{{count} znakov}}.",
+  "@fullNameMaximum": {
+    "description": "fullNameMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordConfirmRequired": "Potvrďte heslo.",
+  "@passwordConfirmRequired": {
+    "description": "passwordConfirmRequired"
+  },
+  "passwordMismatch": "Heslá sa nezhodujú.",
+  "@passwordMismatch": {
+    "description": "passwordMismatch"
+  },
+  "welcome": "Vitajte v Mealio",
+  "@welcome": {
+    "description": "welcome"
+  },
+  "loginDescription": "Prihláste sa a spravujte zásoby, recepty a jedálničky.",
+  "@loginDescription": {
+    "description": "loginDescription"
+  },
+  "accountCreated": "Účet bol vytvorený. Teraz sa môžete prihlásiť.",
+  "@accountCreated": {
+    "description": "accountCreated"
+  },
+  "email": "E-mail",
+  "@email": {
+    "description": "email"
+  },
+  "emailHint": "you@example.com",
+  "@emailHint": {
+    "description": "emailHint"
+  },
+  "password": "Heslo",
+  "@password": {
+    "description": "password"
+  },
+  "showPassword": "Zobraziť heslo",
+  "@showPassword": {
+    "description": "showPassword"
+  },
+  "hidePassword": "Skryť heslo",
+  "@hidePassword": {
+    "description": "hidePassword"
+  },
+  "forgotPassword": "Zabudli ste heslo?",
+  "@forgotPassword": {
+    "description": "forgotPassword"
+  },
+  "login": "Prihlásiť sa",
+  "@login": {
+    "description": "login"
+  },
+  "newAccount": "Ste v Mealio noví? Vytvorte si účet",
+  "@newAccount": {
+    "description": "newAccount"
+  },
+  "backToLogin": "Späť na prihlásenie",
+  "@backToLogin": {
+    "description": "backToLogin"
+  },
+  "createAccountTitle": "Vytvorte si účet Mealio",
+  "@createAccountTitle": {
+    "description": "createAccountTitle"
+  },
+  "createAccountDescription": "Vytvorte si účet a začnite spravovať zásoby a plánovať jedlá.",
+  "@createAccountDescription": {
+    "description": "createAccountDescription"
+  },
+  "fullName": "Celé meno (nepovinné)",
+  "@fullName": {
+    "description": "fullName"
+  },
+  "passwordHint": "Použite 15–128 znakov.",
+  "@passwordHint": {
+    "description": "passwordHint"
+  },
+  "confirmPassword": "Potvrďte heslo",
+  "@confirmPassword": {
+    "description": "confirmPassword"
+  },
+  "showPasswordConfirmation": "Zobraziť potvrdenie hesla",
+  "@showPasswordConfirmation": {
+    "description": "showPasswordConfirmation"
+  },
+  "hidePasswordConfirmation": "Skryť potvrdenie hesla",
+  "@hidePasswordConfirmation": {
+    "description": "hidePasswordConfirmation"
+  },
+  "createAccount": "Vytvoriť účet",
+  "@createAccount": {
+    "description": "createAccount"
+  },
+  "existingAccount": "Už máte účet? Prihláste sa",
+  "@existingAccount": {
+    "description": "existingAccount"
+  },
+  "resetInstructionsSent": "Ak účet s týmto e-mailom existuje, pokyny na obnovenie hesla boli odoslané.",
+  "@resetInstructionsSent": {
+    "description": "resetInstructionsSent"
+  },
+  "checkEmail": "Skontrolujte si e-mail",
+  "@checkEmail": {
+    "description": "checkEmail"
+  },
+  "forgotPasswordDescription": "Zadajte e-mail. Ak účet existuje, Mealio odošle šesťmiestny kód na obnovenie hesla.",
+  "@forgotPasswordDescription": {
+    "description": "forgotPasswordDescription"
+  },
+  "sendResetCode": "Odoslať kód na obnovenie",
+  "@sendResetCode": {
+    "description": "sendResetCode"
+  },
+  "sendResetLink": "Namiesto kódu odoslať odkaz",
+  "@sendResetLink": {
+    "description": "sendResetLink"
+  },
+  "resetCodeSent": "Ak účet s týmto e-mailom existuje, kód na obnovenie hesla bol odoslaný.",
+  "@resetCodeSent": {
+    "description": "resetCodeSent"
+  },
+  "otpInvalidInput": "Zadajte šesťmiestny kód z e-mailu.",
+  "@otpInvalidInput": {
+    "description": "otpInvalidInput"
+  },
+  "back": "Späť",
+  "@back": {
+    "description": "back"
+  },
+  "resetWithCode": "Obnoviť heslo pomocou kódu",
+  "@resetWithCode": {
+    "description": "resetWithCode"
+  },
+  "resetWithCodeDescription": "Zadajte šesťmiestny kód z e-mailu a zvoľte nové heslo.",
+  "@resetWithCodeDescription": {
+    "description": "resetWithCodeDescription"
+  },
+  "emailAddress": "E-mailová adresa",
+  "@emailAddress": {
+    "description": "emailAddress"
+  },
+  "resetCodeLabel": "Šesťmiestny kód na obnovenie",
+  "@resetCodeLabel": {
+    "description": "resetCodeLabel"
+  },
+  "otpHint": "000000",
+  "@otpHint": {
+    "description": "otpHint"
+  },
+  "newPassword": "Nové heslo",
+  "@newPassword": {
+    "description": "newPassword"
+  },
+  "confirmNewPassword": "Potvrďte nové heslo",
+  "@confirmNewPassword": {
+    "description": "confirmNewPassword"
+  },
+  "resetPassword": "Obnoviť heslo",
+  "@resetPassword": {
+    "description": "resetPassword"
+  },
+  "sending": "Odosiela sa…",
+  "@sending": {
+    "description": "sending"
+  },
+  "resendCode": "Znova odoslať kód",
+  "@resendCode": {
+    "description": "resendCode"
+  },
+  "resetCodeUnavailable": "Kód na obnovenie hesla nie je dostupný",
+  "@resetCodeUnavailable": {
+    "description": "resetCodeUnavailable"
+  },
+  "requestResetCodeDescription": "Ak chcete pokračovať, vyžiadajte si nový kód na obnovenie hesla.",
+  "@requestResetCodeDescription": {
+    "description": "requestResetCodeDescription"
+  },
+  "requestNewCode": "Vyžiadať nový kód",
+  "@requestNewCode": {
+    "description": "requestNewCode"
+  },
+  "resetComplete": "Heslo bolo obnovené",
+  "@resetComplete": {
+    "description": "resetComplete"
+  },
+  "resetCompleteDescription": "Heslo bolo zmenené. Prihláste sa znova s novým heslom.",
+  "@resetCompleteDescription": {
+    "description": "resetCompleteDescription"
+  },
+  "goToLogin": "Prejsť na prihlásenie",
+  "@goToLogin": {
+    "description": "goToLogin"
+  },
+  "newPasswordTitle": "Vytvorte nové heslo",
+  "@newPasswordTitle": {
+    "description": "newPasswordTitle"
+  },
+  "newPasswordDescription": "Zvoľte nové heslo pre svoj účet Mealio.",
+  "@newPasswordDescription": {
+    "description": "newPasswordDescription"
+  },
+  "resetLinkUnavailable": "Odkaz na obnovenie hesla nie je dostupný",
+  "@resetLinkUnavailable": {
+    "description": "resetLinkUnavailable"
+  },
+  "requestNewResetLink": "Vyžiadať nový odkaz na obnovenie",
+  "@requestNewResetLink": {
+    "description": "requestNewResetLink"
+  },
+  "verificationInstructionsSent": "Ak je overenie potrebné, pokyny boli odoslané.",
+  "@verificationInstructionsSent": {
+    "description": "verificationInstructionsSent"
+  },
+  "verificationCodeSent": "Ak je overenie potrebné, kód bol odoslaný.",
+  "@verificationCodeSent": {
+    "description": "verificationCodeSent"
+  },
+  "emailNotVerified": "Váš e-mail ešte nie je overený.",
+  "@emailNotVerified": {
+    "description": "emailNotVerified"
+  },
+  "resendEmail": "Znova odoslať e-mail",
+  "@resendEmail": {
+    "description": "resendEmail"
+  },
+  "verifyWithCode": "Overiť pomocou kódu",
+  "@verifyWithCode": {
+    "description": "verifyWithCode"
+  },
+  "alreadyVerified": "E-mail už mám overený",
+  "@alreadyVerified": {
+    "description": "alreadyVerified"
+  },
+  "continueToMealio": "Pokračovať do Mealio",
+  "@continueToMealio": {
+    "description": "continueToMealio"
+  },
+  "continueToLogin": "Pokračovať na prihlásenie",
+  "@continueToLogin": {
+    "description": "continueToLogin"
+  },
+  "verifyEmail": "Overte svoj e-mail",
+  "@verifyEmail": {
+    "description": "verifyEmail"
+  },
+  "verifyEmailDescription": "Skontrolujte si doručenú poštu a overte e-mail pomocou odkazu.",
+  "@verifyEmailDescription": {
+    "description": "verifyEmailDescription"
+  },
+  "verificationEmail": "E-mail na overenie",
+  "@verificationEmail": {
+    "description": "verificationEmail"
+  },
+  "verificationInitialHint": "Prvý overovací e-mail sa vyžiada automaticky pri vytvorení účtu. Opätovné odoslanie použite, iba ak potrebujete ďalší e-mail.",
+  "@verificationInitialHint": {
+    "description": "verificationInitialHint"
+  },
+  "verifyCodeDescription": "Vyžiadajte si šesťmiestny overovací kód a zadajte ho nižšie.",
+  "@verifyCodeDescription": {
+    "description": "verifyCodeDescription"
+  },
+  "sendVerificationCode": "Odoslať overovací kód",
+  "@sendVerificationCode": {
+    "description": "sendVerificationCode"
+  },
+  "verificationCodeLabel": "Šesťmiestny overovací kód",
+  "@verificationCodeLabel": {
+    "description": "verificationCodeLabel"
+  },
+  "confirmCode": "Potvrdiť kód",
+  "@confirmCode": {
+    "description": "confirmCode"
+  },
+  "useVerificationLink": "Použiť overovací odkaz",
+  "@useVerificationLink": {
+    "description": "useVerificationLink"
+  },
+  "verifyingEmail": "Overovanie e-mailu",
+  "@verifyingEmail": {
+    "description": "verifyingEmail"
+  },
+  "verifyingEmailDescription": "Mealio bezpečne overuje váš overovací odkaz.",
+  "@verifyingEmailDescription": {
+    "description": "verifyingEmailDescription"
+  },
+  "verificationLinkUnavailable": "Overovací odkaz nie je dostupný",
+  "@verificationLinkUnavailable": {
+    "description": "verificationLinkUnavailable"
+  },
+  "couldNotVerifyEmail": "E-mail sa nepodarilo overiť",
+  "@couldNotVerifyEmail": {
+    "description": "couldNotVerifyEmail"
+  },
+  "emailVerified": "E-mail bol overený",
+  "@emailVerified": {
+    "description": "emailVerified"
+  },
+  "verificationSyncError": "Overenie bolo prijaté, ale Mealio nedokázalo obnoviť údaje prihláseného účtu.",
+  "@verificationSyncError": {
+    "description": "verificationSyncError"
+  },
+  "verificationSyncHint": "Váš e-mail je na serveri overený. Pred pokračovaním obnovte stav účtu.",
+  "@verificationSyncHint": {
+    "description": "verificationSyncHint"
+  },
+  "refreshAccount": "Obnoviť účet",
+  "@refreshAccount": {
+    "description": "refreshAccount"
+  },
+  "emailVerifiedDescription": "Vaša e-mailová adresa je overená. Môžete pokračovať v používaní Mealio.",
+  "@emailVerifiedDescription": {
+    "description": "emailVerifiedDescription"
+  },
+  "missingVerificationLink": "Otvorte overovací odkaz z e-mailu alebo sa vráťte do Mealio a vyžiadajte si ďalší e-mail.",
+  "@missingVerificationLink": {
+    "description": "missingVerificationLink"
+  },
+  "tryAgain": "Skúsiť znova",
+  "@tryAgain": {
+    "description": "tryAgain"
+  },
+  "logout": "Odhlásiť sa",
+  "@logout": {
+    "description": "logout"
+  },
+  "greeting": "Radi vás vidíme",
+  "@greeting": {
+    "description": "greeting"
+  },
+  "dashboardDescription": "Váš prehľad Mealio je pripravený na prvé funkcie.",
+  "@dashboardDescription": {
+    "description": "dashboardDescription"
+  },
+  "pantry": "Zásoby",
+  "@pantry": {
+    "description": "pantry"
+  },
+  "pantryDescription": "Sledujte suroviny, ktoré máte doma.",
+  "@pantryDescription": {
+    "description": "pantryDescription"
+  },
+  "aiRecipe": "AI recept",
+  "@aiRecipe": {
+    "description": "aiRecipe"
+  },
+  "aiRecipeDescription": "Získajte nápady na recepty podľa svojich preferencií.",
+  "@aiRecipeDescription": {
+    "description": "aiRecipeDescription"
+  },
+  "mealPlan": "Jedálniček",
+  "@mealPlan": {
+    "description": "mealPlan"
+  },
+  "mealPlanDescription": "Naplánujte si jedlá na celý týždeň.",
+  "@mealPlanDescription": {
+    "description": "mealPlanDescription"
+  },
+  "shoppingList": "Nákupný zoznam",
+  "@shoppingList": {
+    "description": "shoppingList"
+  },
+  "shoppingListDescription": "Pripravte si suroviny na naplánované jedlá.",
+  "@shoppingListDescription": {
+    "description": "shoppingListDescription"
+  },
+  "splashTagline": "Plánujte jedlá. Využite svoje zásoby. Jedzte lepšie.",
+  "@splashTagline": {
+    "description": "splashTagline"
+  },
+  "addIngredient": "Pridať surovinu",
+  "@addIngredient": {
+    "description": "addIngredient"
+  },
+  "pantryEmpty": "Vaše zásoby sú prázdne",
+  "@pantryEmpty": {
+    "description": "pantryEmpty"
+  },
+  "pantryEmptyDescription": "Tu sa zobrazia suroviny, ktoré máte doma.",
+  "@pantryEmptyDescription": {
+    "description": "pantryEmptyDescription"
+  },
+  "retry": "Skúsiť znova",
+  "@retry": {
+    "description": "retry"
+  },
+  "selectIngredient": "Vyberte surovinu.",
+  "@selectIngredient": {
+    "description": "selectIngredient"
+  },
+  "searchIngredients": "Hľadať suroviny",
+  "@searchIngredients": {
+    "description": "searchIngredients"
+  },
+  "quantityLabel": "Množstvo (g)",
+  "@quantityLabel": {
+    "description": "quantityLabel"
+  },
+  "quantityHint": "500.25",
+  "@quantityHint": {
+    "description": "quantityHint"
+  },
+  "expiryOptional": "Dátum spotreby (nepovinné)",
+  "@expiryOptional": {
+    "description": "expiryOptional"
+  },
+  "clearExpiry": "Vymazať dátum spotreby",
+  "@clearExpiry": {
+    "description": "clearExpiry"
+  },
+  "addToPantry": "Pridať do zásob",
+  "@addToPantry": {
+    "description": "addToPantry"
+  },
+  "noIngredients": "Nenašli sa žiadne suroviny.",
+  "@noIngredients": {
+    "description": "noIngredients"
+  },
+  "deletePantryTitle": "Odstrániť surovinu zo zásob?",
+  "@deletePantryTitle": {
+    "description": "deletePantryTitle"
+  },
+  "cancel": "Zrušiť",
+  "@cancel": {
+    "description": "cancel"
+  },
+  "delete": "Odstrániť",
+  "@delete": {
+    "description": "delete"
+  },
+  "editIngredient": "Upraviť surovinu",
+  "@editIngredient": {
+    "description": "editIngredient"
+  },
+  "saveChanges": "Uložiť zmeny",
+  "@saveChanges": {
+    "description": "saveChanges"
+  },
+  "deleteFromPantry": "Odstrániť zo zásob",
+  "@deleteFromPantry": {
+    "description": "deleteFromPantry"
+  },
+  "quantityRequired": "Zadajte množstvo.",
+  "@quantityRequired": {
+    "description": "quantityRequired"
+  },
+  "quantityInvalid": "Zadajte najviac 8 číslic a 2 desatinné miesta.",
+  "@quantityInvalid": {
+    "description": "quantityInvalid"
+  },
+  "quantityPositive": "Množstvo musí byť väčšie ako nula.",
+  "@quantityPositive": {
+    "description": "quantityPositive"
+  },
+  "language": "Jazyk",
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English language name in the selector. Keep the native name in every locale."
+  },
+  "languageRussian": "Русский",
+  "@languageRussian": {
+    "description": "Russian language name in the selector. Keep the native name in every locale."
+  },
+  "languageUkrainian": "Українська",
+  "@languageUkrainian": {
+    "description": "Ukrainian language name in the selector. Keep the native name in every locale."
+  },
+  "languageSlovak": "Slovenčina",
+  "@languageSlovak": {
+    "description": "Slovak language name in the selector. Keep the native name in every locale."
+  },
+  "@language": {
+    "description": "language"
+  },
+  "systemLanguage": "Jazyk systému",
+  "@systemLanguage": {
+    "description": "systemLanguage"
+  },
+  "languageSaveFailed": "Jazyk bol zmenený pre toto spustenie, ale nepodarilo sa ho uložiť. Skúste to znova.",
+  "@languageSaveFailed": {
+    "description": "languageSaveFailed"
+  },
+  "authInvalidCredentials": "Nesprávny e-mail alebo heslo.",
+  "@authInvalidCredentials": {
+    "description": "authInvalidCredentials"
+  },
+  "authValidation": "Skontrolujte zadaný e-mail a heslo.",
+  "@authValidation": {
+    "description": "authValidation"
+  },
+  "authDuplicateEmail": "Účet s týmto e-mailom už existuje.",
+  "@authDuplicateEmail": {
+    "description": "authDuplicateEmail"
+  },
+  "authRegistrationValidation": "Skontrolujte registračné údaje.",
+  "@authRegistrationValidation": {
+    "description": "authRegistrationValidation"
+  },
+  "authEmailVerificationInvalid": "Overovací odkaz je neplatný alebo jeho platnosť vypršala.",
+  "@authEmailVerificationInvalid": {
+    "description": "authEmailVerificationInvalid"
+  },
+  "authEmailVerificationRequest": "Overovací e-mail sa nepodarilo znova odoslať. Skúste to znova.",
+  "@authEmailVerificationRequest": {
+    "description": "authEmailVerificationRequest"
+  },
+  "authEmailVerificationOtpRequest": "Overovací kód sa nepodarilo vyžiadať. Skúste to znova.",
+  "@authEmailVerificationOtpRequest": {
+    "description": "authEmailVerificationOtpRequest"
+  },
+  "authEmailVerificationOtpInvalid": "Overovací kód je neplatný alebo jeho platnosť vypršala.",
+  "@authEmailVerificationOtpInvalid": {
+    "description": "authEmailVerificationOtpInvalid"
+  },
+  "rateLimited": "Príliš veľa požiadaviek. Skúste to neskôr.",
+  "@rateLimited": {
+    "description": "rateLimited"
+  },
+  "authPasswordResetRequest": "Pokyny na obnovenie hesla sa nepodarilo odoslať. Skúste to znova.",
+  "@authPasswordResetRequest": {
+    "description": "authPasswordResetRequest"
+  },
+  "authPasswordResetInvalid": "Odkaz na obnovenie hesla je neplatný alebo jeho platnosť vypršala.",
+  "@authPasswordResetInvalid": {
+    "description": "authPasswordResetInvalid"
+  },
+  "authPasswordResetValidation": "Skontrolujte nové heslo a skúste to znova.",
+  "@authPasswordResetValidation": {
+    "description": "authPasswordResetValidation"
+  },
+  "authPasswordResetOtpRequest": "Kód na obnovenie hesla sa nepodarilo odoslať. Skúste to znova.",
+  "@authPasswordResetOtpRequest": {
+    "description": "authPasswordResetOtpRequest"
+  },
+  "authPasswordResetPasswordReuse": "Nové heslo sa musí líšiť od aktuálneho hesla.",
+  "@authPasswordResetPasswordReuse": {
+    "description": "authPasswordResetPasswordReuse"
+  },
+  "authPasswordResetOtpInvalid": "Kód na obnovenie hesla je neplatný alebo jeho platnosť vypršala.",
+  "@authPasswordResetOtpInvalid": {
+    "description": "authPasswordResetOtpInvalid"
+  },
+  "authPasswordResetOtpValidation": "Skontrolujte kód a nové heslo a skúste to znova.",
+  "@authPasswordResetOtpValidation": {
+    "description": "authPasswordResetOtpValidation"
+  },
+  "connectionError": "Nepodarilo sa pripojiť k serveru. Skúste to znova.",
+  "@connectionError": {
+    "description": "connectionError"
+  },
+  "unexpectedError": "Niečo sa pokazilo. Skúste to znova.",
+  "@unexpectedError": {
+    "description": "unexpectedError"
+  },
+  "pantryLoadError": "Zásoby sa nepodarilo načítať. Skúste to znova.",
+  "@pantryLoadError": {
+    "description": "pantryLoadError"
+  },
+  "pantrySearchError": "Suroviny sa nepodarilo načítať. Skúste to znova.",
+  "@pantrySearchError": {
+    "description": "pantrySearchError"
+  },
+  "pantryCreateError": "Surovinu sa nepodarilo pridať. Skúste to znova.",
+  "@pantryCreateError": {
+    "description": "pantryCreateError"
+  },
+  "pantryDuplicate": "Táto surovina už je vo vašich zásobách.",
+  "@pantryDuplicate": {
+    "description": "pantryDuplicate"
+  },
+  "ingredientUnavailable": "Táto surovina už nie je dostupná.",
+  "@ingredientUnavailable": {
+    "description": "ingredientUnavailable"
+  },
+  "pantryItemUnavailable": "Táto položka zásob už nie je dostupná.",
+  "@pantryItemUnavailable": {
+    "description": "pantryItemUnavailable"
+  },
+  "pantryValidation": "Skontrolujte zadané hodnoty a skúste to znova.",
+  "@pantryValidation": {
+    "description": "pantryValidation"
+  },
+  "pantryAuthentication": "Vaša relácia už nie je platná. Prihláste sa znova.",
+  "@pantryAuthentication": {
+    "description": "pantryAuthentication"
+  },
+  "pantryUpdateError": "Položku zásob sa nepodarilo upraviť. Skúste to znova.",
+  "@pantryUpdateError": {
+    "description": "pantryUpdateError"
+  },
+  "pantryDeleteError": "Položku zásob sa nepodarilo odstrániť. Skúste to znova.",
+  "@pantryDeleteError": {
+    "description": "pantryDeleteError"
+  },
+  "greetingNamed": "Radi vás vidíme, {name}",
+  "@greetingNamed": {
+    "description": "greetingNamed",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "featureComingSoon": "Funkcia {feature} bude dostupná v niektorej z ďalších aktualizácií.",
+  "@featureComingSoon": {
+    "description": "featureComingSoon",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePantryConfirmation": "Odstrániť {name} zo zásob?",
+  "@deletePantryConfirmation": {
+    "description": "deletePantryConfirmation",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityGrams": "{quantity} g",
+  "@quantityGrams": {
+    "description": "quantityGrams",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityWithExpiry": "{quantity} g\nSpotrebujte do {date}",
+  "@quantityWithExpiry": {
+    "description": "quantityWithExpiry",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
+}

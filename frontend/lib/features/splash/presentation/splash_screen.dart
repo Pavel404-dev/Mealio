@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -36,7 +37,7 @@ class SplashScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Plan meals. Use what you have. Eat better.',
+                  context.l10n.splashTagline,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),

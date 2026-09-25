@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 import 'auth_controller.dart';
@@ -24,8 +25,7 @@ class _PasswordResetOtpScreenState
   static const int _maximumPasswordLength = 128;
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   static final RegExp _otpPattern = RegExp(r'^[0-9]{6}$');
-  static const String _requestSuccessMessage =
-      'If an account with that email exists, a password reset code has been sent.';
+  String get _requestSuccessMessage => context.l10n.resetCodeSent;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _otpController = TextEditingController();
@@ -39,7 +39,7 @@ class _PasswordResetOtpScreenState
   bool _isRequestingOtp = false;
   bool _isSubmitting = false;
   bool _isComplete = false;
-  String? _requestMessage;
+  bool _showRequestMessage = false;
   AuthFailure? _requestFailure;
   AuthFailure? _confirmationFailure;
 
@@ -78,7 +78,7 @@ class _PasswordResetOtpScreenState
 
   String? _validateOtp(String? value) {
     if (value == null || !_otpPattern.hasMatch(value)) {
-      return 'Enter the six-digit code from your email.';
+      return context.l10n.otpInvalidInput;
     }
 
     return null;
@@ -86,20 +86,20 @@ class _PasswordResetOtpScreenState
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required.';
+      return context.l10n.passwordRequired;
     }
 
     if (value.trim().isEmpty) {
-      return 'Password cannot contain only whitespace.';
+      return context.l10n.passwordWhitespace;
     }
 
     final length = value.runes.length;
     if (length < _minimumPasswordLength) {
-      return 'Password must be at least 15 characters.';
+      return context.l10n.passwordMinimum(_minimumPasswordLength);
     }
 
     if (length > _maximumPasswordLength) {
-      return 'Password must be 128 characters or fewer.';
+      return context.l10n.passwordMaximum(_maximumPasswordLength);
     }
 
     return null;
@@ -107,11 +107,11 @@ class _PasswordResetOtpScreenState
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password.';
+      return context.l10n.passwordConfirmRequired;
     }
 
     if (value != _passwordController.text) {
-      return 'Passwords do not match.';
+      return context.l10n.passwordMismatch;
     }
 
     return null;
@@ -125,7 +125,7 @@ class _PasswordResetOtpScreenState
 
     setState(() {
       _isRequestingOtp = true;
-      _requestMessage = null;
+      _showRequestMessage = false;
       _requestFailure = null;
       _confirmationFailure = null;
     });
@@ -142,7 +142,7 @@ class _PasswordResetOtpScreenState
       _otpController.clear();
       setState(() {
         _isRequestingOtp = false;
-        _requestMessage = _requestSuccessMessage;
+        _showRequestMessage = true;
       });
       _otpFocusNode.requestFocus();
     } on AuthFailure catch (failure) {
@@ -274,7 +274,7 @@ class _PasswordResetOtpScreenState
       child: Scaffold(
         key: const Key('password-reset-otp-screen'),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: Center(
               child: ConstrainedBox(
@@ -286,7 +286,7 @@ class _PasswordResetOtpScreenState
                       alignment: Alignment.centerLeft,
                       child: IconButton(
                         key: const Key('password-reset-otp-back-button'),
-                        tooltip: 'Back',
+                        tooltip: context.l10n.back,
                         onPressed: _operationInProgress ? null : _goBack,
                         icon: const Icon(Icons.arrow_back_rounded),
                       ),
@@ -310,12 +310,12 @@ class _PasswordResetOtpScreenState
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Reset with a code',
+                      context.l10n.resetWithCode,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Enter the six-digit code from your email and choose a new password.',
+                      context.l10n.resetWithCodeDescription,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
@@ -334,7 +334,7 @@ class _PasswordResetOtpScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Email address',
+                            context.l10n.emailAddress,
                             style: Theme.of(context).textTheme.labelLarge,
                           ),
                           const SizedBox(height: 6),
@@ -368,9 +368,9 @@ class _PasswordResetOtpScreenState
                           _confirmationFailure = null;
                         });
                       },
-                      decoration: const InputDecoration(
-                        labelText: 'Six-digit reset code',
-                        hintText: '000000',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.resetCodeLabel,
+                        hintText: context.l10n.otpHint,
                         prefixIcon: Icon(Icons.pin_outlined),
                       ),
                     ),
@@ -384,13 +384,13 @@ class _PasswordResetOtpScreenState
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
-                        labelText: 'New password',
-                        helperText: 'Use 15–128 characters.',
+                        labelText: context.l10n.newPassword,
+                        helperText: context.l10n.passwordHint,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           tooltip: _obscurePassword
-                              ? 'Show password'
-                              : 'Hide password',
+                              ? context.l10n.showPassword
+                              : context.l10n.hidePassword,
                           onPressed: _operationInProgress
                               ? null
                               : () {
@@ -419,12 +419,12 @@ class _PasswordResetOtpScreenState
                       autofillHints: const [AutofillHints.newPassword],
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Confirm new password',
+                        labelText: context.l10n.confirmNewPassword,
                         prefixIcon: const Icon(Icons.lock_reset_rounded),
                         suffixIcon: IconButton(
                           tooltip: _obscureConfirmPassword
-                              ? 'Show password confirmation'
-                              : 'Hide password confirmation',
+                              ? context.l10n.showPasswordConfirmation
+                              : context.l10n.hidePasswordConfirmation,
                           onPressed: _operationInProgress
                               ? null
                               : () {
@@ -446,7 +446,7 @@ class _PasswordResetOtpScreenState
                       _buildMessage(
                         context,
                         key: const Key('password-reset-otp-confirm-error'),
-                        message: _confirmationFailure!.message,
+                        message: _confirmationFailure!.localized(context.l10n),
                         isError: true,
                       ),
                     ],
@@ -461,7 +461,7 @@ class _PasswordResetOtpScreenState
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Reset password'),
+                          : Text(context.l10n.resetPassword),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -476,15 +476,17 @@ class _PasswordResetOtpScreenState
                             )
                           : const Icon(Icons.mark_email_unread_outlined),
                       label: Text(
-                        _isRequestingOtp ? 'Sending…' : 'Resend code',
+                        _isRequestingOtp
+                            ? context.l10n.sending
+                            : context.l10n.resendCode,
                       ),
                     ),
-                    if (_requestMessage != null) ...[
+                    if (_showRequestMessage) ...[
                       const SizedBox(height: 16),
                       _buildMessage(
                         context,
                         key: const Key('password-reset-otp-resend-success'),
-                        message: _requestMessage!,
+                        message: _requestSuccessMessage,
                         isError: false,
                       ),
                     ],
@@ -493,7 +495,7 @@ class _PasswordResetOtpScreenState
                       _buildMessage(
                         context,
                         key: const Key('password-reset-otp-resend-error'),
-                        message: _requestFailure!.message,
+                        message: _requestFailure!.localized(context.l10n),
                         isError: true,
                       ),
                     ],
@@ -511,19 +513,19 @@ class _PasswordResetOtpScreenState
     return _buildShell(
       context,
       icon: Icons.lock_reset_rounded,
-      title: 'Password reset code unavailable',
-      subtitle: 'Request a new password reset code to continue.',
+      title: context.l10n.resetCodeUnavailable,
+      subtitle: context.l10n.requestResetCodeDescription,
       children: [
         FilledButton(
           key: const Key('password-reset-otp-request-new-button'),
           onPressed: () => context.go('/forgot-password'),
-          child: const Text('Request a new code'),
+          child: Text(context.l10n.requestNewCode),
         ),
         const SizedBox(height: 12),
         TextButton(
           key: const Key('password-reset-otp-unavailable-login-button'),
           onPressed: () => context.go('/login'),
-          child: const Text('Back to login'),
+          child: Text(context.l10n.backToLogin),
         ),
       ],
     );
@@ -533,14 +535,13 @@ class _PasswordResetOtpScreenState
     return _buildShell(
       context,
       icon: Icons.check_circle_outline_rounded,
-      title: 'Password reset complete',
-      subtitle:
-          'Your password has been changed. Sign in again with your new password.',
+      title: context.l10n.resetComplete,
+      subtitle: context.l10n.resetCompleteDescription,
       children: [
         FilledButton(
           key: const Key('password-reset-otp-success-login-button'),
           onPressed: () => context.go('/login'),
-          child: const Text('Go to login'),
+          child: Text(context.l10n.goToLogin),
         ),
       ],
     );

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
+import '../../../core/localization/language_button.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -62,11 +64,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final email = value?.trim() ?? '';
 
     if (email.isEmpty) {
-      return 'Email is required.';
+      return context.l10n.emailRequired;
     }
 
     if (!_emailPattern.hasMatch(email)) {
-      return 'Enter a valid email address.';
+      return context.l10n.emailInvalid;
     }
 
     return null;
@@ -74,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required.';
+      return context.l10n.passwordRequired;
     }
 
     return null;
@@ -115,11 +117,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       key: const Key('login-screen'),
       body: SafeArea(
-        child: Form(
+        child: LocalizedForm(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             children: [
+              const Align(
+                alignment: Alignment.centerRight,
+                child: LanguageButton(),
+              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
@@ -138,12 +144,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                'Welcome to Mealio',
+                context.l10n.welcome,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 10),
               Text(
-                'Sign in to manage your pantry, recipes and meal plans.',
+                context.l10n.loginDescription,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               if (_showRegistrationSuccess) ...[
@@ -156,9 +162,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.sage),
                   ),
-                  child: const Text(
-                    'Account created successfully. You can now sign in.',
-                  ),
+                  child: Text(context.l10n.accountCreated),
                 ),
               ],
               const SizedBox(height: 32),
@@ -169,9 +173,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'you@example.com',
+                decoration: InputDecoration(
+                  labelText: context.l10n.email,
+                  hintText: context.l10n.emailHint,
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
@@ -185,12 +189,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 autofillHints: const [AutofillHints.password],
                 onFieldSubmitted: (_) => _submit(),
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: context.l10n.password,
                   prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     tooltip: _obscurePassword
-                        ? 'Show password'
-                        : 'Hide password',
+                        ? context.l10n.showPassword
+                        : context.l10n.hidePassword,
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -211,13 +215,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onPressed: isLoginInProgress
                       ? null
                       : () => context.push('/forgot-password'),
-                  child: const Text('Forgot password?'),
+                  child: Text(context.l10n.forgotPassword),
                 ),
               ),
               if (failure != null) ...[
                 const SizedBox(height: 16),
                 Text(
-                  failure.message,
+                  failure.localized(context.l10n),
                   key: const Key('login-error-message'),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -233,7 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Login'),
+                    : Text(context.l10n.login),
               ),
               const SizedBox(height: 24),
               TextButton(
@@ -241,7 +245,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: isLoginInProgress
                     ? null
                     : () => context.push('/register'),
-                child: const Text('New to Mealio? Create an account'),
+                child: Text(context.l10n.newAccount),
               ),
             ],
           ),

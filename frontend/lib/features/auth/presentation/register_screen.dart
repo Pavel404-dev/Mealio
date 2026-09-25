@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 
@@ -44,7 +45,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final fullName = value?.trim() ?? '';
 
     if (fullName.runes.length > _maximumFullNameLength) {
-      return 'Full name must be 255 characters or fewer.';
+      return context.l10n.fullNameMaximum(_maximumFullNameLength);
     }
 
     return null;
@@ -54,11 +55,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final email = value?.trim() ?? '';
 
     if (email.isEmpty) {
-      return 'Email is required.';
+      return context.l10n.emailRequired;
     }
 
     if (!_emailPattern.hasMatch(email)) {
-      return 'Enter a valid email address.';
+      return context.l10n.emailInvalid;
     }
 
     return null;
@@ -66,21 +67,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required.';
+      return context.l10n.passwordRequired;
     }
 
     if (value.trim().isEmpty) {
-      return 'Password cannot contain only whitespace.';
+      return context.l10n.passwordWhitespace;
     }
 
     final length = value.runes.length;
 
     if (length < _minimumPasswordLength) {
-      return 'Password must be at least 15 characters.';
+      return context.l10n.passwordMinimum(_minimumPasswordLength);
     }
 
     if (length > _maximumPasswordLength) {
-      return 'Password must be 128 characters or fewer.';
+      return context.l10n.passwordMaximum(_maximumPasswordLength);
     }
 
     return null;
@@ -88,11 +89,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password.';
+      return context.l10n.passwordConfirmRequired;
     }
 
     if (value != _passwordController.text) {
-      return 'Passwords do not match.';
+      return context.l10n.passwordMismatch;
     }
 
     return null;
@@ -167,7 +168,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: Scaffold(
         key: const Key('register-screen'),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -176,7 +177,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     key: const Key('register-back-button'),
-                    tooltip: 'Back to login',
+                    tooltip: context.l10n.backToLogin,
                     onPressed: _isSubmitting ? null : _goToLogin,
                     icon: const Icon(Icons.arrow_back_rounded),
                   ),
@@ -200,12 +201,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Create your Mealio account',
+                  context.l10n.createAccountTitle,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Create an account to start building your pantry and meal plans.',
+                  context.l10n.createAccountDescription,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 32),
@@ -215,8 +216,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   validator: _validateFullName,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.name],
-                  decoration: const InputDecoration(
-                    labelText: 'Full name (optional)',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.fullName,
                     prefixIcon: Icon(Icons.person_outline_rounded),
                   ),
                 ),
@@ -228,9 +229,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'you@example.com',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.email,
+                    hintText: context.l10n.emailHint,
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
@@ -243,13 +244,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    helperText: 'Use 15–128 characters.',
+                    labelText: context.l10n.password,
+                    helperText: context.l10n.passwordHint,
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
                       tooltip: _obscurePassword
-                          ? 'Show password'
-                          : 'Hide password',
+                          ? context.l10n.showPassword
+                          : context.l10n.hidePassword,
                       onPressed: () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
@@ -273,12 +274,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   autofillHints: const [AutofillHints.newPassword],
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
-                    labelText: 'Confirm password',
+                    labelText: context.l10n.confirmPassword,
                     prefixIcon: const Icon(Icons.lock_reset_rounded),
                     suffixIcon: IconButton(
                       tooltip: _obscureConfirmPassword
-                          ? 'Show password confirmation'
-                          : 'Hide password confirmation',
+                          ? context.l10n.showPasswordConfirmation
+                          : context.l10n.hidePasswordConfirmation,
                       onPressed: () {
                         setState(() {
                           _obscureConfirmPassword = !_obscureConfirmPassword;
@@ -295,7 +296,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 if (_failure != null) ...[
                   const SizedBox(height: 16),
                   Text(
-                    _failure!.message,
+                    _failure!.localized(context.l10n),
                     key: const Key('register-error-message'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -313,13 +314,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Create account'),
+                      : Text(context.l10n.createAccount),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   key: const Key('register-login-button'),
                   onPressed: _isSubmitting ? null : _goToLogin,
-                  child: const Text('Already have an account? Login'),
+                  child: Text(context.l10n.existingAccount),
                 ),
               ],
             ),

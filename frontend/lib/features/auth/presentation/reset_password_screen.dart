@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_failure.dart';
 import 'auth_controller.dart';
@@ -47,21 +48,21 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required.';
+      return context.l10n.passwordRequired;
     }
 
     if (value.trim().isEmpty) {
-      return 'Password cannot contain only whitespace.';
+      return context.l10n.passwordWhitespace;
     }
 
     final length = value.runes.length;
 
     if (length < _minimumPasswordLength) {
-      return 'Password must be at least 15 characters.';
+      return context.l10n.passwordMinimum(_minimumPasswordLength);
     }
 
     if (length > _maximumPasswordLength) {
-      return 'Password must be 128 characters or fewer.';
+      return context.l10n.passwordMaximum(_maximumPasswordLength);
     }
 
     return null;
@@ -69,11 +70,11 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password.';
+      return context.l10n.passwordConfirmRequired;
     }
 
     if (value != _passwordController.text) {
-      return 'Passwords do not match.';
+      return context.l10n.passwordMismatch;
     }
 
     return null;
@@ -178,7 +179,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       child: Scaffold(
         key: const Key('reset-password-screen'),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: Center(
               child: ConstrainedBox(
@@ -204,12 +205,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Create a new password',
+                      context.l10n.newPasswordTitle,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Choose a new password for your Mealio account.',
+                      context.l10n.newPasswordDescription,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 32),
@@ -221,13 +222,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
-                        labelText: 'New password',
-                        helperText: 'Use 15–128 characters.',
+                        labelText: context.l10n.newPassword,
+                        helperText: context.l10n.passwordHint,
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           tooltip: _obscurePassword
-                              ? 'Show password'
-                              : 'Hide password',
+                              ? context.l10n.showPassword
+                              : context.l10n.hidePassword,
                           onPressed: () {
                             setState(() {
                               _obscurePassword = !_obscurePassword;
@@ -251,12 +252,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       autofillHints: const [AutofillHints.newPassword],
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Confirm new password',
+                        labelText: context.l10n.confirmNewPassword,
                         prefixIcon: const Icon(Icons.lock_reset_rounded),
                         suffixIcon: IconButton(
                           tooltip: _obscureConfirmPassword
-                              ? 'Show password confirmation'
-                              : 'Hide password confirmation',
+                              ? context.l10n.showPasswordConfirmation
+                              : context.l10n.hidePasswordConfirmation,
                           onPressed: () {
                             setState(() {
                               _obscureConfirmPassword =
@@ -274,7 +275,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     if (_failure != null) ...[
                       const SizedBox(height: 16),
                       Text(
-                        _failure!.message,
+                        _failure!.localized(context.l10n),
                         key: const Key('reset-password-error-message'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
@@ -292,7 +293,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Reset password'),
+                          : Text(context.l10n.resetPassword),
                     ),
                   ],
                 ),
@@ -308,19 +309,19 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     return _buildShell(
       context,
       icon: Icons.link_off_rounded,
-      title: 'Password reset link unavailable',
-      subtitle: AuthFailure.invalidPasswordReset().message,
+      title: context.l10n.resetLinkUnavailable,
+      subtitle: AuthFailure.invalidPasswordReset().localized(context.l10n),
       children: [
         FilledButton(
           key: const Key('reset-password-request-new-button'),
           onPressed: () => context.go('/forgot-password'),
-          child: const Text('Request a new reset link'),
+          child: Text(context.l10n.requestNewResetLink),
         ),
         const SizedBox(height: 12),
         TextButton(
           key: const Key('reset-password-unavailable-login-button'),
           onPressed: () => context.go('/login'),
-          child: const Text('Back to login'),
+          child: Text(context.l10n.backToLogin),
         ),
       ],
     );
@@ -330,14 +331,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     return _buildShell(
       context,
       icon: Icons.check_circle_outline_rounded,
-      title: 'Password reset complete',
-      subtitle:
-          'Your password has been changed. Sign in again with your new password.',
+      title: context.l10n.resetComplete,
+      subtitle: context.l10n.resetCompleteDescription,
       children: [
         FilledButton(
           key: const Key('reset-password-success-login-button'),
           onPressed: () => context.go('/login'),
-          child: const Text('Go to login'),
+          child: Text(context.l10n.goToLogin),
         ),
       ],
     );

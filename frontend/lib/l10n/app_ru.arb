@@ -1,0 +1,682 @@
+{
+  "@@locale": "ru",
+  "emailRequired": "Укажите email.",
+  "@emailRequired": {
+    "description": "emailRequired"
+  },
+  "emailInvalid": "Введите корректный email.",
+  "@emailInvalid": {
+    "description": "emailInvalid"
+  },
+  "passwordRequired": "Укажите пароль.",
+  "@passwordRequired": {
+    "description": "passwordRequired"
+  },
+  "passwordWhitespace": "Пароль не может состоять только из пробелов.",
+  "@passwordWhitespace": {
+    "description": "passwordWhitespace"
+  },
+  "passwordMinimum": "Пароль должен содержать не менее {count, plural, one{{count} символа} few{{count} символов} many{{count} символов} other{{count} символа}}.",
+  "@passwordMinimum": {
+    "description": "passwordMinimum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordMaximum": "Пароль должен содержать не более {count, plural, one{{count} символа} few{{count} символов} many{{count} символов} other{{count} символа}}.",
+  "@passwordMaximum": {
+    "description": "passwordMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fullNameMaximum": "Имя должно содержать не более {count, plural, one{{count} символа} few{{count} символов} many{{count} символов} other{{count} символа}}.",
+  "@fullNameMaximum": {
+    "description": "fullNameMaximum",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordConfirmRequired": "Подтвердите пароль.",
+  "@passwordConfirmRequired": {
+    "description": "passwordConfirmRequired"
+  },
+  "passwordMismatch": "Пароли не совпадают.",
+  "@passwordMismatch": {
+    "description": "passwordMismatch"
+  },
+  "welcome": "Добро пожаловать в Mealio",
+  "@welcome": {
+    "description": "welcome"
+  },
+  "loginDescription": "Войдите, чтобы управлять запасами, рецептами и планами питания.",
+  "@loginDescription": {
+    "description": "loginDescription"
+  },
+  "accountCreated": "Аккаунт создан. Теперь можно войти.",
+  "@accountCreated": {
+    "description": "accountCreated"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "email"
+  },
+  "emailHint": "you@example.com",
+  "@emailHint": {
+    "description": "emailHint"
+  },
+  "password": "Пароль",
+  "@password": {
+    "description": "password"
+  },
+  "showPassword": "Показать пароль",
+  "@showPassword": {
+    "description": "showPassword"
+  },
+  "hidePassword": "Скрыть пароль",
+  "@hidePassword": {
+    "description": "hidePassword"
+  },
+  "forgotPassword": "Забыли пароль?",
+  "@forgotPassword": {
+    "description": "forgotPassword"
+  },
+  "login": "Войти",
+  "@login": {
+    "description": "login"
+  },
+  "newAccount": "Впервые в Mealio? Создайте аккаунт",
+  "@newAccount": {
+    "description": "newAccount"
+  },
+  "backToLogin": "Вернуться ко входу",
+  "@backToLogin": {
+    "description": "backToLogin"
+  },
+  "createAccountTitle": "Создайте аккаунт Mealio",
+  "@createAccountTitle": {
+    "description": "createAccountTitle"
+  },
+  "createAccountDescription": "Создайте аккаунт, чтобы вести запасы и планировать питание.",
+  "@createAccountDescription": {
+    "description": "createAccountDescription"
+  },
+  "fullName": "Полное имя (необязательно)",
+  "@fullName": {
+    "description": "fullName"
+  },
+  "passwordHint": "Используйте 15–128 символов.",
+  "@passwordHint": {
+    "description": "passwordHint"
+  },
+  "confirmPassword": "Подтвердите пароль",
+  "@confirmPassword": {
+    "description": "confirmPassword"
+  },
+  "showPasswordConfirmation": "Показать подтверждение пароля",
+  "@showPasswordConfirmation": {
+    "description": "showPasswordConfirmation"
+  },
+  "hidePasswordConfirmation": "Скрыть подтверждение пароля",
+  "@hidePasswordConfirmation": {
+    "description": "hidePasswordConfirmation"
+  },
+  "createAccount": "Создать аккаунт",
+  "@createAccount": {
+    "description": "createAccount"
+  },
+  "existingAccount": "Уже есть аккаунт? Войдите",
+  "@existingAccount": {
+    "description": "existingAccount"
+  },
+  "resetInstructionsSent": "Если аккаунт с таким email существует, инструкции по сбросу пароля отправлены.",
+  "@resetInstructionsSent": {
+    "description": "resetInstructionsSent"
+  },
+  "checkEmail": "Проверьте почту",
+  "@checkEmail": {
+    "description": "checkEmail"
+  },
+  "forgotPasswordDescription": "Введите email. Если аккаунт существует, Mealio отправит шестизначный код сброса пароля.",
+  "@forgotPasswordDescription": {
+    "description": "forgotPasswordDescription"
+  },
+  "sendResetCode": "Отправить код сброса",
+  "@sendResetCode": {
+    "description": "sendResetCode"
+  },
+  "sendResetLink": "Отправить ссылку вместо кода",
+  "@sendResetLink": {
+    "description": "sendResetLink"
+  },
+  "resetCodeSent": "Если аккаунт с таким email существует, код сброса пароля отправлен.",
+  "@resetCodeSent": {
+    "description": "resetCodeSent"
+  },
+  "otpInvalidInput": "Введите шестизначный код из письма.",
+  "@otpInvalidInput": {
+    "description": "otpInvalidInput"
+  },
+  "back": "Назад",
+  "@back": {
+    "description": "back"
+  },
+  "resetWithCode": "Сбросить пароль по коду",
+  "@resetWithCode": {
+    "description": "resetWithCode"
+  },
+  "resetWithCodeDescription": "Введите шестизначный код из письма и выберите новый пароль.",
+  "@resetWithCodeDescription": {
+    "description": "resetWithCodeDescription"
+  },
+  "emailAddress": "Адрес email",
+  "@emailAddress": {
+    "description": "emailAddress"
+  },
+  "resetCodeLabel": "Шестизначный код сброса",
+  "@resetCodeLabel": {
+    "description": "resetCodeLabel"
+  },
+  "otpHint": "000000",
+  "@otpHint": {
+    "description": "otpHint"
+  },
+  "newPassword": "Новый пароль",
+  "@newPassword": {
+    "description": "newPassword"
+  },
+  "confirmNewPassword": "Подтвердите новый пароль",
+  "@confirmNewPassword": {
+    "description": "confirmNewPassword"
+  },
+  "resetPassword": "Сбросить пароль",
+  "@resetPassword": {
+    "description": "resetPassword"
+  },
+  "sending": "Отправка…",
+  "@sending": {
+    "description": "sending"
+  },
+  "resendCode": "Отправить код повторно",
+  "@resendCode": {
+    "description": "resendCode"
+  },
+  "resetCodeUnavailable": "Код сброса пароля недоступен",
+  "@resetCodeUnavailable": {
+    "description": "resetCodeUnavailable"
+  },
+  "requestResetCodeDescription": "Запросите новый код сброса пароля, чтобы продолжить.",
+  "@requestResetCodeDescription": {
+    "description": "requestResetCodeDescription"
+  },
+  "requestNewCode": "Запросить новый код",
+  "@requestNewCode": {
+    "description": "requestNewCode"
+  },
+  "resetComplete": "Пароль изменён",
+  "@resetComplete": {
+    "description": "resetComplete"
+  },
+  "resetCompleteDescription": "Пароль изменён. Войдите снова с новым паролем.",
+  "@resetCompleteDescription": {
+    "description": "resetCompleteDescription"
+  },
+  "goToLogin": "Перейти ко входу",
+  "@goToLogin": {
+    "description": "goToLogin"
+  },
+  "newPasswordTitle": "Создайте новый пароль",
+  "@newPasswordTitle": {
+    "description": "newPasswordTitle"
+  },
+  "newPasswordDescription": "Выберите новый пароль для аккаунта Mealio.",
+  "@newPasswordDescription": {
+    "description": "newPasswordDescription"
+  },
+  "resetLinkUnavailable": "Ссылка сброса пароля недоступна",
+  "@resetLinkUnavailable": {
+    "description": "resetLinkUnavailable"
+  },
+  "requestNewResetLink": "Запросить новую ссылку сброса",
+  "@requestNewResetLink": {
+    "description": "requestNewResetLink"
+  },
+  "verificationInstructionsSent": "Если подтверждение необходимо, инструкции отправлены.",
+  "@verificationInstructionsSent": {
+    "description": "verificationInstructionsSent"
+  },
+  "verificationCodeSent": "Если подтверждение необходимо, код отправлен.",
+  "@verificationCodeSent": {
+    "description": "verificationCodeSent"
+  },
+  "emailNotVerified": "Ваш email ещё не подтверждён.",
+  "@emailNotVerified": {
+    "description": "emailNotVerified"
+  },
+  "resendEmail": "Отправить письмо повторно",
+  "@resendEmail": {
+    "description": "resendEmail"
+  },
+  "verifyWithCode": "Подтвердить кодом",
+  "@verifyWithCode": {
+    "description": "verifyWithCode"
+  },
+  "alreadyVerified": "Я подтвердил email",
+  "@alreadyVerified": {
+    "description": "alreadyVerified"
+  },
+  "continueToMealio": "Перейти в Mealio",
+  "@continueToMealio": {
+    "description": "continueToMealio"
+  },
+  "continueToLogin": "Перейти ко входу",
+  "@continueToLogin": {
+    "description": "continueToLogin"
+  },
+  "verifyEmail": "Подтвердите email",
+  "@verifyEmail": {
+    "description": "verifyEmail"
+  },
+  "verifyEmailDescription": "Проверьте почту и перейдите по ссылке, чтобы подтвердить email.",
+  "@verifyEmailDescription": {
+    "description": "verifyEmailDescription"
+  },
+  "verificationEmail": "Email для подтверждения",
+  "@verificationEmail": {
+    "description": "verificationEmail"
+  },
+  "verificationInitialHint": "Первое письмо для подтверждения запрашивается при создании аккаунта. Повторная отправка нужна, только если вы хотите получить ещё одно письмо.",
+  "@verificationInitialHint": {
+    "description": "verificationInitialHint"
+  },
+  "verifyCodeDescription": "Запросите шестизначный код подтверждения и введите его ниже.",
+  "@verifyCodeDescription": {
+    "description": "verifyCodeDescription"
+  },
+  "sendVerificationCode": "Отправить код подтверждения",
+  "@sendVerificationCode": {
+    "description": "sendVerificationCode"
+  },
+  "verificationCodeLabel": "Шестизначный код подтверждения",
+  "@verificationCodeLabel": {
+    "description": "verificationCodeLabel"
+  },
+  "confirmCode": "Подтвердить код",
+  "@confirmCode": {
+    "description": "confirmCode"
+  },
+  "useVerificationLink": "Использовать ссылку подтверждения",
+  "@useVerificationLink": {
+    "description": "useVerificationLink"
+  },
+  "verifyingEmail": "Подтверждаем email",
+  "@verifyingEmail": {
+    "description": "verifyingEmail"
+  },
+  "verifyingEmailDescription": "Mealio проверяет вашу ссылку подтверждения.",
+  "@verifyingEmailDescription": {
+    "description": "verifyingEmailDescription"
+  },
+  "verificationLinkUnavailable": "Ссылка подтверждения недоступна",
+  "@verificationLinkUnavailable": {
+    "description": "verificationLinkUnavailable"
+  },
+  "couldNotVerifyEmail": "Не удалось подтвердить email",
+  "@couldNotVerifyEmail": {
+    "description": "couldNotVerifyEmail"
+  },
+  "emailVerified": "Email подтверждён",
+  "@emailVerified": {
+    "description": "emailVerified"
+  },
+  "verificationSyncError": "Подтверждение принято, но Mealio не удалось обновить данные вашего аккаунта.",
+  "@verificationSyncError": {
+    "description": "verificationSyncError"
+  },
+  "verificationSyncHint": "Email подтверждён на сервере. Обновите данные аккаунта перед продолжением.",
+  "@verificationSyncHint": {
+    "description": "verificationSyncHint"
+  },
+  "refreshAccount": "Обновить аккаунт",
+  "@refreshAccount": {
+    "description": "refreshAccount"
+  },
+  "emailVerifiedDescription": "Ваш email подтверждён. Можно продолжить пользоваться Mealio.",
+  "@emailVerifiedDescription": {
+    "description": "emailVerifiedDescription"
+  },
+  "missingVerificationLink": "Откройте ссылку подтверждения из письма или вернитесь в Mealio и запросите новое письмо.",
+  "@missingVerificationLink": {
+    "description": "missingVerificationLink"
+  },
+  "tryAgain": "Попробовать снова",
+  "@tryAgain": {
+    "description": "tryAgain"
+  },
+  "logout": "Выйти",
+  "@logout": {
+    "description": "logout"
+  },
+  "greeting": "Рады вас видеть",
+  "@greeting": {
+    "description": "greeting"
+  },
+  "dashboardDescription": "Ваша панель Mealio готова к первым функциям.",
+  "@dashboardDescription": {
+    "description": "dashboardDescription"
+  },
+  "pantry": "Запасы",
+  "@pantry": {
+    "description": "pantry"
+  },
+  "pantryDescription": "Следите за продуктами, которые есть дома.",
+  "@pantryDescription": {
+    "description": "pantryDescription"
+  },
+  "aiRecipe": "AI-рецепт",
+  "@aiRecipe": {
+    "description": "aiRecipe"
+  },
+  "aiRecipeDescription": "Получайте идеи рецептов с учётом ваших предпочтений.",
+  "@aiRecipeDescription": {
+    "description": "aiRecipeDescription"
+  },
+  "mealPlan": "План питания",
+  "@mealPlan": {
+    "description": "mealPlan"
+  },
+  "mealPlanDescription": "Планируйте питание на неделю.",
+  "@mealPlanDescription": {
+    "description": "mealPlanDescription"
+  },
+  "shoppingList": "Список покупок",
+  "@shoppingList": {
+    "description": "shoppingList"
+  },
+  "shoppingListDescription": "Подготовьте продукты для запланированных блюд.",
+  "@shoppingListDescription": {
+    "description": "shoppingListDescription"
+  },
+  "splashTagline": "Планируйте питание. Используйте запасы. Питайтесь лучше.",
+  "@splashTagline": {
+    "description": "splashTagline"
+  },
+  "addIngredient": "Добавить продукт",
+  "@addIngredient": {
+    "description": "addIngredient"
+  },
+  "pantryEmpty": "У вас пока нет запасов",
+  "@pantryEmpty": {
+    "description": "pantryEmpty"
+  },
+  "pantryEmptyDescription": "Здесь появятся продукты, которые есть у вас дома.",
+  "@pantryEmptyDescription": {
+    "description": "pantryEmptyDescription"
+  },
+  "retry": "Повторить",
+  "@retry": {
+    "description": "retry"
+  },
+  "selectIngredient": "Выберите продукт.",
+  "@selectIngredient": {
+    "description": "selectIngredient"
+  },
+  "searchIngredients": "Поиск продуктов",
+  "@searchIngredients": {
+    "description": "searchIngredients"
+  },
+  "quantityLabel": "Количество (г)",
+  "@quantityLabel": {
+    "description": "quantityLabel"
+  },
+  "quantityHint": "500.25",
+  "@quantityHint": {
+    "description": "quantityHint"
+  },
+  "expiryOptional": "Срок годности (необязательно)",
+  "@expiryOptional": {
+    "description": "expiryOptional"
+  },
+  "clearExpiry": "Убрать срок годности",
+  "@clearExpiry": {
+    "description": "clearExpiry"
+  },
+  "addToPantry": "Добавить в запасы",
+  "@addToPantry": {
+    "description": "addToPantry"
+  },
+  "noIngredients": "Продукты не найдены.",
+  "@noIngredients": {
+    "description": "noIngredients"
+  },
+  "deletePantryTitle": "Удалить продукт из запасов?",
+  "@deletePantryTitle": {
+    "description": "deletePantryTitle"
+  },
+  "cancel": "Отмена",
+  "@cancel": {
+    "description": "cancel"
+  },
+  "delete": "Удалить",
+  "@delete": {
+    "description": "delete"
+  },
+  "editIngredient": "Изменить продукт",
+  "@editIngredient": {
+    "description": "editIngredient"
+  },
+  "saveChanges": "Сохранить изменения",
+  "@saveChanges": {
+    "description": "saveChanges"
+  },
+  "deleteFromPantry": "Удалить из запасов",
+  "@deleteFromPantry": {
+    "description": "deleteFromPantry"
+  },
+  "quantityRequired": "Укажите количество.",
+  "@quantityRequired": {
+    "description": "quantityRequired"
+  },
+  "quantityInvalid": "Введите до 8 цифр и до 2 знаков после запятой.",
+  "@quantityInvalid": {
+    "description": "quantityInvalid"
+  },
+  "quantityPositive": "Количество должно быть больше нуля.",
+  "@quantityPositive": {
+    "description": "quantityPositive"
+  },
+  "language": "Язык",
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English language name in the selector. Keep the native name in every locale."
+  },
+  "languageRussian": "Русский",
+  "@languageRussian": {
+    "description": "Russian language name in the selector. Keep the native name in every locale."
+  },
+  "languageUkrainian": "Українська",
+  "@languageUkrainian": {
+    "description": "Ukrainian language name in the selector. Keep the native name in every locale."
+  },
+  "languageSlovak": "Slovenčina",
+  "@languageSlovak": {
+    "description": "Slovak language name in the selector. Keep the native name in every locale."
+  },
+  "@language": {
+    "description": "language"
+  },
+  "systemLanguage": "Язык системы",
+  "@systemLanguage": {
+    "description": "systemLanguage"
+  },
+  "languageSaveFailed": "Язык изменён на этот запуск, но сохранить настройку не удалось. Попробуйте снова.",
+  "@languageSaveFailed": {
+    "description": "languageSaveFailed"
+  },
+  "authInvalidCredentials": "Неверный email или пароль.",
+  "@authInvalidCredentials": {
+    "description": "authInvalidCredentials"
+  },
+  "authValidation": "Проверьте введённые email и пароль.",
+  "@authValidation": {
+    "description": "authValidation"
+  },
+  "authDuplicateEmail": "Аккаунт с таким email уже существует.",
+  "@authDuplicateEmail": {
+    "description": "authDuplicateEmail"
+  },
+  "authRegistrationValidation": "Проверьте данные регистрации.",
+  "@authRegistrationValidation": {
+    "description": "authRegistrationValidation"
+  },
+  "authEmailVerificationInvalid": "Ссылка подтверждения недействительна или срок её действия истёк.",
+  "@authEmailVerificationInvalid": {
+    "description": "authEmailVerificationInvalid"
+  },
+  "authEmailVerificationRequest": "Не удалось повторно отправить письмо подтверждения. Попробуйте снова.",
+  "@authEmailVerificationRequest": {
+    "description": "authEmailVerificationRequest"
+  },
+  "authEmailVerificationOtpRequest": "Не удалось запросить код подтверждения. Попробуйте снова.",
+  "@authEmailVerificationOtpRequest": {
+    "description": "authEmailVerificationOtpRequest"
+  },
+  "authEmailVerificationOtpInvalid": "Код подтверждения недействителен или срок его действия истёк.",
+  "@authEmailVerificationOtpInvalid": {
+    "description": "authEmailVerificationOtpInvalid"
+  },
+  "rateLimited": "Слишком много запросов. Попробуйте позже.",
+  "@rateLimited": {
+    "description": "rateLimited"
+  },
+  "authPasswordResetRequest": "Не удалось отправить инструкции по сбросу пароля. Попробуйте снова.",
+  "@authPasswordResetRequest": {
+    "description": "authPasswordResetRequest"
+  },
+  "authPasswordResetInvalid": "Ссылка сброса пароля недействительна или срок её действия истёк.",
+  "@authPasswordResetInvalid": {
+    "description": "authPasswordResetInvalid"
+  },
+  "authPasswordResetValidation": "Проверьте новый пароль и попробуйте снова.",
+  "@authPasswordResetValidation": {
+    "description": "authPasswordResetValidation"
+  },
+  "authPasswordResetOtpRequest": "Не удалось отправить код сброса пароля. Попробуйте снова.",
+  "@authPasswordResetOtpRequest": {
+    "description": "authPasswordResetOtpRequest"
+  },
+  "authPasswordResetPasswordReuse": "Новый пароль должен отличаться от текущего.",
+  "@authPasswordResetPasswordReuse": {
+    "description": "authPasswordResetPasswordReuse"
+  },
+  "authPasswordResetOtpInvalid": "Код сброса пароля недействителен или срок его действия истёк.",
+  "@authPasswordResetOtpInvalid": {
+    "description": "authPasswordResetOtpInvalid"
+  },
+  "authPasswordResetOtpValidation": "Проверьте код и новый пароль, затем попробуйте снова.",
+  "@authPasswordResetOtpValidation": {
+    "description": "authPasswordResetOtpValidation"
+  },
+  "connectionError": "Не удалось подключиться к серверу. Попробуйте снова.",
+  "@connectionError": {
+    "description": "connectionError"
+  },
+  "unexpectedError": "Что-то пошло не так. Попробуйте снова.",
+  "@unexpectedError": {
+    "description": "unexpectedError"
+  },
+  "pantryLoadError": "Не удалось загрузить запасы. Попробуйте снова.",
+  "@pantryLoadError": {
+    "description": "pantryLoadError"
+  },
+  "pantrySearchError": "Не удалось загрузить продукты. Попробуйте снова.",
+  "@pantrySearchError": {
+    "description": "pantrySearchError"
+  },
+  "pantryCreateError": "Не удалось добавить продукт. Попробуйте снова.",
+  "@pantryCreateError": {
+    "description": "pantryCreateError"
+  },
+  "pantryDuplicate": "Этот продукт уже есть в запасах.",
+  "@pantryDuplicate": {
+    "description": "pantryDuplicate"
+  },
+  "ingredientUnavailable": "Этот продукт больше недоступен.",
+  "@ingredientUnavailable": {
+    "description": "ingredientUnavailable"
+  },
+  "pantryItemUnavailable": "Эта запись в запасах больше недоступна.",
+  "@pantryItemUnavailable": {
+    "description": "pantryItemUnavailable"
+  },
+  "pantryValidation": "Проверьте введённые значения и попробуйте снова.",
+  "@pantryValidation": {
+    "description": "pantryValidation"
+  },
+  "pantryAuthentication": "Сеанс завершён. Войдите снова.",
+  "@pantryAuthentication": {
+    "description": "pantryAuthentication"
+  },
+  "pantryUpdateError": "Не удалось изменить продукт в запасах. Попробуйте снова.",
+  "@pantryUpdateError": {
+    "description": "pantryUpdateError"
+  },
+  "pantryDeleteError": "Не удалось удалить продукт из запасов. Попробуйте снова.",
+  "@pantryDeleteError": {
+    "description": "pantryDeleteError"
+  },
+  "greetingNamed": "Рады вас видеть, {name}",
+  "@greetingNamed": {
+    "description": "greetingNamed",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "featureComingSoon": "{feature} появится в одном из следующих обновлений.",
+  "@featureComingSoon": {
+    "description": "featureComingSoon",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePantryConfirmation": "Удалить {name} из запасов?",
+  "@deletePantryConfirmation": {
+    "description": "deletePantryConfirmation",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityGrams": "{quantity} г",
+  "@quantityGrams": {
+    "description": "quantityGrams",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityWithExpiry": "{quantity} г\nГоден до {date}",
+  "@quantityWithExpiry": {
+    "description": "quantityWithExpiry",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
+}

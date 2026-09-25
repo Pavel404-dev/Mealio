@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../data/pantry_repository.dart';
 import '../domain/pantry_failure.dart';
 import '../domain/pantry_item.dart';
@@ -24,6 +25,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
   late final TextEditingController _quantityController;
   late DateTime? _expiresAt;
   PantryFailure? _failure;
+  PantryOperation _operation = PantryOperation.update;
   bool _isMutating = false;
   bool _isDeleteConfirmationOpen = false;
 
@@ -79,6 +81,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
     final quantity = PantryQuantity.fromInput(_quantityController.text);
     setState(() {
       _isMutating = true;
+      _operation = PantryOperation.update;
       _failure = null;
     });
 
@@ -117,9 +120,11 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             key: const Key('edit-pantry-delete-confirm-dialog'),
-            title: const Text('Delete pantry item?'),
+            title: Text(context.l10n.deletePantryTitle),
             content: Text(
-              'Remove ${widget.pantryItem.ingredient.name} from your pantry?',
+              context.l10n.deletePantryConfirmation(
+                widget.pantryItem.ingredient.name,
+              ),
             ),
             actions: [
               TextButton(
@@ -127,7 +132,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                 onPressed: isConfirming
                     ? null
                     : () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancel'),
+                child: Text(context.l10n.cancel),
               ),
               FilledButton(
                 key: const Key('edit-pantry-delete-confirm-button'),
@@ -140,7 +145,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                         setDialogState(() => isConfirming = true);
                         Navigator.of(dialogContext).pop(true);
                       },
-                child: const Text('Delete'),
+                child: Text(context.l10n.delete),
               ),
             ],
           ),
@@ -163,6 +168,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
     }
     setState(() {
       _isMutating = true;
+      _operation = PantryOperation.delete;
       _failure = null;
     });
     try {
@@ -215,7 +221,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
       child: Scaffold(
         key: const Key('edit-pantry-item-screen'),
         appBar: AppBar(
-          title: const Text('Edit ingredient'),
+          title: Text(context.l10n.editIngredient),
           leading: IconButton(
             key: const Key('edit-pantry-back-button'),
             onPressed: _isInteractionLocked ? null : _cancel,
@@ -223,7 +229,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
           ),
         ),
         body: SafeArea(
-          child: Form(
+          child: LocalizedForm(
             key: _formKey,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -244,7 +250,8 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                   key: const Key('edit-pantry-quantity-field'),
                   controller: _quantityController,
                   enabled: !_isInteractionLocked,
-                  validator: PantryQuantity.validate,
+                  validator: (value) =>
+                      localizedQuantityError(value, context.l10n),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -255,9 +262,9 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                     }
                   },
                   onFieldSubmitted: (_) => _save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity (g)',
-                    hintText: '500.25',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.quantityLabel,
+                    hintText: context.l10n.quantityHint,
                     prefixIcon: Icon(Icons.scale_outlined),
                   ),
                 ),
@@ -268,7 +275,7 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                   icon: const Icon(Icons.event_outlined),
                   label: Text(
                     _expiresAt == null
-                        ? 'Expiration date (optional)'
+                        ? context.l10n.expiryOptional
                         : _formatDate(_expiresAt!),
                   ),
                 ),
@@ -281,12 +288,12 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                             _expiresAt = null;
                             _failure = null;
                           }),
-                    child: const Text('Clear expiration date'),
+                    child: Text(context.l10n.clearExpiry),
                   ),
                 if (_failure != null) ...[
                   const SizedBox(height: 12),
                   Text(
-                    _failure!.message,
+                    _failure!.localized(context.l10n, _operation),
                     key: const Key('edit-pantry-error-message'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -304,14 +311,14 @@ class _EditPantryItemScreenState extends ConsumerState<EditPantryItemScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Save changes'),
+                      : Text(context.l10n.saveChanges),
                 ),
                 const SizedBox(height: 12),
                 TextButton.icon(
                   key: const Key('edit-pantry-delete-button'),
                   onPressed: _isInteractionLocked ? null : _confirmDelete,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete from pantry'),
+                  label: Text(context.l10n.deleteFromPantry),
                 ),
               ],
             ),

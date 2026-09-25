@@ -1,3 +1,5 @@
+enum PantryQuantityError { required, invalid, nonPositive }
+
 class PantryQuantity {
   const PantryQuantity._(this.value);
 
@@ -5,18 +7,25 @@ class PantryQuantity {
 
   final String value;
 
-  static String? validate(String? input) {
+  static String? validate(String? input) => switch (validationError(input)) {
+    null => null,
+    PantryQuantityError.required => 'Quantity is required.',
+    PantryQuantityError.invalid => 'Enter up to 8 digits and 2 decimal places.',
+    PantryQuantityError.nonPositive => 'Quantity must be greater than zero.',
+  };
+
+  static PantryQuantityError? validationError(String? input) {
     final value = input?.trim() ?? '';
     if (value.isEmpty) {
-      return 'Quantity is required.';
+      return PantryQuantityError.required;
     }
     if (!_pattern.hasMatch(value)) {
-      return 'Enter up to 8 digits and 2 decimal places.';
+      return PantryQuantityError.invalid;
     }
 
     final digits = value.replaceAll(RegExp(r'[.,]'), '');
     if (digits.runes.every((digit) => digit == 48)) {
-      return 'Quantity must be greater than zero.';
+      return PantryQuantityError.nonPositive;
     }
     return null;
   }

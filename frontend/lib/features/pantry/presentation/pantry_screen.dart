@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/localization/l10n.dart';
 import '../domain/pantry_failure.dart';
 import '../domain/pantry_item.dart';
 import 'pantry_providers.dart';
@@ -16,12 +17,12 @@ class PantryScreen extends ConsumerWidget {
 
     return Scaffold(
       key: const Key('pantry-screen'),
-      appBar: AppBar(title: const Text('Pantry')),
+      appBar: AppBar(title: Text(context.l10n.pantry)),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('pantry-add-button'),
         onPressed: () => context.push('/pantry/add'),
         icon: const Icon(Icons.add),
-        label: const Text('Add ingredient'),
+        label: Text(context.l10n.addIngredient),
       ),
       body: SafeArea(
         child: pantryItems.when(
@@ -59,13 +60,13 @@ class _EmptyPantry extends StatelessWidget {
             const Icon(Icons.kitchen_outlined, size: 56, color: AppColors.sage),
             const SizedBox(height: 16),
             Text(
-              'Your pantry is empty',
+              context.l10n.pantryEmpty,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Ingredients you have at home will appear here.',
+              context.l10n.pantryEmptyDescription,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -98,7 +99,7 @@ class _PantryError extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              failure.message,
+              failure.localized(context.l10n, PantryOperation.list),
               key: const Key('pantry-error-message'),
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
@@ -107,7 +108,7 @@ class _PantryError extends StatelessWidget {
             FilledButton(
               key: const Key('pantry-retry-button'),
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -146,9 +147,11 @@ class _PantryList extends StatelessWidget {
             title: Text(item.ingredient.name),
             subtitle: Text(
               item.expiresAt == null
-                  ? '${_formatQuantity(item.quantityG)} g'
-                  : '${_formatQuantity(item.quantityG)} g\n'
-                        'Expires ${_formatDate(item.expiresAt!)}',
+                  ? context.l10n.quantityGrams(_formatQuantity(item.quantityG))
+                  : context.l10n.quantityWithExpiry(
+                      _formatQuantity(item.quantityG),
+                      _formatDate(item.expiresAt!),
+                    ),
             ),
           ),
         );
