@@ -344,4 +344,5 @@ Keep one backend replica in one region and use private PostgreSQL networking.
 Do not raise the budget or silently upgrade the plan to keep staging running.
 If the ceiling cannot be maintained, leave staging offline and use local Compose.
 
-Mobile manual E2E remains `N/A — manual E2E is a future phase`.
+Record actual phone checks using the [Android QA guide](android-staging-qa.md).
+Broader manual mobile E2E remains separate from those checks.

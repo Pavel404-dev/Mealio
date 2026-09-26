@@ -18,11 +18,17 @@ Closes #
 
 - [ ] Not run (explain why)
 
-## Manual E2E status (future phase)
+## Expected behavior examples
 
-<!-- Manual E2E is not yet an active release gate. State N/A or record the future scenario. -->
+<!-- For user behavior changes, link or repeat 2–4 examples defined before implementation, including an edge case; use them in review and tests. For documentation or mechanical changes, write N/A. -->
 
-N/A — manual E2E is a future phase.
+N/A.
+
+## Manual check
+
+<!-- Replace with Done: device/environment, APK version or commit if applicable, scenarios and results; Pending: brief reason; or N/A: brief reason. -->
+
+Status:
 
 ## Security and migration impact
 
@@ -43,4 +49,5 @@ N/A.
 - [ ] I ran the relevant local checks and reported only what actually ran.
 - [ ] I considered security and migration effects and documented them above.
 - [ ] GitHub Actions are green, or any failure is explained and resolved before merge.
-- [ ] The PR is ready for human review; no secrets, generated credentials, or deployment configuration were added.
+- [ ] Independent human review is recorded when available; if unavailable, I stated that without treating CI, Copilot silence, or Codex review as human approval.
+- [ ] The PR is ready for review; no secrets, generated credentials, or deployment configuration were added.

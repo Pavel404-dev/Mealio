@@ -15,7 +15,10 @@ perform the prohibited Git or GitHub mutations listed in [AGENTS.md](../AGENTS.m
 
 1. Create a focused GitHub issue with the feature form. Define the goal, scope,
    exclusions, acceptance criteria, verification, and security or migration
-   impact before implementation.
+   impact before implementation. For changes to user behavior, write 2–4
+   concrete examples of the expected result, including an edge case, before
+   coding. Use them during review and testing. Pure documentation and mechanical
+   changes do not need artificial behavior examples.
 2. Start from an up-to-date, clean `main`, then create one focused branch, for
    example `feat/pantry-search` or `fix/token-refresh`. Do not mix unrelated
    cleanup into the branch.
@@ -27,16 +30,20 @@ perform the prohibited Git or GitHub mutations listed in [AGENTS.md](../AGENTS.m
    checks that actually ran.
 5. Open a small PR linked to the issue and complete the PR template. Keep its
    title and commits focused on the same outcome.
-6. The author reviews the complete diff. A human reviewer checks the scope,
-   behavior, tests, security and migration implications, and whether Actions
-   results support the change.
-7. Merge only after required review and GitHub Actions pass. `main` receives
-   reviewed PRs only; do not use it as an integration branch for unreviewed work.
+6. The author reviews the complete diff. When available, an independent human
+   reviewer checks the behavior examples, compatibility, concrete risks, tests,
+   and security or migration implications. If no independent reviewer is
+   available, record that honestly. A separate Codex review can help find
+   defects but is not human approval. Green CI and no Copilot comments do not
+   establish review when Copilot could not complete it.
+7. Merge only after required reviews and GitHub Actions pass. `main` is not an
+   integration branch for unreviewed work.
 
 The current Actions workflows run backend quality checks, migrations, backend
 tests, a backend image build, and Flutter format, analysis, and tests for PRs
-targeting `main` and pushes to `main`. They complement, rather than replace,
-relevant local verification and human review.
+targeting `main` and pushes to `main`. A separate workflow builds the Android
+QA APK after frontend changes reach `main`. These checks complement relevant
+local verification and review.
 
 ## Local development and Codex Cloud
 
@@ -80,18 +87,19 @@ Save tokens without weakening quality:
   review the final complete diff before handoff.
 - Choose Luna, Sol, or Astra by risk, not by a desire to bypass verification.
 
-## Future delivery phases
+## Staging and later delivery
 
 See [Railway staging](staging.md) for the project IaC, manual secrets, plan/apply
-workflow, verification, rollback, and $10 monthly budget. Infrastructure is
-prepared in the repository; provisioning and deployment remain user actions.
+workflow, verification, rollback, and $10 monthly budget. Railway backend
+deployment is a user action independent of the Android APK build.
 
-Internal Android staging QA APKs have a
-[manual build, download, and installation workflow](android-staging-qa.md).
-The user performs the first Actions run and downloaded-artifact verification
-after merge; local checks do not establish that the remote workflow passed.
+After frontend changes merge into `main`, Actions automatically builds an
+internal Android staging QA APK. A person checks the run's source commit and
+downloaded APK checksum, installs it on a phone, and records the scenarios
+actually checked and their results. See the [Android QA guide](android-staging-qa.md).
+An optional manual build remains available.
 
-Staging activation, manual mobile E2E, n8n automation, production Android
-distribution, and TestFlight remain separate phases. They are not current merge
-gates or deployment commitments. Record manual E2E as
-`N/A — manual E2E is a future phase` unless an issue explicitly includes it.
+Broader manual mobile E2E, n8n automation, production Android distribution,
+and TestFlight remain separate phases. Device checks already performed should
+be reported as actual results; do not claim broader E2E coverage from an APK
+build or a limited phone check.

@@ -36,8 +36,9 @@ GoRouter, Dio, and flutter_secure_storage.
 ## Working agreement
 
 - Respond in Russian unless the user requests another language.
-- Work one terminal command or one verification step at a time, then wait for the
-  complete output before continuing.
+- Group related safe terminal commands and checks when their full output remains
+  visible. Run dependent changes and steps that may affect data sequentially,
+  waiting for each complete result.
 - Start every implementation task with a focused audit.
 - Prefer one carefully reviewed patch when practical.
 - Explain assumptions and security or migration tradeoffs before implementation.
