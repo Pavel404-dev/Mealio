@@ -9,18 +9,13 @@ class LanguageButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locale = ref.watch(localeControllerProvider);
+    final selectedLanguageCode = Localizations.localeOf(context).languageCode;
     return PopupMenuButton<String>(
       key: const Key('language-button'),
       tooltip: context.l10n.language,
-      initialValue: locale?.languageCode ?? 'system',
+      initialValue: selectedLanguageCode,
       icon: const Icon(Icons.language),
       itemBuilder: (context) => [
-        CheckedPopupMenuItem(
-          value: 'system',
-          checked: locale == null,
-          child: Text(context.l10n.systemLanguage),
-        ),
         for (final entry in {
           'en': context.l10n.languageEnglish,
           'ru': context.l10n.languageRussian,
@@ -29,14 +24,14 @@ class LanguageButton extends ConsumerWidget {
         }.entries)
           CheckedPopupMenuItem(
             value: entry.key,
-            checked: locale?.languageCode == entry.key,
+            checked: selectedLanguageCode == entry.key,
             child: Text(entry.value),
           ),
       ],
       onSelected: (code) async {
         final saved = await ref
             .read(localeControllerProvider.notifier)
-            .setLocale(code == 'system' ? null : Locale(code));
+            .setLocale(Locale(code));
         if (!saved && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

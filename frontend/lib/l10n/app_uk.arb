@@ -511,10 +511,6 @@
   "@language": {
     "description": "language"
   },
-  "systemLanguage": "Мова системи",
-  "@systemLanguage": {
-    "description": "systemLanguage"
-  },
   "languageSaveFailed": "Мову змінено на цей запуск, але зберегти налаштування не вдалося. Спробуйте знову.",
   "@languageSaveFailed": {
     "description": "languageSaveFailed"

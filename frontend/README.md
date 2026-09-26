@@ -293,11 +293,13 @@ by Flutter `gen_l10n`. Running `flutter pub get` generates ignored Dart files in
 
 The app chooses the first supported language in the system preference list
 (regional variants match by language), with English as the fallback. The language
-menu on Login and in the Home AppBar applies an override immediately. “System
-language” removes it and resumes following system changes. The override uses
-its own secure-storage key, `mealio_locale_override`, independent of token
-storage and logout. Read failures fall back to system selection; write failures
-keep the current selection for the session and show a localized notification.
+menu on Login and in the Home AppBar shows the four supported languages and
+marks the language currently used by the app. Choosing any language, including
+the current device language, applies and saves an override immediately. The
+override uses its own secure-storage key, `mealio_locale_override`, independent
+of token storage and logout. Read failures fall back to system selection;
+write failures keep the current selection for the session and show a localized
+notification.
 Writes are serialized and a delayed restore cannot overwrite a newer choice.
 
 Language does not determine country, currency, units or time zone. Pantry

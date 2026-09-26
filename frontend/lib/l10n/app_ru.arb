@@ -511,10 +511,6 @@
   "@language": {
     "description": "language"
   },
-  "systemLanguage": "Язык системы",
-  "@systemLanguage": {
-    "description": "systemLanguage"
-  },
   "languageSaveFailed": "Язык изменён на этот запуск, но сохранить настройку не удалось. Попробуйте снова.",
   "@languageSaveFailed": {
     "description": "languageSaveFailed"

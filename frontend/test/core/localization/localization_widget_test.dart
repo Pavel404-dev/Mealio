@@ -63,6 +63,26 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  void expectLanguageMenu(WidgetTester tester, String selectedCode) {
+    const names = {
+      'en': 'English',
+      'ru': 'Русский',
+      'uk': 'Українська',
+      'sk': 'Slovenčina',
+    };
+    final items = tester.widgetList<CheckedPopupMenuItem<String>>(
+      find.byType(CheckedPopupMenuItem<String>),
+    );
+    expect(items, hasLength(4));
+    for (final entry in names.entries) {
+      final item = tester.widget<CheckedPopupMenuItem<String>>(
+        find.widgetWithText(CheckedPopupMenuItem<String>, entry.value),
+      );
+      expect(item.value, entry.key);
+      expect(item.checked, entry.key == selectedCode);
+    }
+  }
+
   for (final code in ['en', 'ru', 'uk', 'sk']) {
     testWidgets(
       '$code system locale localizes login, validators and safe auth errors',
@@ -231,7 +251,7 @@ void main() {
     },
   );
 
-  testWidgets('unsupported system language falls back to English', (
+  testWidgets('unsupported system language falls back to checked English', (
     tester,
   ) async {
     tester.binding.platformDispatcher.localesTestValue = [
@@ -246,6 +266,45 @@ void main() {
       ),
       const Locale('en'),
     );
+    await tap(tester, 'language-button');
+    expectLanguageMenu(tester, 'en');
+  });
+
+  testWidgets('device Russian is checked, and choosing it saves an override', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [
+      const Locale('ru', 'RU'),
+    ];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    final storage = MemoryLocaleStorage();
+    final container = await pumpApp(tester, storage: storage);
+    expect(container.read(localeControllerProvider), isNull);
+    await tap(tester, 'language-button');
+    expectLanguageMenu(tester, 'ru');
+    await tester.tap(
+      find.widgetWithText(CheckedPopupMenuItem<String>, 'Русский'),
+    );
+    await tester.pumpAndSettle();
+    expect(storage.writes, ['ru']);
+    expect(storage.value, 'ru');
+
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('uk')];
+    await tester.pumpAndSettle();
+    expect(find.text('Добро пожаловать в Mealio'), findsOneWidget);
+    await tap(tester, 'language-button');
+    expectLanguageMenu(tester, 'ru');
+  });
+
+  testWidgets('saved override is checked instead of the device language', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('ru')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await pumpApp(tester, storage: MemoryLocaleStorage('sk'));
+    expect(find.text('Vitajte v Mealio'), findsOneWidget);
+    await tap(tester, 'language-button');
+    expectLanguageMenu(tester, 'sk');
   });
 
   testWidgets('system locale list chooses the first supported language', (
@@ -262,7 +321,7 @@ void main() {
   });
 
   testWidgets(
-    'login selector changes immediately, keeps fields and errors, returns to system',
+    'login selector changes immediately and keeps fields and navigation',
     (tester) async {
       tester.binding.platformDispatcher.localesTestValue = [const Locale('sk')];
       addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
@@ -279,6 +338,7 @@ void main() {
       );
       await tap(tester, 'login-button');
       await tap(tester, 'language-button');
+      expectLanguageMenu(tester, 'sk');
       await tester.tap(
         find.widgetWithText(CheckedPopupMenuItem<String>, 'Русский'),
       );
@@ -293,16 +353,16 @@ void main() {
       expect(container.read(appRouterProvider), same(router));
       expect(storage.value, 'ru');
       await tap(tester, 'language-button');
-      await tester.tap(
-        find.widgetWithText(CheckedPopupMenuItem<String>, 'Язык системы'),
-      );
+      expectLanguageMenu(tester, 'ru');
+      await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
-      expect(find.text('Vitajte v Mealio'), findsOneWidget);
-      expect(storage.value, isNull);
       tester.binding.platformDispatcher.localesTestValue = [const Locale('uk')];
       await tester.pumpAndSettle();
-      expect(find.text('Вітаємо в Mealio'), findsOneWidget);
-      expect(find.text('Введіть коректний email.'), findsOneWidget);
+      expect(find.text('Добро пожаловать в Mealio'), findsOneWidget);
+      expect(find.text('Введите корректный email.'), findsOneWidget);
+      expect(storage.value, 'ru');
+      expect(field.controller!.text, '  synthetic password  ');
+      expect(router.state.uri.path, '/login');
     },
   );
 
