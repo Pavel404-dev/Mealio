@@ -30,6 +30,12 @@ N/A.
 
 Status:
 
+## Review status
+
+<!-- Choose one: Reviewed — reviewer and outcome; Pending — requested reviewer; Unavailable — reason. Record automated review separately. -->
+
+Status: Pending — independent human review not yet recorded.
+
 ## Security and migration impact
 
 <!-- Cover auth, authorization, secrets, data handling, transactions, and Alembic. Write "None" when not applicable. -->
