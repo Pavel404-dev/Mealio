@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent
 INSTALLER = ROOT / "install-android-staging-qa.py"
 SHA = "a" * 40
 SERIAL = "test-device-123"
-REPO = "Pavel404-dev/Mealio"
+REPO = "github.com/Pavel404-dev/Mealio"
 
 FAKE_GH = '''#!/usr/bin/env python3
 import hashlib
@@ -24,7 +24,7 @@ from pathlib import Path
 args = sys.argv[1:]
 with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as log:
     log.write(json.dumps(["gh", *args]) + "\\n")
-if "--repo" not in args or args[args.index("--repo") + 1] != "Pavel404-dev/Mealio":
+if "--repo" not in args or args[args.index("--repo") + 1] != "github.com/Pavel404-dev/Mealio":
     sys.exit(2)
 if args[:2] == ["run", "view"]:
     print(json.dumps({
@@ -97,7 +97,9 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(any(call[0] == "adb" and "install" in call for call in calls))
 
     def test_success(self):
-        result, calls = self.run_installer(GH_REPO="elsewhere/other")
+        result, calls = self.run_installer(
+            GH_HOST="example.invalid", GH_REPO="elsewhere/other"
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("APK installed successfully", result.stdout)
         self.assertEqual(calls[0][:4], ["gh", "run", "view", "12345"])

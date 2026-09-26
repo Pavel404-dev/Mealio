@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 WORKFLOW = "Android Staging QA APK"
-REPO = "Pavel404-dev/Mealio"
+REPO = "github.com/Pavel404-dev/Mealio"
 APK = "mealio-staging-qa-debug.apk"
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 SERIAL_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._:-]*\Z")

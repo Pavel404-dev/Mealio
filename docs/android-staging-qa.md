@@ -92,8 +92,9 @@ python3 scripts/install-android-staging-qa.py RUN_ID FULL_COMMIT_SHA DEVICE_SERI
 Replace all three uppercase arguments with values from that specific run and
 device. The helper never chooses the latest run. It requires the completed,
 successful **Android Staging QA APK** run on `main` with the exact expected
-`headSha`. Both `gh` calls explicitly select `Pavel404-dev/Mealio`, regardless
-of `GH_REPO` or the current directory. It downloads only the artifact named
+`headSha`. Both `gh` calls explicitly select `github.com/Pavel404-dev/Mealio`,
+regardless of `GH_HOST`, `GH_REPO`, or the current directory. It downloads only
+the artifact named
 `mealio-internal-staging-qa-debug-<full-commit-sha>` from that run into a fresh
 temporary directory, verifies `SOURCE_COMMIT.txt` and the APK's `SHA256SUMS`,
 checks that the selected serial is in the `device` state, and only then calls
