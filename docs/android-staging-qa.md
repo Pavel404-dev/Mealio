@@ -74,8 +74,8 @@ For an optional manual build, click **Run workflow**, select `main`, and start
 the run. [GitHub requires the workflow on the default branch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
 for manual dispatch; the operator needs repository write access.
 
-The first successful automatic run and downloaded-artifact verification remain
-post-merge checks. The APK must still be downloaded and installed on the phone.
+The automatic run is a post-merge check. A person still verifies the downloaded
+artifact and installs the APK on a phone before reporting device results.
 
 ## Download and verify
 
@@ -137,10 +137,17 @@ adb -s <device-serial> uninstall com.mealio.app
 
 Uninstallation does not delete the account or data stored by the staging backend.
 
+## Record device checks
+
+After installation, record the device and environment, APK source commit, each
+scenario actually checked, and its result. State checks that were skipped or
+blocked, including an unavailable staging backend. APK assembly alone is not a
+phone test. The APK build and Railway backend deployment are independent; wait
+for a healthy staging backend before checking flows that use it.
+
 ## Local build verification
 
-With the toolchain above already available, run these commands individually from
-`frontend/`:
+With the toolchain above already available, run these checks from `frontend/`:
 
 ```bash
 flutter --version
@@ -164,5 +171,5 @@ by `git rev-parse HEAD` alone.
 This workflow does not change UI/UX, backend behavior, Railway infrastructure,
 the application ID, or release signing. It does not configure production
 signing, distribute a keystore, or publish to Play Store. SMTP, OpenAI, Android
-App Links, and iOS/TestFlight are separate work. **Manual mobile E2E is a separate
-task**; successful tests and APK assembly do not establish staging E2E results.
+App Links, and iOS/TestFlight are separate work. Broader manual mobile E2E is a
+separate task; report only the device scenarios actually checked.
