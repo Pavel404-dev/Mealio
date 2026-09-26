@@ -27,9 +27,12 @@ jobs:
           flutter-version: "3.44.8"
           cache: true
 
-      - name: Install frontend dependencies
+      - name: Install locked frontend dependencies
         working-directory: frontend
-        run: flutter pub get
+        run: |
+          git ls-files --error-unmatch pubspec.lock
+          flutter pub get --enforce-lockfile
+          git diff --exit-code HEAD -- pubspec.lock
 
       - name: Check localization catalogs
         working-directory: frontend
@@ -43,8 +46,13 @@ jobs:
 
       - name: Analyze frontend
         working-directory: frontend
-        run: flutter analyze
+        run: flutter analyze --no-pub
 
       - name: Run frontend tests
         working-directory: frontend
-        run: flutter test
+        run: flutter test --no-pub
+
+      - name: Confirm frontend lockfile is unchanged
+        if: always()
+        working-directory: frontend
+        run: git diff --exit-code HEAD -- pubspec.lock
