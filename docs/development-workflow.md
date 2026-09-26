@@ -44,6 +44,8 @@ tests, a backend image build, and Flutter format, analysis, and tests for PRs
 targeting `main` and pushes to `main`. A separate workflow builds the Android
 QA APK after frontend changes reach `main`. These checks complement relevant
 local verification and review.
+For the complete local Flutter checks from the repository root, run
+`bash scripts/check-frontend.sh`.
 
 ## Local development and Codex Cloud
 
@@ -97,6 +99,8 @@ After frontend changes merge into `main`, Actions automatically builds an
 internal Android staging QA APK. A person checks the run's source commit and
 downloaded APK checksum, installs it on a phone, and records the scenarios
 actually checked and their results. See the [Android QA guide](android-staging-qa.md).
+Its manual install helper requires a specific run ID, full commit SHA, and
+device serial.
 An optional manual build remains available.
 
 Broader manual mobile E2E, n8n automation, production Android distribution,

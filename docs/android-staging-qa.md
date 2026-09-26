@@ -77,7 +77,37 @@ for manual dispatch; the operator needs repository write access.
 The automatic run is a post-merge check. A person still verifies the downloaded
 artifact and installs the APK on a phone before reporting device results.
 
-## Download and verify
+## Install one verified run on one device
+
+From the repository root, with Python 3.11+, authenticated `gh` CLI, `adb`, and
+USB debugging available, first identify the intended run in **Actions → Android
+Staging QA APK**. Copy its numeric run ID and full 40-character commit SHA. Run
+`adb devices` to get the serial of the intended phone and authorize its USB
+debugging prompt. Then run:
+
+```bash
+python3 scripts/install-android-staging-qa.py RUN_ID FULL_COMMIT_SHA DEVICE_SERIAL
+```
+
+Replace all three uppercase arguments with values from that specific run and
+device. The helper never chooses the latest run. It requires the completed,
+successful **Android Staging QA APK** run on `main` with the exact expected
+`headSha`. Both `gh` calls explicitly select `github.com/Pavel404-dev/Mealio`,
+regardless of `GH_HOST`, `GH_REPO`, or the current directory. It downloads only
+the artifact named
+`mealio-internal-staging-qa-debug-<full-commit-sha>` from that run into a fresh
+temporary directory, verifies `SOURCE_COMMIT.txt` and the APK's `SHA256SUMS`,
+checks that the selected serial is in the `device` state, and only then calls
+`adb -s DEVICE_SERIAL install -r` for that APK. It reports an error and stops
+if any check fails. It does not uninstall the app, clear data, select another
+device, or keep the downloaded files. Re-run the same command to download and
+verify a fresh copy if needed. An expired artifact must be rebuilt on `main`.
+
+The APK comes from the workflow's checked-out commit and targets the staging
+backend above. The SHA and checksum identify this specific CI bundle; the
+helper does not build an APK locally.
+
+## Optional manual download and verification
 
 1. On the successful run's summary page, under **Artifacts**, download
    `mealio-internal-staging-qa-debug-<full-commit-sha>` before its 7-day expiry.
@@ -98,11 +128,13 @@ artifact and installs the APK on a phone before reporting device results.
 Do not install the APK if the commit is unexpected or the checksum fails.
 Download the complete bundle from the intended successful run again.
 
-## Install and remove with adb
+## Manual adb installation and removal
 
-Use an Android device with USB debugging enabled and Android SDK Platform Tools
-(`adb`) available on your computer. Connect the device and approve the USB
-debugging prompt. From the verified bundle directory:
+If installing without the helper, use an Android device with USB debugging
+enabled and Android SDK Platform Tools (`adb`) available on your computer.
+Connect the device and approve the USB debugging prompt. Verify the bundle as
+above and confirm the chosen serial is in the `device` state. From the verified
+bundle directory:
 
 ```bash
 adb devices
@@ -140,22 +172,35 @@ Uninstallation does not delete the account or data stored by the staging backend
 ## Record device checks
 
 After installation, record the device and environment, APK source commit, each
-scenario actually checked, and its result. State checks that were skipped or
-blocked, including an unavailable staging backend. APK assembly alone is not a
-phone test. The APK build and Railway backend deployment are independent; wait
-for a healthy staging backend before checking flows that use it.
+scenario actually checked, and its result. Include the Actions run ID, device
+model/Android version and serial (redact the serial in public reports if needed),
+staging backend status, and any failure message or screenshot with secrets
+removed. State checks that were skipped or blocked, including an unavailable
+staging backend. APK assembly alone is not a phone test. The APK build and
+Railway backend deployment are independent; wait for a healthy staging backend
+before checking flows that use it.
 
-## Local build verification
+## Local frontend verification
 
-With the toolchain above already available, run these checks from `frontend/`:
+With Flutter 3.44.8 and its bundled Dart available, run this single command from
+the repository root:
+
+```bash
+bash scripts/check-frontend.sh
+```
+
+It runs the same frontend checks as [Frontend Tests](../.github/workflows/frontend-tests.yml)
+in this order: tracked lockfile check, `flutter pub get --enforce-lockfile`,
+`dart run tool/check_l10n.dart`, `flutter gen-l10n`,
+`dart format --output=none --set-exit-if-changed .`, `flutter analyze --no-pub`,
+and the full `flutter test --no-pub`. It stops at the first error and checks the
+tracked `frontend/pubspec.lock` again on exit, including after a failed step.
+Inspect an unexpected lockfile change before rerunning.
+
+For an optional local APK build after that verification, run from `frontend/`:
 
 ```bash
 flutter --version
-flutter pub get --enforce-lockfile
-git diff --exit-code HEAD -- pubspec.lock
-dart format --output=none --set-exit-if-changed .
-flutter analyze --no-pub
-flutter test --no-pub
 flutter build apk --debug --no-pub \
   --dart-define=API_BASE_URL=https://backend-staging-362e.up.railway.app
 ```
