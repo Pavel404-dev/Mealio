@@ -511,10 +511,6 @@
   "@language": {
     "description": "language"
   },
-  "systemLanguage": "System language",
-  "@systemLanguage": {
-    "description": "systemLanguage"
-  },
   "languageSaveFailed": "Language changed for this session, but could not be saved. Please try again.",
   "@languageSaveFailed": {
     "description": "languageSaveFailed"

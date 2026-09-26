@@ -511,10 +511,6 @@
   "@language": {
     "description": "language"
   },
-  "systemLanguage": "Jazyk systému",
-  "@systemLanguage": {
-    "description": "systemLanguage"
-  },
   "languageSaveFailed": "Jazyk bol zmenený pre toto spustenie, ale nepodarilo sa ho uložiť. Skúste to znova.",
   "@languageSaveFailed": {
     "description": "languageSaveFailed"
