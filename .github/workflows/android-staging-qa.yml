@@ -7,6 +7,8 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/android-staging-qa.yml"
+      - "scripts/build-android-staging-qa.py"
+      - "scripts/test_android_qa_signing.py"
   workflow_dispatch:
 
 permissions:
@@ -14,6 +16,9 @@ permissions:
 
 jobs:
   staging-qa-apk:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     name: Build internal staging QA debug APK
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -71,10 +76,20 @@ jobs:
       - name: Run frontend tests
         run: flutter test --no-pub
 
-      - name: Build staging QA debug APK
+      - name: Build and verify signed staging QA debug APK
+        env:
+          ANDROID_QA_KEYSTORE_BASE64: ${{ secrets.ANDROID_QA_KEYSTORE_BASE64 }}
+          ANDROID_QA_STORE_PASSWORD: ${{ secrets.ANDROID_QA_STORE_PASSWORD }}
+          ANDROID_QA_KEY_ALIAS: ${{ secrets.ANDROID_QA_KEY_ALIAS }}
+          ANDROID_QA_KEY_PASSWORD: ${{ secrets.ANDROID_QA_KEY_PASSWORD }}
+          ANDROID_QA_CERT_SHA256: ${{ vars.ANDROID_QA_CERT_SHA256 }}
         run: |
-          flutter build apk --debug --no-pub \
-            --dart-define=API_BASE_URL=https://backend-staging-362e.up.railway.app
+          python3 ../scripts/build-android-staging-qa.py
+
+      # Also runs after cancellation or failure; the build helper normally removes it.
+      - name: Remove temporary QA signing material
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/mealio-qa-signing"
 
       - name: Prepare and verify staging QA bundle
         run: |

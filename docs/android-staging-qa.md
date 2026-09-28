@@ -9,9 +9,11 @@ Use disposable synthetic QA accounts and data.
 
 ## Build contract
 
-The workflow runs automatically when a push to `main` changes `frontend/**`
-or this workflow file, including matching PR merges. `workflow_dispatch` also
-allows a manual build. Backend-only changes do not trigger another APK build.
+The workflow runs automatically when a push to `main` changes `frontend/**`,
+the QA build helper or its signing tests, or this workflow file, including
+matching PR merges. `workflow_dispatch` allows a manual build **on main only**;
+the job skips all other refs and events. PR workflows never receive the QA key.
+Backend-only changes do not trigger another APK build.
 The workflow limits `GITHUB_TOKEN` to `contents: read`, checks out the triggering
 commit, and disables persisted checkout credentials. Existing backend and
 frontend CI workflows remain separate. APK builds and Railway deployments can
@@ -42,8 +44,9 @@ lockfile stays unchanged. Analysis, tests, and the build use `--no-pub` to avoid
 another implicit dependency resolution.
 
 Formatting, `flutter analyze`, and the full `flutter test` suite must pass before
-the debug APK is built. The bundle is uploaded only after its APK checksum
-passes verification. The upload allowlist contains exactly these three files:
+the debug APK is built. The bundle is uploaded only after its signing certificate
+matches the configured fingerprint and its APK checksum passes verification.
+The upload allowlist contains exactly these three files:
 
 | File | Purpose |
 | --- | --- |
@@ -57,18 +60,107 @@ do not add APKs, debug keys, keystores, or credentials to Git. Signing material
 is not included in the upload.
 
 This is a repeatable build process, **not a guarantee of byte-for-byte identical
-APKs**. Debug signing keys, archive timestamps, the runner image, JDK patch
-versions, and Actions major-version tags can change between runs. The checksum
+APKs**. The QA signing certificate is stable; archive timestamps, the runner
+image, JDK patch versions, and Actions major-version tags can change between runs. The checksum
 identifies the APK from one particular run; it does not establish reproducibility
 across separate builds.
+
+## One-time signing setup by the owner, before merge
+
+Configure these repository **Settings → Secrets and variables → Actions** entries
+before merging the signing change. Only the owner generates and backs up the
+real key; do not send keys, passwords, or base64 data in chat, issues, or PRs.
+
+| Kind | Exact name | Value |
+| --- | --- | --- |
+| Secret | `ANDROID_QA_KEYSTORE_BASE64` | Single-line base64 of the dedicated JKS keystore |
+| Secret | `ANDROID_QA_STORE_PASSWORD` | Keystore password |
+| Secret | `ANDROID_QA_KEY_ALIAS` | Private key alias, e.g. `mealio-staging-qa` |
+| Secret | `ANDROID_QA_KEY_PASSWORD` | Private key password |
+| Variable | `ANDROID_QA_CERT_SHA256` | Public certificate SHA-256, 64 hex digits or 32 colon-separated hex pairs |
+
+On a trusted owner-controlled computer with JDK 17+, create a private directory
+**outside the repository**, preferably on an encrypted volume. Run the following
+once in that directory, with terminal recording and shell tracing disabled:
+
+```bash
+umask 077
+keytool -genkeypair -keystore mealio-staging-qa.jks -storetype JKS \
+  -alias mealio-staging-qa -keyalg RSA -keysize 3072 -validity 10000
+```
+
+Use the interactive password prompts, a password manager, and strong unique
+passwords. The private key password can differ from the store password; enter
+the actual chosen value for each secret. Certificate identity fields are public:
+use a QA project identity without personal details. Do not reuse a release key,
+a local debug key, or a synthetic test key. Do not overwrite an existing QA key.
+
+Get the **public** certificate fingerprint (the password is prompted):
+
+```bash
+keytool -list -v -keystore mealio-staging-qa.jks -storetype JKS \
+  -alias mealio-staging-qa
+```
+
+Copy only the certificate's `SHA256` value to `ANDROID_QA_CERT_SHA256`, not the
+SHA-256 checksum of the keystore file. Base64 is encoding, not encryption.
+For example, on Linux the owner can upload the keystore directly without
+printing it or creating a base64 file:
+
+```bash
+base64 -w 0 mealio-staging-qa.jks | gh secret set ANDROID_QA_KEYSTORE_BASE64 \
+  --repo github.com/Pavel404-dev/Mealio
+```
+
+Set the other secrets through the Actions settings UI or `gh secret set NAME`
+using its hidden interactive prompt, never literal passwords in command-line
+arguments. Set the public variable in the UI. These are owner instructions;
+repository automation does not create the secrets.
+
+Keep encrypted offline backups of the keystore and recoverable password-manager
+records for both passwords and the alias. Record the public fingerprint alongside
+the backup, and test that a restored copy yields the same fingerprint. GitHub
+Secrets is not a downloadable backup. Restrict repository write access and
+review changes to the signing workflow and helper before merging.
+
+The helper writes the JKS only to `$RUNNER_TEMP/mealio-qa-signing/qa.jks`
+(directory `0700`, file `0600`). It checks all settings, validates the private
+key/password with `keytool`, and checks the exported certificate before invoking
+Flutter. Gradle selects the separate `stagingQa` config only with
+`MEALIO_QA_SIGNING=true`; incomplete QA settings fail instead of selecting the
+default debug config. The keystore is removed after the build, including failures;
+an `always()` workflow step also removes it on failure/cancellation.
+
+The helper then runs [`apksigner verify --print-certs`](https://developer.android.com/tools/apksigner)
+on the actual APK, requires exactly one matching signer, and logs
+`Verified APK certificate SHA-256: <public fingerprint>`. A bad key, password,
+alias, fingerprint, APK signature, or accidental default debug signer stops
+the job before packaging/upload. Tool output from key-bearing commands is
+withheld, including failures, to avoid exposing signing inputs in diagnostics.
+For a generic build failure, reproduce with a disposable synthetic key locally;
+do not enable shell tracing, Gradle debug logs, or upload private diagnostics.
+
+`MEALIO_QA_KEYSTORE_PATH` and `MEALIO_QA_SIGNING` are internal helper-to-Gradle
+environment settings, not GitHub Secrets or Dart defines. The default
+`~/.android/debug.keystore`, application ID, and release signing stay unchanged.
+
+### Key loss or rotation
+
+Restore the same keystore from backup if possible. Replacing the key changes the
+certificate and requires another explicitly approved uninstall/reinstall on QA
+devices, with local data loss. Update the keystore, passwords, alias, and expected
+fingerprint together; mismatched settings deliberately block builds. Do not
+rotate routinely or regenerate the key per run. This workflow does not implement
+Android signing lineage or a production key rotation process.
 
 ## Build after merging frontend changes
 
 After a matching merge into `main`, open the repository's **Actions** tab and
 select **Android Staging QA APK**. Open the run for that merge and confirm its
 full commit SHA is the revision intended for QA. Wait for formatting, analysis,
-tests, APK build, checksum verification, and upload to succeed. If a step fails,
-inspect its logs; do not substitute an artifact from another run.
+tests, APK build, certificate verification, checksum verification, and upload to
+succeed. If a step fails, inspect its logs; do not substitute an artifact from
+another run.
 
 For an optional manual build, click **Run workflow**, select `main`, and start
 the run. [GitHub requires the workflow on the default branch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
@@ -146,11 +238,13 @@ The unchanged application ID is `com.mealio.app`; this QA APK occupies the same
 app slot as other Mealio builds with that ID. The staging origin uses HTTPS
 directly, so `adb reverse` is unnecessary.
 
-Android debug signing is for internal testing. **Debug keys can differ between
-builds**, especially on fresh CI runners, and from a developer's local key.
-`install -r` can preserve local data only when Android accepts the update.
-A signature conflict (for example, `INSTALL_FAILED_UPDATE_INCOMPATIBLE`) can
-require removing the existing app before installing this APK.
+Android debug signing is for internal testing. Successive CI QA builds now use
+the same dedicated certificate. Older CI APKs and ordinary local debug builds
+can have a different certificate. The **first transition** to the stable QA
+certificate can fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`; `install -r`
+cannot bypass that mismatch. Plan one uninstall/reinstall on a disposable QA
+device. Subsequent stable-key QA APKs can update through `install -r` without
+clearing local data. The installer never uninstalls automatically.
 
 **Uninstalling deletes the app's local data, including locally stored sessions
 and settings.** Only proceed if losing those data on the selected QA device is
@@ -168,6 +262,29 @@ adb -s <device-serial> uninstall com.mealio.app
 ```
 
 Uninstallation does not delete the account or data stored by the staging backend.
+
+## Acceptance check after secrets are configured and the change is merged
+
+1. Build run A on `main`. Record its run ID, source SHA and the public fingerprint
+   from the successful signing-verification log. Install its verified bundle,
+   performing the one-time transition above only if needed and acceptable.
+2. Select an explicit app language different from the phone's default. Close and
+   reopen the app to confirm the language setting was persisted locally.
+3. Start a separate run B on `main` (manual dispatch is sufficient, even for the
+   same source SHA). Check that its verification log reports exactly the same
+   fingerprint as run A and the configured variable. These must be distinct CI
+   runs on fresh runners, not two downloads of the same artifact.
+4. Use the installer with **run B's** ID, SHA, and the same device serial. Confirm
+   `adb install -r` succeeds without uninstalling or clearing data. Reopen the app
+   and confirm the explicit language setting remains. Record both run IDs,
+   fingerprints, the update result, and the setting before/after.
+
+The installer still validates exactly three bundle files, SHA, checksum, and run
+status. The certificate gate is in CI; the installer does not independently pin
+a certificate. For an independent public check on either downloaded APK, run
+`apksigner verify --print-certs mealio-staging-qa-debug.apk` and compare its
+certificate SHA-256 with the configured variable. An APK file checksum will
+usually differ between builds and is not the certificate fingerprint.
 
 ## Record device checks
 
@@ -197,6 +314,25 @@ and the full `flutter test --no-pub`. It stops at the first error and checks the
 tracked `frontend/pubspec.lock` again on exit, including after a failed step.
 Inspect an unexpected lockfile change before rerunning.
 
+Run signing and installer tests from the repository root with Python 3.11+,
+`JAVA_HOME` pointing to a JDK and `ANDROID_HOME` to an SDK containing platform 36
+and Build Tools 36.0.0:
+
+```bash
+python3 -m unittest discover -s scripts -p 'test_*.py' -v
+```
+
+The signing tests create and remove temporary synthetic keys and tiny APKs.
+They use real `keytool`/`apksigner`, cover two signatures with the same key,
+missing/invalid inputs, a different signer (silent fallback), corrupt APKs,
+restricted permissions, cleanup, and safe failure logs. They substitute the
+Flutter build and therefore do not prove device update behavior. After
+`flutter pub get`, set `MEALIO_TEST_GRADLE=1` for the same test command to also
+check the real Gradle model: ordinary debug without secrets, QA debug, unchanged
+release signing/application ID, and missing QA settings. This needs the full
+Android toolchain listed above and Gradle dependencies. PR CI enables this check
+without any QA secrets. Never use the project's real QA key for local tests.
+
 For an optional local APK build after that verification, run from `frontend/`:
 
 ```bash
@@ -205,7 +341,9 @@ flutter build apk --debug --no-pub \
   --dart-define=API_BASE_URL=https://backend-staging-362e.up.railway.app
 ```
 
-The APK is written to `frontend/build/app/outputs/flutter-apk/app-debug.apk`.
+Leave `MEALIO_QA_SIGNING` unset for this ordinary local build; it needs no QA
+secrets and uses the local debug key. The APK is written to
+`frontend/build/app/outputs/flutter-apk/app-debug.apk`.
 The workflow's **Prepare and verify staging QA bundle** step documents the exact
 packaging commands; its `GITHUB_SHA` comparison is specific to the CI run. A
 local APK built from uncommitted source changes cannot be identified completely
