@@ -20,6 +20,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Set up Java for synthetic QA signing tests
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Set up Flutter 3.44.8
         uses: subosito/flutter-action@v2
         with:
@@ -33,6 +39,18 @@ jobs:
           git ls-files --error-unmatch pubspec.lock
           flutter pub get --enforce-lockfile
           git diff --exit-code HEAD -- pubspec.lock
+
+      # These tests generate disposable keys and never receive repository secrets.
+      - name: Test Android QA signing, Gradle configuration, and installer
+        env:
+          MEALIO_TEST_GRADLE: "1"
+        run: |
+          flutter config --jdk-dir="$JAVA_HOME"
+          flutter config --android-sdk="$ANDROID_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-36" "build-tools;36.0.0" \
+            "ndk;28.2.13676358" "cmake;3.22.1"
+          python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
       - name: Check localization catalogs
         working-directory: frontend
