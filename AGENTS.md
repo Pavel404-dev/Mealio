@@ -4,7 +4,7 @@
 
 These instructions apply to the entire Mealio repository.
 
-Mealio is a long-term AI-powered meal-planning application and a bachelor's thesis project.
+Mealio is an independent, long-term AI-powered meal-planning product.
 The backend uses FastAPI, async SQLAlchemy, PostgreSQL, Alembic, Pydantic,
 pytest, Ruff, and Docker Compose. The frontend uses Flutter, Dart, Riverpod,
 GoRouter, Dio, and flutter_secure_storage.

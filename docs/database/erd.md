@@ -480,7 +480,7 @@ snack
 
 The `recipe_ai_requests` table stores AI recipe generation requests and responses.
 
-This table is useful for debugging, analytics, thesis evaluation, and tracking AI output quality.
+This table is useful for debugging, analytics, product evaluation, and tracking AI output quality.
 
 ### Fields
 
@@ -576,7 +576,7 @@ track AI generation history
 debug failed AI responses
 evaluate AI quality
 reuse generated data if needed
-support thesis analysis
+support product analysis
 ```
 
 ---
