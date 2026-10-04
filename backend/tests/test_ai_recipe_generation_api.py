@@ -782,3 +782,81 @@ async def test_preview_does_not_create_recipes_or_ingredients(
     )
     assert recipes_after == recipes_before
     assert ingredients_after == ingredients_before
+
+
+@pytest.mark.asyncio
+async def test_w4_fields_do_not_change_ai_context_or_explicit_targets(
+    client: AsyncClient,
+    fake_provider: FakeRecipeGenerationProvider,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    old_profile = {
+        "daily_calories_target": 2400,
+        "daily_protein_target_g": 150,
+        "preferred_meals_per_day": 3,
+        "allergies": ["Peanuts"],
+    }
+    assert (
+        await client.patch(NUTRITION_PROFILE_URL, headers=headers, json=old_profile)
+    ).status_code == 200
+    before = await client.post(
+        AI_RECIPE_PREVIEW_URL, headers=headers, json=generation_payload()
+    )
+    assert before.status_code == 200
+    before_request = fake_provider.calls[-1].model_dump(mode="json")
+    updated = await client.patch(
+        NUTRITION_PROFILE_URL,
+        headers=headers,
+        json={
+            "sex": "female",
+            "birth_date": "1990-01-02",
+            "height_cm": "170.5",
+            "weight_kg": "70.25",
+            "activity_level": "extra_active",
+            # Storing a shorter preference must not change the request's explicit max time.
+            "max_cooking_time_minutes": 1,
+            "weekly_food_budget_amount": "120.50",
+            "budget_currency": "EUR",
+        },
+    )
+    assert updated.status_code == 200
+    after = await client.post(
+        AI_RECIPE_PREVIEW_URL, headers=headers, json=generation_payload()
+    )
+    assert after.status_code == 200
+    assert fake_provider.calls[-1].model_dump(mode="json") == before_request
+    assert fake_provider.calls[
+        -1
+    ].context.nutrition_profile.calories_target_per_meal == Decimal("800.00")
+    assert fake_provider.calls[
+        -1
+    ].context.nutrition_profile.protein_target_per_meal_g == Decimal("50.00")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["allergies", "disliked_ingredients"])
+@pytest.mark.parametrize(
+    "values", [[f"restriction-{i}" for i in range(26)], ["x" * 101]]
+)
+async def test_profile_preserves_restrictions_exceeding_ai_limits(
+    client: AsyncClient,
+    fake_provider: FakeRecipeGenerationProvider,
+    field: str,
+    values: list[str],
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    saved = await client.patch(
+        NUTRITION_PROFILE_URL,
+        headers=headers,
+        json={field: values, "height_cm": "170.0"},
+    )
+    assert saved.status_code == 200
+    assert saved.json()[field] == values
+    rejected = await client.post(
+        AI_RECIPE_PREVIEW_URL, headers=headers, json=generation_payload()
+    )
+    assert rejected.status_code == 422
+    assert fake_provider.calls == []
+    read = await client.get(NUTRITION_PROFILE_URL, headers=headers)
+    assert read.status_code == 200
+    assert read.json()[field] == values

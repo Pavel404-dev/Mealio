@@ -30,6 +30,7 @@ The backend currently includes:
 * user profile creation;
 * user profile retrieval by ID;
 * partial user profile updates;
+* authenticated nutrition profiles with nullable onboarding inputs and weekly food budgets;
 * user registration;
 * user login;
 * JWT access token generation;
@@ -148,6 +149,15 @@ This separation keeps HTTP handling, business logic, persistence logic, and data
 * Dart
 
 The mobile application is initialized / under development.
+
+## Nutrition Profile
+
+Authenticated users can GET/PATCH `/api/v1/user-preferences/nutrition`. The profile
+stores goals, targets, diet/allergy preferences, and optional demographic,
+activity, cooking-time, and weekly budget inputs for future onboarding and
+calculations. See the [nutrition profile contract](docs/nutrition-profile.md) for
+units, validation, Decimal JSON strings, defaults, partial updates, and migration
+rollback behavior. Automatic target calculations are not implemented.
 
 ## Authentication Recovery
 
