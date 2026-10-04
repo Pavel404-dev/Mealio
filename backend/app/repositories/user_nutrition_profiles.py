@@ -19,9 +19,11 @@ class UserNutritionProfilesRepository:
         user_id: uuid.UUID,
     ) -> UserNutritionProfile | None:
         result = await self.db.execute(
-            select(UserNutritionProfile).where(
+            select(UserNutritionProfile)
+            .where(
                 UserNutritionProfile.user_id == user_id,
             )
+            .execution_options(populate_existing=True)
         )
 
         return result.scalar_one_or_none()
@@ -38,14 +40,8 @@ class UserNutritionProfilesRepository:
         )
 
         self.db.add(profile)
-        await self.db.commit()
-
-        created_profile = await self.get_by_user_id(user_id)
-
-        if created_profile is None:
-            raise RuntimeError("Created nutrition profile was not found")
-
-        return created_profile
+        await self.db.flush()
+        return profile
 
     async def update(
         self,
@@ -58,7 +54,5 @@ class UserNutritionProfilesRepository:
         for field_name, field_value in update_data.items():
             setattr(profile, field_name, field_value)
 
-        await self.db.commit()
-        await self.db.refresh(profile)
-
+        await self.db.flush()
         return profile

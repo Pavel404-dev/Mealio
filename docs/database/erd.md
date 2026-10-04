@@ -12,6 +12,7 @@ The first version of the database contains the following tables:
 
 ```txt
 users
+user_nutrition_profiles
 ingredients
 nutrition_values
 user_ingredients
@@ -28,6 +29,7 @@ recipe_ai_requests
 
 ```mermaid
 erDiagram
+    users ||--o| user_nutrition_profiles : has
     users ||--o{ user_ingredients : has
     users ||--o{ recipes : creates
     users ||--o{ meal_plans : owns
@@ -47,6 +49,30 @@ erDiagram
         string email UK
         string password_hash
         string name
+        datetime created_at
+        datetime updated_at
+    }
+
+    user_nutrition_profiles {
+        uuid id PK
+        uuid user_id FK,UK
+        string goal
+        string diet_type
+        int daily_calories_target
+        int daily_protein_target_g
+        int daily_carbs_target_g
+        int daily_fat_target_g
+        jsonb allergies
+        jsonb disliked_ingredients
+        int preferred_meals_per_day
+        string sex
+        date birth_date
+        decimal height_cm
+        decimal weight_kg
+        string activity_level
+        int max_cooking_time_minutes
+        decimal weekly_food_budget_amount
+        string budget_currency
         datetime created_at
         datetime updated_at
     }
@@ -531,6 +557,23 @@ failed
 | recipes → recipe_ingredients | One-to-many | One recipe contains many ingredients |
 | recipes → meal_plan_items | One-to-many | One recipe can be used in many meal plans |
 | meal_plans → meal_plan_items | One-to-many | One meal plan contains many planned items |
+
+---
+
+## user_nutrition_profiles
+
+An optional profile belongs to exactly one user (`UNIQUE(user_id)`, cascading
+foreign key to `users.id`). GET defaults do not create a row. The eight W4 inputs
+are nullable, with no backfill: sex, birth date, height (`Numeric(4,1)`, cm),
+weight (`Numeric(5,2)`, kg), activity category, maximum total dish cooking time
+(Integer, minutes), weekly food budget (`Numeric(9,2)`, one person/seven days),
+and currency (`String(3)`). CHECK constraints enforce the new enums/ranges,
+UTC birth-date bounds, currency format, and complete-or-null budget pair.
+
+See the [nutrition profile contract](../nutrition-profile.md) for all existing
+fields, defaults, ranges, API semantics, concurrency, and rollback. Migration
+`e9c4a7b2d610` adds these fields after `b7e3c9a1d5f8`; downgrade loses only their
+values and preserves the original profile.
 
 ---
 
