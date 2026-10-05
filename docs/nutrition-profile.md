@@ -120,6 +120,11 @@ none of the eight new fields is sent to the provider. Pantry personalization and
 nutrition progress/gaps continue to use explicit existing targets/preferences.
 Flutter onboarding is outside this change.
 
+W5 adds a separate, read-only
+[personal nutrition calculation endpoint](nutrition-calculation.md). Its support
+envelope does not change W4 input/storage bounds, GET/PATCH semantics or manual
+targets, and its estimates are not automatically used by existing consumers.
+
 ## Migration and rollback
 
 Migration `e9c4a7b2d610` follows `b7e3c9a1d5f8` and adds eight nullable columns,

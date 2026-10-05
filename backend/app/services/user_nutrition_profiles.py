@@ -7,11 +7,17 @@ from app.repositories.user_nutrition_profiles import (
     UserNutritionProfilesRepository,
 )
 from app.repositories.users import UsersRepository
+from app.schemas.nutrition_calculation import (
+    NutritionCalculationInput,
+    NutritionCalculationOutcome,
+    NutritionCalculationRequest,
+)
 from app.schemas.user_nutrition_profile import (
     UserNutritionProfileCreate,
     UserNutritionProfileRead,
     UserNutritionProfileUpdate,
 )
+from app.services.nutrition_calculation import NutritionCalculator
 
 
 class UserNutritionProfilesService:
@@ -30,6 +36,30 @@ class UserNutritionProfilesService:
             return UserNutritionProfileRead.default()
 
         return profile
+
+    async def calculate_current_user_targets(
+        self,
+        *,
+        user_id: uuid.UUID,
+        data: NutritionCalculationRequest,
+    ) -> NutritionCalculationOutcome:
+        # Prevent even an incidental autoflush for callers sharing a session.
+        # One owner-scoped SELECT supplies all fields; no new locks or writes.
+        with self.db.no_autoflush:
+            profile = await self.get_current_user_profile(user_id)
+        snapshot = NutritionCalculationInput(
+            sex=profile.sex,
+            birth_date=profile.birth_date,
+            height_cm=profile.height_cm,
+            weight_kg=profile.weight_kg,
+            activity_level=profile.activity_level,
+            goal=profile.goal,
+        )
+        return NutritionCalculator().calculate(
+            snapshot,
+            calculation_date=data.calculation_date,
+            rules_version=data.rules_version,
+        )
 
     async def create_or_update_current_user_profile(
         self,

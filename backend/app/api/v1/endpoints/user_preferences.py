@@ -4,6 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.schemas.nutrition_calculation import (
+    NutritionCalculationOutcome,
+    NutritionCalculationRequest,
+)
 from app.schemas.user_nutrition_profile import (
     UserNutritionProfileRead,
     UserNutritionProfileUpdate,
@@ -14,6 +18,17 @@ router = APIRouter(
     prefix="/user-preferences",
     tags=["User Preferences"],
 )
+
+
+@router.post("/nutrition/calculate", response_model=NutritionCalculationOutcome)
+async def calculate_current_user_nutrition_targets(
+    payload: NutritionCalculationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await UserNutritionProfilesService(db).calculate_current_user_targets(
+        user_id=current_user.id, data=payload
+    )
 
 
 @router.get(
