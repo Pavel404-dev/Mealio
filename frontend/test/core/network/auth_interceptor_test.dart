@@ -701,4 +701,86 @@ void main() {
       );
     },
   );
+
+  test(
+    'session isolation: delayed initial PATCH 401 never replays under B',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'access-A',
+        refreshToken: 'refresh-A',
+      );
+      final dio = createAuthenticatedDio();
+      final started = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      appAdapter.responseHandler = (options) async {
+        if (options.headers['Authorization'] == 'Bearer access-A') {
+          started.complete();
+          await release.future;
+          return const FakeHttpResponse(statusCode: 401, body: {});
+        }
+        return const FakeHttpResponse(statusCode: 200, body: {});
+      };
+      final old = dio
+          .patch<Object?>('/pantry/item-A', data: {'quantity': 19})
+          .then<Object?>((value) => value, onError: (Object error) => error);
+      await started.future;
+      await storage.deleteTokenPair();
+      await storage.writeTokenPair(
+        const AuthTokenPair(accessToken: 'access-B', refreshToken: 'refresh-B'),
+      );
+      release.complete();
+      final result = await old;
+      expect(
+        appAdapter.requests,
+        hasLength(1),
+        reason: 'A payload must never be sent with B credentials',
+      );
+      expect(result, isA<DioException>());
+      expect(refreshAdapter.requests, isEmpty);
+      expect(storage.accessToken, 'access-B');
+      expect(invalidationCount, 0);
+      await dio.get<Object?>('/auth/me');
+      expect(
+        appAdapter.requests.last.headers['Authorization'],
+        'Bearer access-B',
+      );
+    },
+  );
+
+  test(
+    'session isolation: delayed refresh 401 preserves B and invalidation',
+    () async {
+      storage = FakeSecureStorageService(
+        accessToken: 'access-A',
+        refreshToken: 'refresh-A',
+      );
+      final dio = createAuthenticatedDio();
+      final started = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      appAdapter.enqueue(const FakeHttpResponse(statusCode: 401, body: {}));
+      refreshAdapter.responseHandler = (options) async {
+        started.complete();
+        await release.future;
+        return const FakeHttpResponse(statusCode: 401, body: {});
+      };
+      final old = dio
+          .get<Object?>('/auth/me')
+          .then<Object?>((value) => value, onError: (Object error) => error);
+      await started.future;
+      await storage.writeTokenPair(
+        const AuthTokenPair(accessToken: 'access-B', refreshToken: 'refresh-B'),
+      );
+      release.complete();
+      expect(await old, isA<DioException>());
+      expect(storage.accessToken, 'access-B');
+      expect(storage.refreshToken, 'refresh-B');
+      expect(invalidationCount, 0);
+    },
+  );
 }

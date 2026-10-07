@@ -342,6 +342,42 @@ void main() {
     expect(find.byKey(const Key('login-screen')), findsOneWidget);
   });
 
+  testWidgets(
+    'pending remote logout allows relogin and cannot redirect it later',
+    (tester) async {
+      final revoked = Completer<void>();
+      addTearDown(() {
+        if (!revoked.isCompleted) revoked.complete();
+      });
+      final repository = FakeAuthRepository(
+        restoreHandler: () async => testAuthUser,
+        logoutHandler: () => revoked.future,
+        loginHandler: ({required email, required password}) async =>
+            emailOnlyUser,
+      );
+      await tester.pumpWidget(createApp(repository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('home-logout-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('login-screen')), findsOneWidget);
+      await enterValidCredentials(tester);
+      await tester.tap(find.byKey(const Key('login-button')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Good to see you, fallback@example.com'),
+        findsOneWidget,
+      );
+      revoked.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home-screen')), findsOneWidget);
+      expect(find.byKey(const Key('login-screen')), findsNothing);
+      expect(
+        find.text('Good to see you, fallback@example.com'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('logout failure still routes from Home to Login', (tester) async {
     final repository = FakeAuthRepository(
       restoreHandler: () async => testAuthUser,

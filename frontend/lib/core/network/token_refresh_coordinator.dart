@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../auth/auth_token_pair.dart';
 import '../storage/secure_storage_provider.dart';
+import 'session_request.dart';
 
 enum TokenRefreshFailureType { invalidSession, transient, superseded }
 
@@ -27,6 +28,10 @@ class TokenRefreshCoordinator {
     required SecureStorageService storage,
     required void Function() onSessionInvalidated,
   }) {
+    refreshDio.httpClientAdapter = SessionHttpClientAdapter(
+      refreshDio.httpClientAdapter,
+      storage,
+    );
     return TokenRefreshCoordinator._(refreshDio, storage, onSessionInvalidated);
   }
 
@@ -40,46 +45,47 @@ class TokenRefreshCoordinator {
   final SecureStorageService _storage;
   final void Function() _onSessionInvalidated;
 
-  Future<AuthTokenPair>? _inFlightRefresh;
+  final Map<int, Future<AuthTokenPair>> _inFlightRefresh = {};
 
-  Future<void> invalidateSession() {
-    return _invalidateLocalSession();
+  Future<void> invalidateSession() async {
+    await _invalidateLocalSession(_storage.sessionLifetime);
   }
 
-  Future<AuthTokenPair> refreshTokens() async {
-    final existingRefresh = _inFlightRefresh;
-    if (existingRefresh != null) {
-      return existingRefresh;
-    }
+  Future<AuthTokenPair> refreshTokens({int? sessionLifetime}) async {
+    final lifetime = sessionLifetime ?? _storage.sessionLifetime;
+    _checkSession(lifetime);
+    final existingRefresh = _inFlightRefresh[lifetime];
+    if (existingRefresh != null) return existingRefresh;
 
-    final refreshFuture = _refreshOnce();
-    _inFlightRefresh = refreshFuture;
-
+    final refreshFuture = _refreshOnce(lifetime);
+    _inFlightRefresh[lifetime] = refreshFuture;
     try {
       return await refreshFuture;
     } finally {
-      if (identical(_inFlightRefresh, refreshFuture)) {
-        _inFlightRefresh = null;
+      if (identical(_inFlightRefresh[lifetime], refreshFuture)) {
+        _inFlightRefresh.remove(lifetime);
       }
     }
   }
 
-  Future<AuthTokenPair> _refreshOnce() async {
-    final String refreshToken;
+  void _checkSession(int lifetime) {
+    if (!_storage.ownsSession(lifetime)) {
+      throw const TokenRefreshFailure.superseded();
+    }
+  }
 
+  Future<AuthTokenPair> _refreshOnce(int lifetime) async {
+    final String? storedRefreshToken;
     try {
-      final storedRefreshToken = (await _storage.readRefreshToken())?.trim();
-      if (storedRefreshToken == null || storedRefreshToken.isEmpty) {
-        await _invalidateLocalSession();
-        throw const TokenRefreshFailure.invalidSession();
-      }
-
-      refreshToken = storedRefreshToken;
-    } on TokenRefreshFailure {
-      rethrow;
+      storedRefreshToken = await _storage.readSessionRefreshToken(lifetime);
     } catch (_) {
-      await _invalidateLocalSession();
-      throw const TokenRefreshFailure.invalidSession();
+      _checkSession(lifetime);
+      return _failSession(lifetime);
+    }
+    _checkSession(lifetime);
+    final refreshToken = storedRefreshToken?.trim();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return _failSession(lifetime);
     }
 
     final Response<Object?> response;
@@ -87,13 +93,11 @@ class TokenRefreshCoordinator {
       response = await _refreshDio.post<Object?>(
         '/auth/refresh',
         data: {'refresh_token': refreshToken},
+        options: Options(extra: {sessionLifetimeKey: lifetime}),
       );
     } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        await _invalidateLocalSession();
-        throw const TokenRefreshFailure.invalidSession();
-      }
-
+      _checkSession(lifetime);
+      if (error.response?.statusCode == 401) return _failSession(lifetime);
       throw TokenRefreshFailure.transient(error);
     }
 
@@ -102,41 +106,52 @@ class TokenRefreshCoordinator {
       if (response.statusCode != 200) {
         throw const FormatException('Unexpected refresh status');
       }
-
       tokenPair = AuthTokenPair.fromJson(response.data);
     } on FormatException {
-      await _invalidateLocalSession();
-      throw const TokenRefreshFailure.invalidSession();
+      _checkSession(lifetime);
+      return _failSession(lifetime);
     }
 
     final bool replaced;
     try {
       replaced = await _storage.replaceTokenPairIfRefreshTokenMatches(
+        sessionLifetime: lifetime,
         expectedRefreshToken: refreshToken,
         pair: tokenPair,
       );
     } catch (_) {
       await _revokeRefreshTokenBestEffort(tokenPair.refreshToken);
-      await _invalidateLocalSession();
-      throw const TokenRefreshFailure.invalidSession();
+      _checkSession(lifetime);
+      return _failSession(lifetime);
     }
 
-    if (!replaced) {
+    if (!replaced || !_storage.ownsSession(lifetime)) {
       await _revokeRefreshTokenBestEffort(tokenPair.refreshToken);
       throw const TokenRefreshFailure.superseded();
     }
-
     return tokenPair;
   }
 
-  Future<void> _invalidateLocalSession() async {
-    try {
-      await _storage.deleteTokenPair();
-    } catch (_) {
-      // Session invalidation must still propagate to application state.
-    }
+  Future<Never> _failSession(int lifetime) async {
+    final invalidated = await _invalidateLocalSession(lifetime);
+    if (!invalidated) throw const TokenRefreshFailure.superseded();
+    throw const TokenRefreshFailure.invalidSession();
+  }
 
-    _onSessionInvalidated();
+  Future<bool> _invalidateLocalSession(int lifetime) async {
+    var invalidated = false;
+    try {
+      await _storage.deleteTokenPairIfSessionMatches(
+        lifetime,
+        onDeleted: () {
+          invalidated = true;
+          _onSessionInvalidated();
+        },
+      );
+    } catch (_) {
+      // The callback also runs after partial cleanup, but only for its owner.
+    }
+    return invalidated;
   }
 
   Future<void> _revokeRefreshTokenBestEffort(String refreshToken) async {

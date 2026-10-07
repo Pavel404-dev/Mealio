@@ -264,75 +264,108 @@ class AuthRepository {
     }
   }
 
+  int get sessionLifetime => _storage.sessionLifetime;
+
   Future<AuthUser> login({
     required String email,
     required String password,
   }) async {
-    final tokenPair = await _requestTokenPair(email: email, password: password);
-
+    // End the previous lifetime synchronously, before login network I/O.
+    final cleanup = _storage.deleteTokenPair();
+    final lifetime = sessionLifetime;
+    AuthTokenPair? pair;
+    var saved = false;
     try {
-      await _storage.writeTokenPair(tokenPair);
-    } catch (_) {
+      await cleanup;
+      _storage.checkSession(lifetime);
+      pair = await _requestTokenPair(email: email, password: password);
+      saved = await _storage.writeTokenPairForSession(lifetime, pair);
+      if (!saved) throw const SessionSuperseded();
+      return await _getCurrentUser(lifetime);
+    } catch (error) {
+      final superseded = !_storage.ownsSession(lifetime);
+      if (pair != null && !saved) await _revokePairBestEffort(pair);
+      await _deleteTokenPairBestEffort(lifetime);
+      if (superseded) throw const SessionSuperseded();
+      if (error is AuthFailure) rethrow;
       throw AuthFailure.unexpected();
-    }
-
-    try {
-      return await getCurrentUser();
-    } catch (_) {
-      await _deleteTokenPairBestEffort();
-      rethrow;
     }
   }
 
-  Future<AuthUser> getCurrentUser() async {
+  Future<AuthUser> getCurrentUser() => _getCurrentUser(sessionLifetime);
+
+  Future<AuthUser> _getCurrentUser(int lifetime) async {
     try {
-      final response = await _apiClient.get<Object?>('/auth/me');
+      _storage.checkSession(lifetime);
+      final response = await _apiClient.get<Object?>(
+        '/auth/me',
+        sessionLifetime: lifetime,
+      );
+      _storage.checkSession(lifetime);
       return AuthUser.fromJson(response.data);
+    } on SessionSuperseded {
+      rethrow;
     } on DioException catch (error) {
+      if (error.error is SessionSuperseded ||
+          (!_storage.ownsSession(lifetime) &&
+              error.response?.statusCode != 401)) {
+        throw const SessionSuperseded();
+      }
       throw _mapDioException(error, requestKind: _AuthRequestKind.session);
-    } on FormatException {
-      throw AuthFailure.unexpected();
     } catch (_) {
       throw AuthFailure.unexpected();
     }
   }
 
   Future<AuthUser?> restoreSession() async {
+    final lifetime = sessionLifetime;
     final String? storedAccessToken;
     final String? storedRefreshToken;
-
     try {
-      storedAccessToken = await _storage.readAccessToken();
-      storedRefreshToken = await _storage.readRefreshToken();
+      storedAccessToken = await _storage.readSessionAccessToken(lifetime);
+      storedRefreshToken = await _storage.readSessionRefreshToken(lifetime);
+      _storage.checkSession(lifetime);
+    } on SessionSuperseded {
+      rethrow;
     } catch (_) {
       throw AuthFailure.unexpected();
     }
 
     final accessToken = storedAccessToken?.trim();
     final refreshToken = storedRefreshToken?.trim();
-
     if (accessToken == null || accessToken.isEmpty) {
       if (storedAccessToken != null || storedRefreshToken != null) {
-        await _deleteTokenPairBestEffort();
+        await _deleteTokenPairBestEffort(lifetime);
       }
-
       return null;
     }
-
     if (storedRefreshToken != null &&
         (refreshToken == null || refreshToken.isEmpty)) {
-      await _deleteRefreshTokenBestEffort();
+      try {
+        await _storage.deleteEmptyRefreshTokenForSession(lifetime);
+      } catch (_) {
+        // A valid legacy access token can still be checked by /auth/me.
+      }
     }
-
     try {
-      return await getCurrentUser();
+      return await _getCurrentUser(lifetime);
     } on AuthFailure catch (failure) {
       if (failure.type == AuthFailureType.invalidSession) {
-        await _deleteTokenPairBestEffort();
+        await _deleteTokenPairBestEffort(lifetime);
         return null;
       }
-
       rethrow;
+    }
+  }
+
+  Future<void> _revokePairBestEffort(AuthTokenPair pair) async {
+    try {
+      await _apiClient.post<Object?>(
+        '/auth/logout',
+        data: {'refresh_token': pair.refreshToken},
+      );
+    } catch (_) {
+      // Only the orphan returned to this login operation is revoked.
     }
   }
 
@@ -507,19 +540,11 @@ class AuthRepository {
     }
   }
 
-  Future<void> _deleteTokenPairBestEffort() async {
+  Future<void> _deleteTokenPairBestEffort(int lifetime) async {
     try {
-      await _storage.deleteTokenPair();
+      await _storage.deleteTokenPairIfSessionMatches(lifetime);
     } catch (_) {
       // Keep the original authentication failure as the visible error.
-    }
-  }
-
-  Future<void> _deleteRefreshTokenBestEffort() async {
-    try {
-      await _storage.deleteRefreshToken();
-    } catch (_) {
-      // A valid legacy access token can still be checked by /auth/me.
     }
   }
 }

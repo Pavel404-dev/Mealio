@@ -6,6 +6,7 @@ import 'package:mealio/core/auth/auth_token_pair.dart';
 import 'package:mealio/core/network/api_client.dart';
 import 'package:mealio/core/network/auth_interceptor.dart';
 import 'package:mealio/core/network/token_refresh_coordinator.dart';
+import 'package:mealio/core/storage/secure_storage_provider.dart';
 import 'package:mealio/features/auth/data/auth_repository.dart';
 import 'package:mealio/features/auth/domain/auth_failure.dart';
 
@@ -690,5 +691,126 @@ void main() {
         ),
       ),
     );
+  });
+
+  for (final restoring in [false, true]) {
+    for (final status in [200, 401, 503]) {
+      test(
+        'stale ${restoring ? 'restore' : 'login'} me $status cannot publish A or clean B',
+        () async {
+          await storage.writeTokenPair(
+            const AuthTokenPair(accessToken: 'A', refreshToken: 'refresh-A'),
+          );
+          final started = Completer<void>();
+          final release = Completer<void>();
+          addTearDown(() {
+            if (!release.isCompleted) release.complete();
+          });
+          adapter.responseHandler = (options) async {
+            if (options.path == '/auth/login') {
+              return const FakeHttpResponse(
+                statusCode: 200,
+                body: tokenPairJson,
+              );
+            }
+            started.complete();
+            await release.future;
+            return FakeHttpResponse(
+              statusCode: status,
+              body: status == 200 ? userJson : {},
+            );
+          };
+          final old =
+              (restoring
+                      ? repository.restoreSession()
+                      : repository.login(
+                          email: 'a@example.com',
+                          password: 'test-password',
+                        ))
+                  .then<Object?>(
+                    (value) => value,
+                    onError: (Object error) => error,
+                  );
+          await started.future;
+          await storage.writeTokenPair(
+            const AuthTokenPair(accessToken: 'B', refreshToken: 'refresh-B'),
+          );
+          release.complete();
+          expect(await old, anyOf(isNull, isA<SessionSuperseded>()));
+          expect(storage.accessToken, 'B');
+          expect(storage.refreshToken, 'refresh-B');
+          expect(invalidationCount, 0);
+        },
+      );
+    }
+  }
+
+  test(
+    'late login pair after new login cannot overwrite B or fetch me',
+    () async {
+      final started = Completer<void>();
+      final release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      adapter.responseHandler = (options) async {
+        if (options.path == '/auth/logout') {
+          return const FakeHttpResponse(statusCode: 204, body: null);
+        }
+        started.complete();
+        await release.future;
+        return const FakeHttpResponse(statusCode: 200, body: tokenPairJson);
+      };
+      final old = repository
+          .login(email: 'a@example.com', password: 'test-password')
+          .then<Object?>((value) => value, onError: (Object error) => error);
+      await started.future;
+      await storage.writeTokenPair(
+        const AuthTokenPair(accessToken: 'B', refreshToken: 'refresh-B'),
+      );
+      release.complete();
+      expect(await old, isA<SessionSuperseded>());
+      expect(adapter.requests.map((r) => r.path), [
+        '/auth/login',
+        '/auth/logout',
+      ]);
+      expect(adapter.requests.last.data, {
+        'refresh_token': 'test-refresh-token',
+      });
+      expect(storage.accessToken, 'B');
+      expect(storage.refreshToken, 'refresh-B');
+    },
+  );
+
+  test('login intent stops A even while login network is pending', () async {
+    await storage.writeTokenPair(
+      const AuthTokenPair(accessToken: 'A', refreshToken: 'refresh-A'),
+    );
+    final lifetime = storage.sessionLifetime;
+    final started = Completer<void>();
+    final release = Completer<void>();
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    adapter.responseHandler = (options) async {
+      if (options.path == '/auth/me') {
+        return const FakeHttpResponse(statusCode: 200, body: userJson);
+      }
+      started.complete();
+      await release.future;
+      return const FakeHttpResponse(statusCode: 200, body: tokenPairJson);
+    };
+    final login = repository.login(
+      email: 'a@example.com',
+      password: 'test-password',
+    );
+    expect(storage.ownsSession(lifetime), isFalse);
+    await started.future;
+    expect(
+      await storage.readSessionAccessToken(storage.sessionLifetime),
+      isNull,
+    );
+    release.complete();
+    expect(await login, testAuthUser);
   });
 }

@@ -55,6 +55,10 @@ class FakeSecureStorageService extends SecureStorageService {
   bool failAccessDelete;
   bool failRefreshDelete;
 
+  Completer<void>? accessReadStarted;
+  Completer<void>? refreshReadStarted;
+  Completer<void>? accessDeleteStarted;
+  Completer<void>? pendingAccessDelete;
   Completer<String?>? pendingRead;
   Completer<String?>? pendingRefreshRead;
   Completer<void>? accessWriteStarted;
@@ -76,6 +80,9 @@ class FakeSecureStorageService extends SecureStorageService {
   @override
   Future<String?> readAccessToken() {
     readCount++;
+    if (accessReadStarted case final started? when !started.isCompleted) {
+      started.complete();
+    }
     final completer = pendingRead;
 
     if (completer != null) {
@@ -115,12 +122,19 @@ class FakeSecureStorageService extends SecureStorageService {
       throw StateError('Fake access-token delete failure');
     }
 
+    if (accessDeleteStarted case final started? when !started.isCompleted) {
+      started.complete();
+    }
+    if (pendingAccessDelete case final pending?) await pending.future;
     _accessToken = null;
   }
 
   @override
   Future<String?> readRefreshToken() {
     refreshReadCount++;
+    if (refreshReadStarted case final started? when !started.isCompleted) {
+      started.complete();
+    }
     final completer = pendingRefreshRead;
 
     if (completer != null) {
