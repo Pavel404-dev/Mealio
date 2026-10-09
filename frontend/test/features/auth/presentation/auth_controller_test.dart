@@ -215,4 +215,181 @@ void main() {
     expect(session.isAuthenticated, isFalse);
     expect(repository.logoutCalls, 1);
   });
+
+  for (final fails in [false, true]) {
+    test(
+      'late login ${fails ? 'failure' : 'success'} after logout/relogin cannot publish',
+      () async {
+        final oldLogin = Completer<AuthUser>();
+        addTearDown(() {
+          if (!oldLogin.isCompleted) oldLogin.complete(testAuthUser);
+        });
+        final repository = FakeAuthRepository(
+          restoreHandler: () async => null,
+          loginHandler: ({required email, required password}) =>
+              oldLogin.future,
+        );
+        final container = createContainer(repository);
+        await container.read(authControllerProvider.future);
+        final controller = container.read(authControllerProvider.notifier);
+        final old = controller.login(
+          email: 'a@example.com',
+          password: 'synthetic',
+        );
+        await controller.logout();
+        repository.loginHandler = ({required email, required password}) async =>
+            testAuthUser;
+        await controller.login(email: 'a@example.com', password: 'synthetic');
+        if (fails) {
+          oldLogin.completeError(AuthFailure.invalidCredentials());
+        } else {
+          oldLogin.complete(
+            AuthUser(
+              id: testAuthUser.id,
+              email: testAuthUser.email,
+              fullName: 'Stale profile from previous login',
+              createdAt: testAuthUser.createdAt,
+              updatedAt: testAuthUser.updatedAt,
+            ),
+          );
+        }
+        await old;
+        final session = container.read(authControllerProvider).asData!.value;
+        expect(session.user, testAuthUser);
+        expect(session.failure, isNull);
+      },
+    );
+  }
+
+  for (final relogin in [false, true]) {
+    test(
+      'late restore cannot overwrite ${relogin ? 'new login' : 'logout'}',
+      () async {
+        final restored = Completer<AuthUser?>();
+        addTearDown(() {
+          if (!restored.isCompleted) restored.complete(null);
+        });
+        final repository = FakeAuthRepository(
+          restoreHandler: () => restored.future,
+          loginHandler: ({required email, required password}) async =>
+              testAuthUser,
+        );
+        final container = createContainer(repository);
+        final initial = container.read(authControllerProvider.future);
+        final controller = container.read(authControllerProvider.notifier);
+        await controller.logout();
+        if (relogin) {
+          await controller.login(email: 'a@example.com', password: 'synthetic');
+        }
+        // A different old user makes an accidental stale publication observable.
+        restored.complete(
+          AuthUser(
+            id: 'old-id',
+            email: 'old@example.com',
+            fullName: null,
+            createdAt: testAuthUser.createdAt,
+            updatedAt: testAuthUser.updatedAt,
+          ),
+        );
+        await initial;
+        await container.pump();
+        expect(
+          container.read(authControllerProvider).asData!.value.user,
+          relogin ? testAuthUser : isNull,
+        );
+      },
+    );
+  }
+
+  for (final fails in [false, true]) {
+    test(
+      'late reload ${fails ? 'failure' : 'success'} does not resurrect logged-out session',
+      () async {
+        final reloaded = Completer<AuthUser>();
+        addTearDown(() {
+          if (!reloaded.isCompleted) reloaded.complete(testAuthUser);
+        });
+        final repository = FakeAuthRepository(
+          restoreHandler: () async => testAuthUser,
+          currentUserHandler: () => reloaded.future,
+        );
+        final container = createContainer(repository);
+        await container.read(authControllerProvider.future);
+        final controller = container.read(authControllerProvider.notifier);
+        final old = controller.reloadCurrentUser();
+        await controller.logout();
+        if (fails) {
+          reloaded.completeError(AuthFailure.invalidSession());
+        } else {
+          reloaded.complete(testAuthUser);
+        }
+        expect(await old, isNull);
+        expect(
+          container.read(authControllerProvider).asData!.value.user,
+          isNull,
+        );
+      },
+    );
+  }
+
+  test('delayed logout completion does not clear new login', () async {
+    final revoked = Completer<void>();
+    addTearDown(() {
+      if (!revoked.isCompleted) revoked.complete();
+    });
+    final repository = FakeAuthRepository(
+      restoreHandler: () async => testAuthUser,
+      logoutHandler: () => revoked.future,
+      loginHandler: ({required email, required password}) async => testAuthUser,
+    );
+    final container = createContainer(repository);
+    await container.read(authControllerProvider.future);
+    final controller = container.read(authControllerProvider.notifier);
+    final old = controller.logout();
+    expect(container.read(authControllerProvider).asData!.value.user, isNull);
+    await controller.login(email: 'a@example.com', password: 'synthetic');
+    revoked.complete();
+    await old;
+    expect(
+      container.read(authControllerProvider).asData!.value.user,
+      testAuthUser,
+    );
+  });
+
+  for (final operation in ['login', 'reload', 'logout']) {
+    test(
+      '$operation completion after dispose performs no state access',
+      () async {
+        final done = Completer<AuthUser>();
+        addTearDown(() {
+          if (!done.isCompleted) done.complete(testAuthUser);
+        });
+        final repository = FakeAuthRepository(
+          restoreHandler: () async =>
+              operation == 'login' ? null : testAuthUser,
+          loginHandler: ({required email, required password}) => done.future,
+          currentUserHandler: () => done.future,
+          logoutHandler: () async {
+            await done.future;
+          },
+        );
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        );
+        await container.read(authControllerProvider.future);
+        final controller = container.read(authControllerProvider.notifier);
+        final pending = switch (operation) {
+          'login' => controller.login(
+            email: 'a@example.com',
+            password: 'synthetic',
+          ),
+          'reload' => controller.reloadCurrentUser(),
+          _ => controller.logout(),
+        };
+        container.dispose();
+        done.complete(testAuthUser);
+        await pending;
+      },
+    );
+  }
 }

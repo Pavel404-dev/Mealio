@@ -26,6 +26,40 @@ class SecureStorageService {
 
   int get tokenPairRevision => _tokenPairRevision;
 
+  int _sessionLifetime = 0;
+  // Includes credentials restored at startup.
+  bool _credentialsAvailable = true;
+
+  int get sessionLifetime => _sessionLifetime;
+  bool ownsSession(int lifetime) => lifetime == _sessionLifetime;
+
+  void checkSession(int lifetime) {
+    if (!ownsSession(lifetime)) throw const SessionSuperseded();
+  }
+
+  void _endSession() {
+    _sessionLifetime++;
+    _credentialsAvailable = false;
+  }
+
+  // Reads share the mutation queue, so a partially written pair is never used.
+  Future<String?> readSessionAccessToken(int lifetime) =>
+      _readSessionToken(lifetime, readAccessToken);
+
+  Future<String?> readSessionRefreshToken(int lifetime) =>
+      _readSessionToken(lifetime, readRefreshToken);
+
+  Future<String?> _readSessionToken(
+    int lifetime,
+    Future<String?> Function() read,
+  ) => _serializeTokenPairMutation(() async {
+    checkSession(lifetime);
+    if (!_credentialsAvailable) return null;
+    final token = await read();
+    checkSession(lifetime);
+    return token;
+  });
+
   Future<void> writeAccessToken(String token) {
     return _storage.write(key: accessTokenStorageKey, value: token);
   }
@@ -51,32 +85,76 @@ class SecureStorageService {
   }
 
   Future<void> writeTokenPair(AuthTokenPair pair) {
+    _endSession();
+    final lifetime = sessionLifetime;
     return _serializeTokenPairMutation(() async {
       await _writeTokenPairUnlocked(pair);
+      if (ownsSession(lifetime)) _credentialsAvailable = true;
+    });
+  }
+
+  Future<bool> writeTokenPairForSession(int lifetime, AuthTokenPair pair) {
+    return _serializeTokenPairMutation(() async {
+      if (!ownsSession(lifetime)) return false;
+      await _writeTokenPairUnlocked(pair);
+      if (!ownsSession(lifetime)) return false;
+      _credentialsAvailable = true;
+      return true;
     });
   }
 
   Future<bool> replaceTokenPairIfRefreshTokenMatches({
     required String expectedRefreshToken,
     required AuthTokenPair pair,
+    int? sessionLifetime,
   }) {
+    final lifetime = sessionLifetime ?? this.sessionLifetime;
     return _serializeTokenPairMutation(() async {
+      if (!ownsSession(lifetime) || !_credentialsAvailable) return false;
       final currentRefreshToken = (await readRefreshToken())?.trim();
 
-      if (currentRefreshToken != expectedRefreshToken.trim()) {
+      if (!ownsSession(lifetime) ||
+          currentRefreshToken != expectedRefreshToken.trim()) {
         return false;
       }
 
       await _writeTokenPairUnlocked(pair);
-      return true;
+      return ownsSession(lifetime);
     });
   }
 
+  // Ownership is checked inside the queue. Once deletion starts, newer writes
+  // remain behind it; publication is checked again after platform I/O.
+  Future<bool> deleteTokenPairIfSessionMatches(
+    int lifetime, {
+    void Function()? onDeleted,
+  }) => _serializeTokenPairMutation(() async {
+    if (!ownsSession(lifetime)) return false;
+    _endSession();
+    final endedLifetime = sessionLifetime;
+    try {
+      await _deleteTokenPairUnlocked();
+    } finally {
+      if (ownsSession(endedLifetime)) onDeleted?.call();
+    }
+    return true;
+  });
+
+  Future<void> deleteEmptyRefreshTokenForSession(int lifetime) =>
+      _serializeTokenPairMutation(() async {
+        checkSession(lifetime);
+        final token = await readRefreshToken();
+        checkSession(lifetime);
+        if (token != null && token.trim().isEmpty) await deleteRefreshToken();
+      });
+
   Future<void> deleteTokenPair() {
+    _endSession();
     return _serializeTokenPairMutation(_deleteTokenPairUnlocked);
   }
 
   Future<String?> deleteTokenPairAndGetRefreshToken() {
+    _endSession();
     return _serializeTokenPairMutation(() async {
       String? refreshToken;
 
@@ -152,4 +230,9 @@ class SecureStorageService {
       // Preserve the original token-pair write failure.
     }
   }
+}
+
+/// An operation outlived its login session. Contains no credential details.
+class SessionSuperseded implements Exception {
+  const SessionSuperseded();
 }

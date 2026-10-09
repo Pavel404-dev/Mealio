@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../storage/secure_storage_provider.dart';
+import 'session_request.dart';
 import 'token_refresh_coordinator.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -9,6 +10,10 @@ class AuthInterceptor extends Interceptor {
     required SecureStorageService storage,
     required TokenRefreshCoordinator refreshCoordinator,
   }) {
+    dio.httpClientAdapter = SessionHttpClientAdapter(
+      dio.httpClientAdapter,
+      storage,
+    );
     return AuthInterceptor._(dio, storage, refreshCoordinator);
   }
 
@@ -41,17 +46,24 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     if (_isPublicAuthRequest(options)) {
+      options.extra.remove(sessionLifetimeKey);
       handler.next(options);
       return;
     }
 
+    options.extra.putIfAbsent(
+      sessionLifetimeKey,
+      () => _storage.sessionLifetime,
+    );
+    final lifetime = options.extra[sessionLifetimeKey] as int;
     options.extra.putIfAbsent(
       _authGenerationKey,
       () => _storage.tokenPairRevision,
     );
 
     try {
-      final token = (await _storage.readAccessToken())?.trim();
+      final token = (await _storage.readSessionAccessToken(lifetime))?.trim();
+      _storage.checkSession(lifetime);
 
       if (token != null &&
           token.isNotEmpty &&
@@ -60,6 +72,8 @@ class AuthInterceptor extends Interceptor {
       }
 
       handler.next(options);
+    } on SessionSuperseded {
+      handler.reject(supersededRequest(options));
     } catch (error, stackTrace) {
       handler.reject(
         DioException(
@@ -69,6 +83,16 @@ class AuthInterceptor extends Interceptor {
         ),
       );
     }
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    final lifetime = response.requestOptions.extra[sessionLifetimeKey];
+    if (lifetime is int && !_storage.ownsSession(lifetime)) {
+      handler.reject(supersededRequest(response.requestOptions));
+      return;
+    }
+    handler.next(response);
   }
 
   @override
@@ -86,13 +110,25 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
+    final lifetime = requestOptions.extra[sessionLifetimeKey];
+    if (lifetime is! int || !_storage.ownsSession(lifetime)) {
+      handler.reject(supersededRequest(requestOptions));
+      return;
+    }
+
     final failedAccessToken = _extractBearerToken(
       requestOptions.headers['Authorization'],
     );
 
     final String? currentAccessToken;
     try {
-      currentAccessToken = (await _storage.readAccessToken())?.trim();
+      currentAccessToken = (await _storage.readSessionAccessToken(
+        lifetime,
+      ))?.trim();
+      _storage.checkSession(lifetime);
+    } on SessionSuperseded {
+      handler.reject(supersededRequest(requestOptions));
+      return;
     } catch (storageError, stackTrace) {
       handler.reject(
         DioException(
@@ -128,12 +164,16 @@ class AuthInterceptor extends Interceptor {
     }
 
     try {
-      final tokenPair = await _refreshCoordinator.refreshTokens();
+      final tokenPair = await _refreshCoordinator.refreshTokens(
+        sessionLifetime: lifetime,
+      );
       await _retryWithAccessToken(err, handler, tokenPair.accessToken);
     } on TokenRefreshFailure catch (failure) {
       switch (failure.type) {
-        case TokenRefreshFailureType.invalidSession:
         case TokenRefreshFailureType.superseded:
+          handler.reject(supersededRequest(requestOptions));
+          return;
+        case TokenRefreshFailureType.invalidSession:
           handler.next(err);
           return;
         case TokenRefreshFailureType.transient:
@@ -151,6 +191,12 @@ class AuthInterceptor extends Interceptor {
     String accessToken,
   ) async {
     final originalRequest = originalError.requestOptions;
+    if (!_storage.ownsSession(
+      originalRequest.extra[sessionLifetimeKey] as int,
+    )) {
+      handler.reject(supersededRequest(originalRequest));
+      return;
+    }
     final headers = Map<String, dynamic>.from(originalRequest.headers)
       ..['Authorization'] = 'Bearer $accessToken';
     final extra = Map<String, dynamic>.from(originalRequest.extra)
