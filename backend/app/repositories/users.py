@@ -20,8 +20,13 @@ class UsersRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id_for_update(self, user_id: uuid.UUID) -> User | None:
+        # Authentication may have cached User before a concurrent confirmation.
+        # Read current fields under the owner lock before any security mutation.
         result = await self.db.execute(
-            select(User).where(User.id == user_id).with_for_update()
+            select(User)
+            .where(User.id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
         return result.scalar_one_or_none()
