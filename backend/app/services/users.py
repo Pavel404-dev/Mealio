@@ -10,6 +10,7 @@ from app.repositories.email_verification_tokens import (
     EmailVerificationTokensRepository,
 )
 from app.repositories.exceptions import DuplicateResourceError
+from app.repositories.password_reset_tokens import PasswordResetTokensRepository
 from app.repositories.users import UsersRepository
 from app.schemas.user import UserCreate, UserUpdate
 
@@ -20,6 +21,7 @@ class UsersService:
         self.repository = UsersRepository(db)
         self.email_verification_repository = EmailVerificationTokensRepository(db)
         self.email_otp_repository = EmailOtpChallengesRepository(db)
+        self.password_reset_repository = PasswordResetTokensRepository(db)
 
     async def get_user(self, user_id: uuid.UUID):
         user = await self.repository.get_by_id(user_id)
@@ -98,6 +100,15 @@ class UsersService:
                 await self.email_otp_repository.revoke_unused_for_user(
                     user_id=updated_user.id,
                     purpose=EmailOtpPurpose.EMAIL_VERIFICATION,
+                    revoked_at=now,
+                )
+                await self.password_reset_repository.revoke_unused_for_user(
+                    user_id=updated_user.id,
+                    revoked_at=now,
+                )
+                await self.email_otp_repository.revoke_unused_for_user(
+                    user_id=updated_user.id,
+                    purpose=EmailOtpPurpose.PASSWORD_RESET,
                     revoked_at=now,
                 )
 
