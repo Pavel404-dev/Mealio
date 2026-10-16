@@ -88,12 +88,11 @@ erDiagram
     nutrition_values {
         uuid id PK
         uuid ingredient_id FK
-        decimal calories_per_100g
-        decimal protein_per_100g
-        decimal carbs_per_100g
-        decimal fat_per_100g
-        datetime created_at
-        datetime updated_at
+        decimal calories
+        decimal protein_g
+        decimal carbs_g
+        decimal fat_g
+        decimal portion_g
     }
 
     user_ingredients {
@@ -258,7 +257,8 @@ other
 
 ## 3. nutrition_values
 
-The `nutrition_values` table stores nutritional values for each ingredient per 100 grams.
+The `nutrition_values` table stores nutritional values for each ingredient
+for its stored `portion_g`, which defaults to 100 grams.
 
 This separation keeps ingredient information clean and allows nutrition data to be updated independently.
 
@@ -268,12 +268,11 @@ This separation keeps ingredient information clean and allows nutrition data to 
 |---|---|---|
 | id | UUID | Primary key |
 | ingredient_id | UUID | Foreign key to `ingredients.id` |
-| calories_per_100g | Decimal | Calories per 100 grams |
-| protein_per_100g | Decimal | Protein per 100 grams |
-| carbs_per_100g | Decimal | Carbohydrates per 100 grams |
-| fat_per_100g | Decimal | Fat per 100 grams |
-| created_at | DateTime | Record creation date |
-| updated_at | DateTime | Last update date |
+| calories | Numeric(8,2) | Calories for `portion_g` |
+| protein_g | Numeric(8,2) | Protein grams for `portion_g` |
+| carbs_g | Numeric(8,2) | Carbohydrate grams for `portion_g` |
+| fat_g | Numeric(8,2) | Fat grams for `portion_g` |
+| portion_g | Numeric(8,2) | Finite portion in grams, 0.01..999999.99 inclusive; default 100 |
 
 ### Constraints
 
@@ -282,10 +281,13 @@ This separation keeps ingredient information clean and allows nutrition data to 
 | Primary Key | `id` |
 | Foreign Key | `ingredient_id` references `ingredients.id` |
 | Unique | `ingredient_id` |
+| CHECK | `ck_nutrition_values_portion_g_bounds`: `portion_g BETWEEN 0.01 AND 999999.99` |
 
 ### Relationship
 
-- One ingredient has one nutrition value record.
+- One ingredient has at most one nutrition value record.
+
+See the [portion contract and damaged-data rollout runbook](../ingredient-portion-storage.md).
 
 ---
 
@@ -589,21 +591,21 @@ UUID values are also useful when data can be created across different clients or
 
 ### Nutrition Calculation
 
-Nutrition values are stored per 100 grams in the `nutrition_values` table.
+Nutrition values are stored for `portion_g` in `nutrition_values` (default 100 g).
 
 The backend can calculate recipe nutrition using this formula:
 
 ```txt
-ingredient_total = nutrition_value_per_100g * quantity_in_grams / 100
+ingredient_total = nutrient_value * quantity_in_grams / portion_g
 ```
 
 The final recipe totals will be stored in:
 
 ```txt
 recipes.total_calories
-recipes.total_protein
-recipes.total_carbs
-recipes.total_fat
+recipes.total_protein_g
+recipes.total_carbs_g
+recipes.total_fat_g
 ```
 
 ---
