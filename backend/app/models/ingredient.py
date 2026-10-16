@@ -2,7 +2,15 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +64,13 @@ class Ingredient(Base):
 
 class NutritionValue(Base):
     __tablename__ = "nutrition_values"
+
+    __table_args__ = (
+        CheckConstraint(
+            "portion_g BETWEEN 0.01 AND 999999.99",
+            name="ck_nutrition_values_portion_g_bounds",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

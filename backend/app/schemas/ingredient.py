@@ -10,7 +10,27 @@ class NutritionValueBase(BaseModel):
     protein_g: Decimal = Field(default=Decimal("0"), ge=0)
     carbs_g: Decimal = Field(default=Decimal("0"), ge=0)
     fat_g: Decimal = Field(default=Decimal("0"), ge=0)
-    portion_g: Decimal = Field(default=Decimal("100"), gt=0)
+    portion_g: Decimal = Field(
+        default=Decimal("100"),
+        ge=Decimal("0.01"),
+        le=Decimal("999999.99"),
+        max_digits=8,
+        decimal_places=2,
+        allow_inf_nan=False,
+    )
+
+    @field_validator("portion_g")
+    @classmethod
+    def validate_exact_portion(cls, value: Decimal) -> Decimal:
+        # Inspect digits without normalize()/quantize(): Decimal context rounding
+        # must not erase a significant digit beyond the database's scale.
+        _, digits, exponent = value.as_tuple()
+        extra_places = -exponent - 2
+        if extra_places > 0 and any(digits[-extra_places:]):
+            raise ValueError(
+                "Portion must be exactly representable with two decimal places"
+            )
+        return value
 
 
 class NutritionValueCreate(NutritionValueBase):
