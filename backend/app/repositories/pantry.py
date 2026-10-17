@@ -12,6 +12,8 @@ from app.repositories.exceptions import DuplicateResourceError
 
 
 class PantryRepository:
+    """Pantry writes are flushed here; PantryService owns the owner lock and txn."""
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
@@ -57,6 +59,7 @@ class PantryRepository:
                 UserIngredient.id == pantry_item_id,
                 UserIngredient.user_id == user_id,
             )
+            .execution_options(populate_existing=True, autoflush=False)
         )
 
         result = await self.db.execute(stmt)
@@ -68,9 +71,13 @@ class PantryRepository:
         user_id: uuid.UUID,
         ingredient_id: uuid.UUID,
     ) -> UserIngredient | None:
-        stmt = select(UserIngredient).where(
-            UserIngredient.user_id == user_id,
-            UserIngredient.ingredient_id == ingredient_id,
+        stmt = (
+            select(UserIngredient)
+            .where(
+                UserIngredient.user_id == user_id,
+                UserIngredient.ingredient_id == ingredient_id,
+            )
+            .execution_options(populate_existing=True, autoflush=False)
         )
 
         result = await self.db.execute(stmt)
@@ -92,9 +99,8 @@ class PantryRepository:
         self.db.add(pantry_item)
 
         try:
-            await self.db.commit()
+            await self.db.flush()
         except IntegrityError as exc:
-            await self.db.rollback()
             raise DuplicateResourceError(
                 "Ingredient already exists in user pantry"
             ) from exc
@@ -123,7 +129,7 @@ class PantryRepository:
         if "expires_at" in update_data:
             pantry_item.expires_at = data.expires_at
 
-        await self.db.commit()
+        await self.db.flush()
 
         updated = await self.get_user_pantry_item(
             user_id=pantry_item.user_id,
@@ -147,4 +153,3 @@ class PantryRepository:
         )
 
         await self.db.execute(stmt)
-        await self.db.commit()

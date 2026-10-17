@@ -12,10 +12,12 @@ from app.schemas.shopping_list import (
     ShoppingListAddedPantryItemRead,
     ShoppingListItemRead,
 )
+from app.services.pantry_transaction import pantry_transaction
 
 
 class ShoppingListService:
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.repository = ShoppingListRepository(db)
 
     async def get_current_user_combined_shopping_list(
@@ -59,48 +61,51 @@ class ShoppingListService:
 
         normalized_meal_type = self._normalize_optional_meal_type(meal_type)
 
-        shopping_list_items = await self.repository.list_combined_for_user(
-            user_id=user_id,
-            from_date=from_date,
-            to_date=to_date,
-            meal_type=normalized_meal_type,
-            subtract_pantry=True,
-        )
+        async with pantry_transaction(self.db, user_id):
+            shopping_list_items = await self.repository.list_combined_for_user(
+                user_id=user_id,
+                from_date=from_date,
+                to_date=to_date,
+                meal_type=normalized_meal_type,
+                subtract_pantry=True,
+            )
 
-        items_to_add = [
-            item
-            for item in shopping_list_items
-            if self._to_decimal(item.get("missing_quantity_g")) > Decimal("0")
-        ]
+            items_to_add = [
+                item
+                for item in shopping_list_items
+                if self._to_decimal(item.get("missing_quantity_g")) > Decimal("0")
+            ]
 
-        skipped_items_count = len(shopping_list_items) - len(items_to_add)
+            skipped_items_count = len(shopping_list_items) - len(items_to_add)
 
-        updated_pantry_items = await self.repository.add_missing_items_to_pantry(
-            user_id=user_id,
-            items=items_to_add,
-        )
+            updated_pantry_items = await self.repository.add_missing_items_to_pantry(
+                user_id=user_id,
+                items=items_to_add,
+            )
 
-        updated_items_count = sum(
-            1 for item in updated_pantry_items if item["was_existing"]
-        )
-        added_items_count = sum(
-            1 for item in updated_pantry_items if not item["was_existing"]
-        )
+            updated_items_count = sum(
+                1 for item in updated_pantry_items if item["was_existing"]
+            )
+            added_items_count = sum(
+                1 for item in updated_pantry_items if not item["was_existing"]
+            )
 
-        return ShoppingListAddMissingToPantryResponse(
-            updated_items_count=updated_items_count,
-            added_items_count=added_items_count,
-            skipped_items_count=skipped_items_count,
-            items=[
-                ShoppingListAddedPantryItemRead(
-                    ingredient_id=item["ingredient_id"],
-                    ingredient_name=item["ingredient_name"],
-                    added_quantity_g=item["added_quantity_g"],
-                    new_pantry_quantity_g=item["new_pantry_quantity_g"],
-                )
-                for item in updated_pantry_items
-            ],
-        )
+            result = ShoppingListAddMissingToPantryResponse(
+                updated_items_count=updated_items_count,
+                added_items_count=added_items_count,
+                skipped_items_count=skipped_items_count,
+                items=[
+                    ShoppingListAddedPantryItemRead(
+                        ingredient_id=item["ingredient_id"],
+                        ingredient_name=item["ingredient_name"],
+                        added_quantity_g=item["added_quantity_g"],
+                        new_pantry_quantity_g=item["new_pantry_quantity_g"],
+                    )
+                    for item in updated_pantry_items
+                ],
+            )
+
+        return result
 
     def _validate_date_range(
         self,
