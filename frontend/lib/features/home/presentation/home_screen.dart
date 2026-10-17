@@ -103,6 +103,15 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 28),
             _FeatureCard(
+              key: const Key('nutrition-setup-card'),
+              title: context.l10n.nutritionSetup,
+              description: context.l10n.nutritionEntryDescription,
+              icon: Icons.tune_rounded,
+              accentColor: AppColors.sage,
+              onTap: () => context.push('/nutrition/setup'),
+            ),
+            const SizedBox(height: 14),
+            _FeatureCard(
               key: const Key('pantry-card'),
               title: context.l10n.pantry,
               description: context.l10n.pantryDescription,
