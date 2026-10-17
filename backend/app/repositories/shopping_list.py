@@ -122,50 +122,45 @@ class ShoppingListRepository:
 
         updated_items: list[dict] = []
 
-        try:
-            for item in items:
-                added_quantity_g = self._to_decimal(item["missing_quantity_g"])
+        # Service holds the owner lock; use stable dependent-row order.
+        for item in sorted(items, key=lambda item: item["ingredient_id"]):
+            added_quantity_g = self._to_decimal(item["missing_quantity_g"])
 
-                insert_stmt = pg_insert(UserIngredient).values(
-                    user_id=user_id,
-                    ingredient_id=item["ingredient_id"],
-                    quantity_g=added_quantity_g,
-                )
+            insert_stmt = pg_insert(UserIngredient).values(
+                user_id=user_id,
+                ingredient_id=item["ingredient_id"],
+                quantity_g=added_quantity_g,
+            )
 
-                upsert_stmt = insert_stmt.on_conflict_do_update(
-                    constraint="uq_user_ingredient",
-                    set_={
-                        "quantity_g": (
-                            UserIngredient.quantity_g + insert_stmt.excluded.quantity_g
-                        ),
-                        "updated_at": func.now(),
-                    },
-                ).returning(
-                    UserIngredient.ingredient_id.label("ingredient_id"),
-                    UserIngredient.quantity_g.label("quantity_g"),
-                )
+            upsert_stmt = insert_stmt.on_conflict_do_update(
+                constraint="uq_user_ingredient",
+                set_={
+                    "quantity_g": (
+                        UserIngredient.quantity_g + insert_stmt.excluded.quantity_g
+                    ),
+                    "updated_at": func.now(),
+                },
+            ).returning(
+                UserIngredient.ingredient_id.label("ingredient_id"),
+                UserIngredient.quantity_g.label("quantity_g"),
+            )
 
-                result = await self.db.execute(upsert_stmt)
-                row = result.one()
+            result = await self.db.execute(upsert_stmt)
+            row = result.one()
 
-                updated_items.append(
-                    {
-                        "ingredient_id": row.ingredient_id,
-                        "ingredient_name": item["ingredient_name"],
-                        "added_quantity_g": added_quantity_g,
-                        "new_pantry_quantity_g": row.quantity_g,
-                        "was_existing": item["ingredient_id"]
-                        in existing_ingredient_ids,
-                    }
-                )
+            updated_items.append(
+                {
+                    "ingredient_id": row.ingredient_id,
+                    "ingredient_name": item["ingredient_name"],
+                    "added_quantity_g": added_quantity_g,
+                    "new_pantry_quantity_g": row.quantity_g,
+                    "was_existing": item["ingredient_id"] in existing_ingredient_ids,
+                }
+            )
 
-            await self.db.commit()
-
-        except Exception:
-            await self.db.rollback()
-            raise
-
-        return updated_items
+        by_ingredient = {item["ingredient_id"]: item for item in updated_items}
+        # Preserve the combined list order in the API response.
+        return [by_ingredient[item["ingredient_id"]] for item in items]
 
     def _to_decimal(self, value) -> Decimal:
         if isinstance(value, Decimal):

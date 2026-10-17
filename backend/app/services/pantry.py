@@ -7,14 +7,17 @@ from app.repositories.exceptions import DuplicateResourceError
 from app.repositories.pantry import PantryRepository
 from app.schemas.pantry import (
     PantryItemCreate,
+    PantryItemRead,
     PantryItemUpdate,
     PantryNutritionSummaryRead,
 )
 from app.services.pantry_nutrition import PantryNutritionCalculator
+from app.services.pantry_transaction import pantry_transaction
 
 
 class PantryService:
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.repository = PantryRepository(db)
         self.nutrition_calculator = PantryNutritionCalculator()
 
@@ -39,27 +42,30 @@ class PantryService:
         user_id: uuid.UUID,
         data: PantryItemCreate,
     ):
-        await self._ensure_user_exists(user_id)
-        await self._ensure_ingredient_exists(data.ingredient_id)
-
-        existing = await self.repository.get_by_user_and_ingredient(
-            user_id=user_id,
-            ingredient_id=data.ingredient_id,
-        )
-
-        if existing is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Ingredient already exists in user pantry",
-            )
-
         try:
-            return await self.repository.create(user_id=user_id, data=data)
+            async with pantry_transaction(self.db, user_id):
+                await self._ensure_ingredient_exists(data.ingredient_id)
+
+                existing = await self.repository.get_by_user_and_ingredient(
+                    user_id=user_id,
+                    ingredient_id=data.ingredient_id,
+                )
+
+                if existing is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Ingredient already exists in user pantry",
+                    )
+
+                item = await self.repository.create(user_id=user_id, data=data)
+                result = PantryItemRead.model_validate(item)
         except DuplicateResourceError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
+        return result
 
     async def update_pantry_item(
         self,
@@ -68,23 +74,22 @@ class PantryService:
         pantry_item_id: uuid.UUID,
         data: PantryItemUpdate,
     ):
-        await self._ensure_user_exists(user_id)
-
-        pantry_item = await self.repository.get_user_pantry_item(
-            user_id=user_id,
-            pantry_item_id=pantry_item_id,
-        )
-
-        if pantry_item is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pantry item not found",
+        async with pantry_transaction(self.db, user_id):
+            pantry_item = await self.repository.get_user_pantry_item(
+                user_id=user_id,
+                pantry_item_id=pantry_item_id,
             )
 
-        return await self.repository.update(
-            pantry_item=pantry_item,
-            data=data,
-        )
+            if pantry_item is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Pantry item not found",
+                )
+
+            item = await self.repository.update(pantry_item=pantry_item, data=data)
+            result = PantryItemRead.model_validate(item)
+
+        return result
 
     async def delete_pantry_item(
         self,
@@ -92,23 +97,22 @@ class PantryService:
         user_id: uuid.UUID,
         pantry_item_id: uuid.UUID,
     ) -> None:
-        await self._ensure_user_exists(user_id)
-
-        pantry_item = await self.repository.get_user_pantry_item(
-            user_id=user_id,
-            pantry_item_id=pantry_item_id,
-        )
-
-        if pantry_item is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pantry item not found",
+        async with pantry_transaction(self.db, user_id):
+            pantry_item = await self.repository.get_user_pantry_item(
+                user_id=user_id,
+                pantry_item_id=pantry_item_id,
             )
 
-        await self.repository.delete(
-            user_id=user_id,
-            pantry_item_id=pantry_item_id,
-        )
+            if pantry_item is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Pantry item not found",
+                )
+
+            await self.repository.delete(
+                user_id=user_id,
+                pantry_item_id=pantry_item_id,
+            )
 
     async def _ensure_user_exists(self, user_id: uuid.UUID) -> None:
         user = await self.repository.get_user(user_id)
