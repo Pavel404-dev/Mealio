@@ -10,6 +10,7 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/nutrition/presentation/nutrition_setup_screen.dart';
 import '../../features/pantry/domain/pantry_item.dart';
 import '../../features/pantry/presentation/add_pantry_item_screen.dart';
 import '../../features/pantry/presentation/edit_pantry_item_screen.dart';
@@ -118,6 +119,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/nutrition/setup',
+        builder: (context, state) => const NutritionSetupScreen(),
+      ),
       GoRoute(
         path: '/pantry',
         builder: (context, state) => const PantryScreen(),

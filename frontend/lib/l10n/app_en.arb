@@ -674,5 +674,182 @@
         "type": "String"
       }
     }
+  },
+  "nutritionSetup": "Nutrition setup",
+  "@nutritionSetup": {
+    "description": "nutritionSetup"
+  },
+  "nutritionEntryDescription": "Set your goal, body measurements and activity.",
+  "@nutritionEntryDescription": {
+    "description": "nutritionEntryDescription"
+  },
+  "nutritionDescription": "Optional setup. Each saved step updates your current profile. You can leave at any time.",
+  "@nutritionDescription": {
+    "description": "nutritionDescription"
+  },
+  "nutritionStep": "Step {step} of 3",
+  "@nutritionStep": {
+    "description": "nutritionStep",
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoal": "Goal",
+  "@nutritionGoal": {
+    "description": "nutritionGoal"
+  },
+  "nutritionBody": "Body measurements",
+  "@nutritionBody": {
+    "description": "nutritionBody"
+  },
+  "nutritionSex": "Sex",
+  "@nutritionSex": {
+    "description": "nutritionSex"
+  },
+  "nutritionBirthDate": "Date of birth",
+  "@nutritionBirthDate": {
+    "description": "nutritionBirthDate"
+  },
+  "nutritionDateHint": "YYYY-MM-DD — enter your actual date of birth.",
+  "@nutritionDateHint": {
+    "description": "nutritionDateHint"
+  },
+  "nutritionHeight": "Height (cm)",
+  "@nutritionHeight": {
+    "description": "nutritionHeight"
+  },
+  "nutritionWeight": "Weight (kg)",
+  "@nutritionWeight": {
+    "description": "nutritionWeight"
+  },
+  "nutritionActivity": "Activity level",
+  "@nutritionActivity": {
+    "description": "nutritionActivity"
+  },
+  "nutritionLose": "Lose weight",
+  "@nutritionLose": {
+    "description": "nutritionLose"
+  },
+  "nutritionMaintain": "Maintain weight",
+  "@nutritionMaintain": {
+    "description": "nutritionMaintain"
+  },
+  "nutritionGain": "Gain weight",
+  "@nutritionGain": {
+    "description": "nutritionGain"
+  },
+  "nutritionMale": "Male",
+  "@nutritionMale": {
+    "description": "nutritionMale"
+  },
+  "nutritionFemale": "Female",
+  "@nutritionFemale": {
+    "description": "nutritionFemale"
+  },
+  "nutritionSedentary": "Sedentary",
+  "@nutritionSedentary": {
+    "description": "nutritionSedentary"
+  },
+  "nutritionLightlyActive": "Lightly active",
+  "@nutritionLightlyActive": {
+    "description": "nutritionLightlyActive"
+  },
+  "nutritionModeratelyActive": "Moderately active",
+  "@nutritionModeratelyActive": {
+    "description": "nutritionModeratelyActive"
+  },
+  "nutritionVeryActive": "Very active",
+  "@nutritionVeryActive": {
+    "description": "nutritionVeryActive"
+  },
+  "nutritionExtraActive": "Extra active",
+  "@nutritionExtraActive": {
+    "description": "nutritionExtraActive"
+  },
+  "nutritionChoose": "Choose an option",
+  "@nutritionChoose": {
+    "description": "nutritionChoose"
+  },
+  "nutritionRequired": "This field is required.",
+  "@nutritionRequired": {
+    "description": "nutritionRequired"
+  },
+  "nutritionDateInvalid": "Enter a valid date from 1900-01-01 through today (UTC), in YYYY-MM-DD format.",
+  "@nutritionDateInvalid": {
+    "description": "nutritionDateInvalid"
+  },
+  "nutritionHeightInvalid": "Enter 50–250 cm, with at most 1 decimal place.",
+  "@nutritionHeightInvalid": {
+    "description": "nutritionHeightInvalid"
+  },
+  "nutritionWeightInvalid": "Enter 10–500 kg, with at most 2 decimal places.",
+  "@nutritionWeightInvalid": {
+    "description": "nutritionWeightInvalid"
+  },
+  "nutritionAuthentication": "Sign in again to access your profile.",
+  "@nutritionAuthentication": {
+    "description": "nutritionAuthentication"
+  },
+  "nutritionValidation": "Check your entries and try saving again.",
+  "@nutritionValidation": {
+    "description": "nutritionValidation"
+  },
+  "nutritionConnection": "Connection interrupted. Your entries are still here. If you were saving, the server may have saved them. You can retry.",
+  "@nutritionConnection": {
+    "description": "nutritionConnection"
+  },
+  "nutritionUnexpected": "Unable to confirm the result. Please try again.",
+  "@nutritionUnexpected": {
+    "description": "nutritionUnexpected"
+  },
+  "nutritionLoading": "Loading profile…",
+  "@nutritionLoading": {
+    "description": "nutritionLoading"
+  },
+  "nutritionSaving": "Saving…",
+  "@nutritionSaving": {
+    "description": "nutritionSaving"
+  },
+  "nutritionSave": "Save",
+  "@nutritionSave": {
+    "description": "nutritionSave"
+  },
+  "nutritionSaveContinue": "Save and continue",
+  "@nutritionSaveContinue": {
+    "description": "nutritionSaveContinue"
+  },
+  "nutritionStepSaved": "Previous step saved.",
+  "@nutritionStepSaved": {
+    "description": "nutritionStepSaved"
+  },
+  "nutritionNoChanges": "Previous step has no changes to save.",
+  "@nutritionNoChanges": {
+    "description": "nutritionNoChanges"
+  },
+  "nutritionSaved": "Profile saved.",
+  "@nutritionSaved": {
+    "description": "nutritionSaved"
+  },
+  "nutritionReturnHome": "Return to Home",
+  "@nutritionReturnHome": {
+    "description": "nutritionReturnHome"
+  },
+  "nutritionDiscardTitle": "Leave without saving your edits?",
+  "@nutritionDiscardTitle": {
+    "description": "nutritionDiscardTitle"
+  },
+  "nutritionDiscardDescription": "Unsaved edits will be discarded. Steps already saved remain in your profile.",
+  "@nutritionDiscardDescription": {
+    "description": "nutritionDiscardDescription"
+  },
+  "nutritionStay": "Stay",
+  "@nutritionStay": {
+    "description": "nutritionStay"
+  },
+  "nutritionLeaveDiscard": "Leave and discard edits",
+  "@nutritionLeaveDiscard": {
+    "description": "nutritionLeaveDiscard"
   }
 }

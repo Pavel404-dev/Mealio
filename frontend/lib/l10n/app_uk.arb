@@ -674,5 +674,182 @@
         "type": "String"
       }
     }
+  },
+  "nutritionSetup": "Налаштування харчування",
+  "@nutritionSetup": {
+    "description": "nutritionSetup"
+  },
+  "nutritionEntryDescription": "Укажіть мету, параметри тіла та активність.",
+  "@nutritionEntryDescription": {
+    "description": "nutritionEntryDescription"
+  },
+  "nutritionDescription": "Необов’язкове налаштування. Збереження кожного кроку оновлює ваш профіль. Можна вийти будь-коли.",
+  "@nutritionDescription": {
+    "description": "nutritionDescription"
+  },
+  "nutritionStep": "Крок {step} із 3",
+  "@nutritionStep": {
+    "description": "nutritionStep",
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoal": "Мета",
+  "@nutritionGoal": {
+    "description": "nutritionGoal"
+  },
+  "nutritionBody": "Параметри тіла",
+  "@nutritionBody": {
+    "description": "nutritionBody"
+  },
+  "nutritionSex": "Стать",
+  "@nutritionSex": {
+    "description": "nutritionSex"
+  },
+  "nutritionBirthDate": "Дата народження",
+  "@nutritionBirthDate": {
+    "description": "nutritionBirthDate"
+  },
+  "nutritionDateHint": "РРРР-ММ-ДД — укажіть фактичну дату народження.",
+  "@nutritionDateHint": {
+    "description": "nutritionDateHint"
+  },
+  "nutritionHeight": "Зріст (см)",
+  "@nutritionHeight": {
+    "description": "nutritionHeight"
+  },
+  "nutritionWeight": "Вага (кг)",
+  "@nutritionWeight": {
+    "description": "nutritionWeight"
+  },
+  "nutritionActivity": "Рівень активності",
+  "@nutritionActivity": {
+    "description": "nutritionActivity"
+  },
+  "nutritionLose": "Знизити вагу",
+  "@nutritionLose": {
+    "description": "nutritionLose"
+  },
+  "nutritionMaintain": "Підтримувати вагу",
+  "@nutritionMaintain": {
+    "description": "nutritionMaintain"
+  },
+  "nutritionGain": "Збільшити вагу",
+  "@nutritionGain": {
+    "description": "nutritionGain"
+  },
+  "nutritionMale": "Чоловіча",
+  "@nutritionMale": {
+    "description": "nutritionMale"
+  },
+  "nutritionFemale": "Жіноча",
+  "@nutritionFemale": {
+    "description": "nutritionFemale"
+  },
+  "nutritionSedentary": "Малорухливий",
+  "@nutritionSedentary": {
+    "description": "nutritionSedentary"
+  },
+  "nutritionLightlyActive": "Невисока активність",
+  "@nutritionLightlyActive": {
+    "description": "nutritionLightlyActive"
+  },
+  "nutritionModeratelyActive": "Помірна активність",
+  "@nutritionModeratelyActive": {
+    "description": "nutritionModeratelyActive"
+  },
+  "nutritionVeryActive": "Висока активність",
+  "@nutritionVeryActive": {
+    "description": "nutritionVeryActive"
+  },
+  "nutritionExtraActive": "Дуже висока активність",
+  "@nutritionExtraActive": {
+    "description": "nutritionExtraActive"
+  },
+  "nutritionChoose": "Виберіть варіант",
+  "@nutritionChoose": {
+    "description": "nutritionChoose"
+  },
+  "nutritionRequired": "Заповніть це поле.",
+  "@nutritionRequired": {
+    "description": "nutritionRequired"
+  },
+  "nutritionDateInvalid": "Введіть коректну дату від 1900-01-01 до сьогодні (UTC) у форматі РРРР-ММ-ДД.",
+  "@nutritionDateInvalid": {
+    "description": "nutritionDateInvalid"
+  },
+  "nutritionHeightInvalid": "Введіть зріст від 50 до 250 см, не більше 1 знака після коми.",
+  "@nutritionHeightInvalid": {
+    "description": "nutritionHeightInvalid"
+  },
+  "nutritionWeightInvalid": "Введіть вагу від 10 до 500 кг, не більше 2 знаків після коми.",
+  "@nutritionWeightInvalid": {
+    "description": "nutritionWeightInvalid"
+  },
+  "nutritionAuthentication": "Увійдіть знову для доступу до профілю.",
+  "@nutritionAuthentication": {
+    "description": "nutritionAuthentication"
+  },
+  "nutritionValidation": "Перевірте введені дані та повторіть збереження.",
+  "@nutritionValidation": {
+    "description": "nutritionValidation"
+  },
+  "nutritionConnection": "Зв’язок перервано. Введені дані залишилися на екрані. Якщо ви зберігали профіль, сервер міг прийняти зміни. Можна повторити спробу.",
+  "@nutritionConnection": {
+    "description": "nutritionConnection"
+  },
+  "nutritionUnexpected": "Не вдалося підтвердити результат. Спробуйте ще раз.",
+  "@nutritionUnexpected": {
+    "description": "nutritionUnexpected"
+  },
+  "nutritionLoading": "Завантаження профілю…",
+  "@nutritionLoading": {
+    "description": "nutritionLoading"
+  },
+  "nutritionSaving": "Збереження…",
+  "@nutritionSaving": {
+    "description": "nutritionSaving"
+  },
+  "nutritionSave": "Зберегти",
+  "@nutritionSave": {
+    "description": "nutritionSave"
+  },
+  "nutritionSaveContinue": "Зберегти й продовжити",
+  "@nutritionSaveContinue": {
+    "description": "nutritionSaveContinue"
+  },
+  "nutritionStepSaved": "Попередній крок збережено.",
+  "@nutritionStepSaved": {
+    "description": "nutritionStepSaved"
+  },
+  "nutritionNoChanges": "На попередньому кроці немає змін для збереження.",
+  "@nutritionNoChanges": {
+    "description": "nutritionNoChanges"
+  },
+  "nutritionSaved": "Профіль збережено.",
+  "@nutritionSaved": {
+    "description": "nutritionSaved"
+  },
+  "nutritionReturnHome": "На головну",
+  "@nutritionReturnHome": {
+    "description": "nutritionReturnHome"
+  },
+  "nutritionDiscardTitle": "Вийти без збереження правок?",
+  "@nutritionDiscardTitle": {
+    "description": "nutritionDiscardTitle"
+  },
+  "nutritionDiscardDescription": "Незбережені правки буде втрачено. Уже збережені кроки залишаться в профілі.",
+  "@nutritionDiscardDescription": {
+    "description": "nutritionDiscardDescription"
+  },
+  "nutritionStay": "Залишитися",
+  "@nutritionStay": {
+    "description": "nutritionStay"
+  },
+  "nutritionLeaveDiscard": "Вийти й відкинути правки",
+  "@nutritionLeaveDiscard": {
+    "description": "nutritionLeaveDiscard"
   }
 }
