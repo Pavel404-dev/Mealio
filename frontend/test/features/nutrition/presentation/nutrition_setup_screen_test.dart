@@ -676,6 +676,56 @@ void main() {
     );
   }
 
+  for (final field in [
+    'daily_calories_target',
+    'daily_protein_target_g',
+    'daily_carbs_target_g',
+    'daily_fat_target_g',
+  ]) {
+    for (final missing in [true, false]) {
+      testWidgets(
+        'W7 confirm rejects $field ${missing ? 'null' : 'mismatch'} without false success or automatic retry',
+        (tester) async {
+          configure();
+          repository.json.addAll(nutritionJson(full: true));
+          await start(tester);
+          await summary(tester);
+          await tap(tester, 'nutrition-calculate');
+          await tester.ensureVisible(key('nutrition-select-estimate'));
+          tester
+              .widget<CheckboxListTile>(key('nutrition-select-estimate'))
+              .onChanged!(true);
+          await tester.pump();
+          repository.saveHandler = (patch) async => NutritionProfile.fromJson({
+            ...repository.json,
+            ...patch.json,
+            field: missing ? null : (patch.json[field] as int) + 1,
+          });
+          await tap(tester, 'nutrition-save');
+          expect(key('nutrition-setup-screen'), findsOneWidget);
+          expect(key('home-screen'), findsNothing);
+          expect(key('nutrition-error'), findsOneWidget);
+          expect(find.text('Profile saved.'), findsNothing);
+          expect(repository.patches.single, {
+            'daily_calories_target': 3204,
+            'daily_protein_target_g': 160,
+            'daily_carbs_target_g': 400,
+            'daily_fat_target_g': 107,
+          });
+          expect(repository.calculations, 1);
+
+          repository.saveHandler = null;
+          await tap(tester, 'nutrition-save');
+          expect(repository.patches, hasLength(2));
+          expect(repository.patches.last, repository.patches.first);
+          expect(repository.calculations, 1);
+          expect(key('home-screen'), findsOneWidget);
+          expect(find.text('Profile saved.'), findsOneWidget);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'W7 no targets explicitly saves displayed estimate; locale retains estimate',
     (tester) async {

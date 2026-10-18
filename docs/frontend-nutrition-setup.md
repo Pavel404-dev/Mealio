@@ -86,6 +86,11 @@ successful target PATCH from the current confirmation in the current login
 lifetime. Keeping existing targets exits without that notification, even when
 an estimate is available or earlier steps were saved.
 
+Apply also requires the response to contain all four targets exactly matching
+the shown snapshot. A partial or differing response produces a safe error and
+keeps the previous client targets and estimate for explicit retry. The server
+write may have committed; there is no automatic retry or compensating PATCH.
+
 The owner-serialized last-write-wins contract remains. Calculate and apply are
 separate operations: another device can change inputs or targets between them,
 and confirmation can overwrite intervening target writes. There are no

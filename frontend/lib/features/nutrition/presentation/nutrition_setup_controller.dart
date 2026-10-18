@@ -404,6 +404,15 @@ class NutritionSetupController extends ChangeNotifier {
         changes: NutritionPatch.targets(shown.targets),
       );
       if (!checkOwnership()) return NutritionSaveResult.stale;
+      if (!profile.targets.complete ||
+          profile.targets.calories != shown.targets.calories ||
+          profile.targets.protein != shown.targets.protein ||
+          profile.targets.carbs != shown.targets.carbs ||
+          profile.targets.fat != shown.targets.fat) {
+        // The write may have committed; retain the shown snapshot for explicit
+        // retry without publishing an unconfirmed result or compensating.
+        throw const NutritionFailure(NutritionFailureType.unexpected);
+      }
       targets = profile.targets;
       saving = false;
       notifyListeners();

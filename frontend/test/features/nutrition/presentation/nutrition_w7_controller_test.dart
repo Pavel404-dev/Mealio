@@ -271,6 +271,65 @@ void main() {
       expect(repo.calculations, 1);
     },
   );
+  for (final field in [
+    'daily_calories_target',
+    'daily_protein_target_g',
+    'daily_carbs_target_g',
+    'daily_fat_target_g',
+  ]) {
+    for (final missing in [true, false]) {
+      test(
+        'confirm rejects $field ${missing ? 'null' : 'mismatch'}; explicit retry keeps snapshot',
+        () async {
+          await toStep(5);
+          await controller.calculate();
+          controller.selectEstimate(true);
+          final shown = controller.calculation;
+          final saved = controller.targets;
+          final publishedTargets = <NutritionTargets>[];
+          controller.addListener(
+            () => publishedTargets.add(controller.targets),
+          );
+          repo.saveHandler = (patch) async => NutritionProfile.fromJson({
+            ...repo.json,
+            ...patch.json,
+            field: missing ? null : (patch.json[field] as int) + 1,
+          });
+
+          expect(await controller.confirm(), NutritionSaveResult.rejected);
+          expect(controller.failure?.type, NutritionFailureType.unexpected);
+          expect(controller.targets, same(saved));
+          expect(publishedTargets, everyElement(same(saved)));
+          expect(controller.calculation, same(shown));
+          expect(controller.useEstimate, isTrue);
+          expect(controller.saving, isFalse);
+          expect(controller.step, 5);
+          expect(repo.patches.single, {
+            'daily_calories_target': 3204,
+            'daily_protein_target_g': 160,
+            'daily_carbs_target_g': 400,
+            'daily_fat_target_g': 107,
+          });
+          expect(repo.calculations, 1);
+
+          repo.saveHandler = null;
+          expect(
+            await controller.confirm(),
+            NutritionSaveResult.targetsApplied,
+          );
+          expect(controller.failure, isNull);
+          expect(repo.patches, hasLength(2));
+          expect(repo.patches.last, repo.patches.first);
+          expect(repo.calculations, 1);
+          expect(controller.calculation, same(shown));
+          expect(
+            NutritionPatch.targets(controller.targets).json,
+            repo.patches.last,
+          );
+        },
+      );
+    }
+  }
   for (final action in ['calculate', 'confirm']) {
     for (final fails in [false, true]) {
       for (final transition in ['A→B', 'A→A', 'dispose']) {
