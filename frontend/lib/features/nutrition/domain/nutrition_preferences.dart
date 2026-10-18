@@ -92,7 +92,8 @@ class NutritionPreferences {
 
     List<String> strings(String key) {
       final value = requiredValue(key);
-      if (value is! List || value.any((v) => v is! String)) {
+      if (value is! List ||
+          value.any((v) => v is! String || v.trim().isEmpty || v != v.trim())) {
         throw const FormatException('Invalid preference list');
       }
       return value.cast<String>();

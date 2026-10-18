@@ -10,6 +10,7 @@ import 'package:mealio/features/nutrition/data/nutrition_repository.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_preferences.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_calculation.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_failure.dart';
+import 'package:mealio/features/nutrition/presentation/nutrition_setup_controller.dart';
 import '../../../helpers/auth_test_fakes.dart';
 import '../../../helpers/nutrition_test_fakes.dart';
 
@@ -65,6 +66,93 @@ void main() {
         );
   Object body(String action) =>
       action == 'calculate' ? calculationJson() : nutritionJson();
+
+  for (final field in {
+    'allergies': PreferenceList.allergies,
+    'liked_ingredients': PreferenceList.likes,
+    'disliked_ingredients': PreferenceList.dislikes,
+  }.entries) {
+    for (final invalid in <String, Object?>{
+      'number': 1,
+      'null': null,
+      'boolean': true,
+      'empty': '',
+      'spaces': '   ',
+      'tabs and newline': '\t\n',
+      'leading space': ' rice',
+      'trailing space': 'rice ',
+      'surrounding whitespace': '\t rice \n',
+      'Unicode whitespace': '\u00a0рис\u00a0',
+    }.entries) {
+      test(
+        '${field.key} rejects ${invalid.key} with safe failure and no PATCH',
+        () async {
+          final json = nutritionJson(full: true)
+            ..[field.key] = ['valid ingredient', invalid.value];
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await expectLater(
+            repository.load(lifetime: storage.sessionLifetime),
+            throwsA(
+              isA<NutritionFailure>().having(
+                (f) => f.type,
+                'type',
+                NutritionFailureType.unexpected,
+              ),
+            ),
+          );
+
+          final controller = NutritionSetupController(
+            repository: repository,
+            storage: storage,
+            isAuthenticated: () => true,
+          );
+          addTearDown(controller.dispose);
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await controller.load();
+          expect(controller.loaded, isFalse);
+          expect(controller.failure?.type, NutritionFailureType.unexpected);
+          expect(controller.dirty, isFalse);
+          expect(await controller.save(), NutritionSaveResult.rejected);
+          expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+        },
+      );
+    }
+    for (final values in <List<String>>[
+      [],
+      ['рис', 'brown  rice', 'рис', '蘑菇 🍄', 'cre\u0300me', 'salt\tpepper'],
+    ]) {
+      test(
+        '${field.key} valid ${values.isEmpty ? 'empty' : 'Unicode'} list stays unchanged and clean',
+        () async {
+          final json = nutritionJson(full: true)..[field.key] = values;
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          final profile = await repository.load(
+            lifetime: storage.sessionLifetime,
+          );
+          expect(profile.preferences.list(field.value), values);
+
+          final controller = NutritionSetupController(
+            repository: repository,
+            storage: storage,
+            isAuthenticated: () => true,
+          );
+          addTearDown(controller.dispose);
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await controller.load();
+          expect(controller.loaded, isTrue);
+          expect(controller.failure, isNull);
+          expect(controller.ingredients(field.value), values);
+          expect(controller.dirty, isFalse);
+          for (var step = 0; step < 5; step++) {
+            expect(await controller.save(), NutritionSaveResult.advanced);
+            expect(controller.ingredients(field.value), values);
+            expect(controller.dirty, isFalse);
+          }
+          expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+        },
+      );
+    }
+  }
 
   for (final action in ['preferences', 'calculate', 'confirm']) {
     test('$action exact canonical typed wire request', () async {
