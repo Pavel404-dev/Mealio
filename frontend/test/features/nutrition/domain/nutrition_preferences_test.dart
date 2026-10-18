@@ -136,6 +136,28 @@ void main() {
       '2026-10-04',
     );
   });
+  for (final calories in [999, 6001]) {
+    test('calculated calories $calories outside calculation range fail', () {
+      final json = calculationJson();
+      (json['result'] as Map<String, dynamic>)['calories_target_kcal'] =
+          calories;
+      expect(
+        () => NutritionCalculation.fromJson(json, date: '2026-10-04'),
+        throwsFormatException,
+      );
+    });
+  }
+  for (final calories in [1000, 6000]) {
+    test('calculated calories boundary $calories is accepted', () {
+      final json = calculationJson();
+      (json['result'] as Map<String, dynamic>)['calories_target_kcal'] =
+          calories;
+      final outcome =
+          NutritionCalculation.fromJson(json, date: '2026-10-04')
+              as NutritionCalculated;
+      expect(outcome.targets.calories, calories);
+    });
+  }
   test(
     'incomplete/unsupported are typed, unknown or malformed outcomes fail',
     () {

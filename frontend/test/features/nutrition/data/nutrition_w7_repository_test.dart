@@ -209,6 +209,43 @@ void main() {
       }
     }
   }
+  for (final calories in [999, 6001]) {
+    test('calculate maps invalid calories $calories to safe failure', () async {
+      final json = calculationJson();
+      (json['result'] as Map<String, dynamic>)['calories_target_kcal'] =
+          calories;
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      await expectLater(
+        request('calculate'),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.unexpected,
+          ),
+        ),
+      );
+      expect(adapter.requests, hasLength(1));
+    });
+  }
+  for (final calories in [1, 999, 6001, 2147483647]) {
+    test(
+      'load retains saved calories $calories outside calculation range',
+      () async {
+        adapter.enqueue(
+          FakeHttpResponse(
+            statusCode: 200,
+            body: nutritionJson()..['daily_calories_target'] = calories,
+          ),
+        );
+        final profile = await repository.load(
+          lifetime: storage.sessionLifetime,
+        );
+        expect(profile.targets.calories, calories);
+        expect(adapter.requests.single.method, 'GET');
+      },
+    );
+  }
   test('paired money clearing survives actual JSON PATCH', () async {
     for (final change in [
       const NutritionChange(NutritionBudget('50,12', 'eur')),

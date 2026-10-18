@@ -59,8 +59,12 @@ sealed class NutritionCalculation {
             result['energy_delta_kcal'] is! int) {
           throw const FormatException('Invalid calculation metadata');
         }
+        final calories = result['calories_target_kcal'];
+        if (calories is! int || calories < 1000 || calories > 6000) {
+          throw const FormatException('Invalid calculated calories');
+        }
         final targets = NutritionTargets.fromJson({
-          'daily_calories_target': result['calories_target_kcal'],
+          'daily_calories_target': calories,
           'daily_protein_target_g': result['protein_target_g'],
           'daily_carbs_target_g': result['carbs_target_g'],
           'daily_fat_target_g': result['fat_target_g'],
