@@ -55,6 +55,7 @@ def assert_default_profile(profile: dict) -> None:
     assert profile["daily_fat_target_g"] is None
     assert profile["allergies"] == []
     assert profile["disliked_ingredients"] == []
+    assert profile["liked_ingredients"] == []
     assert profile["preferred_meals_per_day"] == 3
 
 

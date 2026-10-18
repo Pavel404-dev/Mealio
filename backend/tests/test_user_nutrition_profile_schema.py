@@ -213,3 +213,27 @@ def test_partial_fields_and_decimal_json_representation():
     read = UserNutritionProfileRead.model_validate(patch.model_dump())
     assert read.model_dump(mode="json")["height_cm"] == "170.5"
     assert read.model_dump(mode="json")["weight_kg"] == "70.25"
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [UserNutritionProfileCreate, UserNutritionProfileUpdate, UserNutritionProfileRead],
+)
+def test_likes_list_contract_without_ai_limits(schema):
+    assert schema().liked_ingredients == []
+    values = [" peanuts ", "", "  ", "peanuts", *["x" * 101] * 26]
+    profile = schema(
+        liked_ingredients=values,
+        allergies=["peanuts"],
+        disliked_ingredients=["peanuts"],
+    )
+    assert profile.liked_ingredients == ["peanuts", "peanuts", *["x" * 101] * 26]
+    assert profile.allergies == profile.disliked_ingredients == ["peanuts"]
+    assert "liked_ingredients" not in schema().model_dump(exclude_unset=True)
+    assert schema(liked_ingredients=[]).model_dump(exclude_unset=True) == {
+        "liked_ingredients": []
+    }
+    with pytest.raises(ValidationError):
+        schema(liked_ingredients=None)
+    with pytest.raises(ValidationError):
+        schema(liked_ingredients=[1])

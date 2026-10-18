@@ -28,6 +28,7 @@ def test_onboarding_values_preserve_explicit_nutrition_calculations():
             "max_cooking_time_minutes": 1,
             "weekly_food_budget_amount": Decimal("0.01"),
             "budget_currency": "EUR",
+            "liked_ingredients": ["peanuts", "celery", "rice"],
         }
     )
     row = {
@@ -64,6 +65,7 @@ def test_onboarding_values_preserve_pantry_personalization_and_restrictions():
             "max_cooking_time_minutes": 1,
             "weekly_food_budget_amount": Decimal("0.01"),
             "budget_currency": "EUR",
+            "liked_ingredients": ["peanuts", "celery", "rice"],
         }
     )
     personalization = RecipeSuggestionPersonalization()

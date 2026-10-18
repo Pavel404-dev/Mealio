@@ -145,6 +145,7 @@ async def test_empty_patch_creates_defaults_and_preserves_existing_row(
         {"goal": None},
         {"allergies": None},
         {"disliked_ingredients": None},
+        {"liked_ingredients": None},
         {"id": "00000000-0000-0000-0000-000000000001"},
         {"user_id": "00000000-0000-0000-0000-000000000001"},
         {"unexpected": 1},
@@ -285,6 +286,7 @@ async def test_failure_before_commit_rolls_back_and_propagates(
                 headers,
                 {
                     "height_cm": "180.0",
+                    "liked_ingredients": ["rice"],
                     "weekly_food_budget_amount": "100.00",
                     "budget_currency": "EUR",
                 },

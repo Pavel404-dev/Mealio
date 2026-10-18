@@ -15,6 +15,7 @@ import 'package:mealio/features/auth/presentation/auth_controller.dart';
 import 'package:mealio/features/nutrition/data/nutrition_repository.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_failure.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_profile.dart';
+import 'package:mealio/features/nutrition/domain/nutrition_calculation.dart';
 import 'package:mealio/l10n/generated/app_localizations.dart';
 
 import '../../../helpers/auth_test_fakes.dart';
@@ -121,7 +122,7 @@ void main() {
       await open(tester);
       expect(repository.loads, 1);
       expect(repository.saves, isEmpty);
-      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(find.text('Step 1 of 6'), findsOneWidget);
       // Exercise the actual dropdown menu and accessible label.
       await tester.tap(key('nutrition-goal'));
       await tester.pumpAndSettle();
@@ -137,7 +138,7 @@ void main() {
       await body(tester);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(find.text('Step 1 of 6'), findsOneWidget);
       await tap(tester, 'nutrition-save');
       expect(text(tester, 'height_cm'), '193,0');
       await tap(tester, 'nutrition-save');
@@ -163,7 +164,7 @@ void main() {
       await tap(tester, 'nutrition-discard');
       expect(key('home-screen'), findsOneWidget);
       await open(tester);
-      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(find.text('Step 1 of 6'), findsOneWidget);
       await tap(tester, 'nutrition-save');
       expect(text(tester, 'weight_kg'), '78.40');
       await tap(tester, 'nutrition-save');
@@ -191,7 +192,7 @@ void main() {
       firstButton.onPressed!();
       firstButton.onPressed!();
       await tester.pumpAndSettle();
-      expect(find.text('Step 2 of 3'), findsOneWidget);
+      expect(find.text('Step 2 of 6'), findsOneWidget);
       await tap(tester, 'nutrition-save');
       select(tester, NutritionField.activity, 'very_active');
       await tester.pump();
@@ -202,7 +203,7 @@ void main() {
       button.onPressed!();
       await tester.pump();
       expect(repository.saves, hasLength(1));
-      expect(find.text('Step 3 of 3'), findsOneWidget);
+      expect(find.text('Step 3 of 6'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pump();
       expect(key('nutrition-setup-screen'), findsOneWidget);
@@ -216,8 +217,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tap(tester, 'nutrition-save');
+      await tap(tester, 'nutrition-save');
+      await tap(tester, 'nutrition-save');
       expect(key('home-screen'), findsOneWidget);
-      expect(find.text('Profile saved.'), findsOneWidget);
+      expect(find.text('Profile saved.'), findsNothing);
     },
   );
 
@@ -264,12 +268,12 @@ void main() {
       await tester.drag(find.byType(ListView), const Offset(0, 1000));
       await tester.pumpAndSettle();
       expect(text(tester, 'weight_kg'), '78,40');
-      expect(find.text('Step 2 of 3'), findsOneWidget);
+      expect(find.text('Step 2 of 6'), findsOneWidget);
       repository.saveHandler = null;
       await tap(tester, 'nutrition-save');
       expect(repository.saves, hasLength(2));
       expect(repository.saves[0], repository.saves[1]);
-      expect(find.text('Step 3 of 3'), findsOneWidget);
+      expect(find.text('Step 3 of 6'), findsOneWidget);
     },
   );
 
@@ -292,7 +296,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await open(tester);
-      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(find.text('Step 1 of 6'), findsOneWidget);
       expect(
         tester
             .widget<DropdownButtonFormField<String>>(key('nutrition-goal'))
@@ -366,7 +370,7 @@ void main() {
             }
             await tester.pumpAndSettle();
             expect(key('nutrition-setup-screen'), findsOneWidget);
-            expect(find.text('Step 1 of 3'), findsOneWidget);
+            expect(find.text('Step 1 of 6'), findsOneWidget);
             expect(
               tester
                   .widget<DropdownButtonFormField<String>>(
@@ -473,6 +477,10 @@ void main() {
         await tap(tester, 'nutrition-exit');
         await tap(tester, 'nutrition-stay');
         await tap(tester, 'nutrition-save');
+        await tap(tester, 'nutrition-save');
+        await tap(tester, 'nutrition-save');
+        await tap(tester, 'nutrition-calculate');
+        await tap(tester, 'nutrition-save');
         expect(key('home-screen'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -570,7 +578,7 @@ void main() {
       repository.json.addAll(savedServer);
       await start(tester);
       await open(tester);
-      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(find.text('Step 1 of 6'), findsOneWidget);
       expect(
         tester
             .widget<DropdownButtonFormField<String>>(key('nutrition-goal'))
@@ -581,6 +589,268 @@ void main() {
       expect(text(tester, 'birth_date'), isEmpty);
       expect(text(tester, 'weight_kg'), isEmpty);
       expect(repository.saves, isEmpty);
+    },
+  );
+  Future<void> summary(WidgetTester tester) async {
+    await open(tester);
+    for (var i = 0; i < 5; i++) {
+      await tap(tester, 'nutrition-save');
+    }
+  }
+
+  testWidgets(
+    'W7 no targets explicitly saves displayed estimate; locale retains estimate',
+    (tester) async {
+      configure();
+      repository.json.addAll(nutritionJson(full: true));
+      for (final key in [
+        'daily_calories_target',
+        'daily_protein_target_g',
+        'daily_carbs_target_g',
+        'daily_fat_target_g',
+      ]) {
+        repository.json[key] = null;
+      }
+      await start(tester);
+      await summary(tester);
+      expect(repository.patches, isEmpty);
+      expect(
+        tester.widget<FilledButton>(key('nutrition-save')).onPressed,
+        isNull,
+      );
+      await tap(tester, 'nutrition-calculate');
+      expect(repository.patches, isEmpty);
+      expect(find.text('Calories (kcal/day): 3204'), findsOneWidget);
+      await container
+          .read(localeControllerProvider.notifier)
+          .setLocale(const Locale('ru'));
+      await tester.pumpAndSettle();
+      expect(find.text('Калории (ккал/день): 3204'), findsOneWidget);
+      expect(repository.calculations, 1);
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches.single, {
+        'daily_calories_target': 3204,
+        'daily_protein_target_g': 160,
+        'daily_carbs_target_g': 400,
+        'daily_fat_target_g': 107,
+      });
+      expect(key('home-screen'), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'W7 partial targets preserve by default; unsupported reason never claims success',
+    (tester) async {
+      configure();
+      repository.json.addAll(nutritionJson(full: true));
+      repository.calculateHandler = (_) async =>
+          NutritionUnsupported('2026-10-04', [NutritionUnsupportedReason.age]);
+      await start(tester);
+      await summary(tester);
+      await tap(tester, 'nutrition-calculate');
+      expect(find.text('The calculation supports ages 19–78.'), findsOneWidget);
+      expect(find.text('Carbs (g/day): Not set'), findsOneWidget);
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches, isEmpty);
+      expect(key('home-screen'), findsOneWidget);
+      expect(find.text('Profile saved.'), findsNothing);
+    },
+  );
+  testWidgets(
+    'W7 money validation retains comma draft/error across locale; pair clear and reopen',
+    (tester) async {
+      configure();
+      repository.json.addAll(nutritionJson(full: true));
+      await start(tester);
+      await open(tester);
+      for (var i = 0; i < 4; i++) {
+        await tap(tester, 'nutrition-save');
+      }
+      final amount = find.descendant(
+        of: key('preference-budgetAmount'),
+        matching: find.byType(TextField),
+      );
+      await tester.ensureVisible(amount);
+      await tester.enterText(amount, '50,125');
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches, isEmpty);
+      await container
+          .read(localeControllerProvider.notifier)
+          .setLocale(const Locale('ru'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(amount).controller!.text, '50,125');
+      expect(
+        tester.widget<TextField>(amount).decoration!.errorText,
+        contains('Без округления'),
+      );
+      await tester.ensureVisible(amount);
+      await tester.enterText(amount, '50,12');
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches.single, {
+        'weekly_food_budget_amount': '50.12',
+        'budget_currency': 'EUR',
+      });
+      await tap(tester, 'nutrition-back');
+      await tap(tester, 'nutrition-clear-budget');
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches.last, {
+        'weekly_food_budget_amount': null,
+        'budget_currency': null,
+      });
+      await tap(tester, 'nutrition-exit');
+      await summary(tester);
+      expect(repository.patches, hasLength(2));
+    },
+  );
+  for (final sameUser in [false, true]) {
+    for (final action in ['calculate', 'confirm']) {
+      for (final fail in [false, true]) {
+        testWidgets(
+          'W7 late $action $fail after ${sameUser ? 'A→A' : 'A→B'} no result/toast/navigation',
+          (tester) async {
+            configure();
+            repository.json.addAll(nutritionJson(full: true));
+            final calc = Completer<NutritionCalculation>();
+            final save = Completer<NutritionProfile>();
+            await start(tester);
+            await summary(tester);
+            final snapshot = NutritionCalculation.fromJson(
+              calculationJson(profile: repository.json),
+              date: '2026-10-04',
+            );
+            if (action == 'calculate') {
+              repository.calculateHandler = (_) => calc.future;
+              tester
+                  .widget<OutlinedButton>(key('nutrition-calculate'))
+                  .onPressed!();
+            } else {
+              await tap(tester, 'nutrition-calculate');
+              await tester.ensureVisible(key('nutrition-select-estimate'));
+              tester
+                  .widget<CheckboxListTile>(key('nutrition-select-estimate'))
+                  .onChanged!(true);
+              await tester.pump();
+              repository.saveHandler = (_) => save.future;
+              tester.widget<FilledButton>(key('nutrition-save')).onPressed!();
+            }
+            await tester.pump();
+            final controller = container.read(authControllerProvider.notifier);
+            await controller.logout();
+            await tester.pumpAndSettle();
+            if (!sameUser) {
+              loginUser = AuthUser(
+                id: 'synthetic-b',
+                email: 'b@example.com',
+                fullName: null,
+                createdAt: DateTime.utc(2026),
+                updatedAt: DateTime.utc(2026),
+              );
+            }
+            repository.calculateHandler = null;
+            repository.saveHandler = null;
+            await controller.login(
+              email: 'synthetic@example.com',
+              password: 'synthetic-password',
+            );
+            await tester.pumpAndSettle();
+            await open(tester);
+            select(tester, NutritionField.goal, 'gain_weight');
+            await tester.pump();
+            if (action == 'calculate') {
+              if (fail) {
+                calc.completeError(StateError('synthetic'));
+              } else {
+                calc.complete(snapshot);
+              }
+            } else {
+              if (fail) {
+                save.completeError(StateError('synthetic'));
+              } else {
+                save.complete(
+                  NutritionProfile.fromJson(nutritionJson(full: true)),
+                );
+              }
+            }
+            await tester.pumpAndSettle();
+            expect(find.text('Step 1 of 6'), findsOneWidget);
+            expect(key('nutrition-error'), findsNothing);
+            expect(find.text('Profile saved.'), findsNothing);
+            expect(find.text('Calories (kcal/day): 3204'), findsNothing);
+            expect(
+              tester
+                  .widget<DropdownButtonFormField<String>>(
+                    key('nutrition-goal'),
+                  )
+                  .initialValue,
+              'gain_weight',
+            );
+          },
+        );
+      }
+    }
+  }
+  testWidgets(
+    'W7 list controls preserve dirty input on Back/locale, save only likes and reopen',
+    (tester) async {
+      configure();
+      repository.json.addAll(nutritionJson(full: true));
+      repository.json['liked_ingredients'] = ['rice', 'rice'];
+      repository.json['diet_type'] = 'custom diet';
+      await start(tester);
+      await open(tester);
+      for (var i = 0; i < 3; i++) {
+        await tap(tester, 'nutrition-save');
+      }
+      Finder likes() => find.descendant(
+        of: key('ingredients-likes'),
+        matching: find.byType(TextField),
+      );
+      await tester.ensureVisible(likes().first);
+      await tester.enterText(likes().first, 'peanuts');
+      await tap(tester, 'nutrition-back');
+      await tap(tester, 'nutrition-save');
+      expect(
+        tester.widget<TextField>(likes().first).controller!.text,
+        'peanuts',
+      );
+      await container
+          .read(localeControllerProvider.notifier)
+          .setLocale(const Locale('uk'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(likes().first).controller!.text,
+        'peanuts',
+      );
+      await tap(tester, 'nutrition-exit');
+      await tap(tester, 'nutrition-stay');
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches.single, {
+        'liked_ingredients': ['peanuts', 'rice'],
+      });
+      expect(repository.json['diet_type'], 'custom diet');
+      expect(repository.json['allergies'], ['synthetic-allergen']);
+      await tap(tester, 'nutrition-exit');
+      await open(tester);
+      for (var i = 0; i < 3; i++) {
+        await tap(tester, 'nutrition-save');
+      }
+      expect(
+        tester.widget<TextField>(likes().first).controller!.text,
+        'peanuts',
+      );
+      final remove = find
+          .descendant(
+            of: key('ingredients-likes'),
+            matching: find.byType(IconButton),
+          )
+          .first;
+      await tester.ensureVisible(remove);
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(likes()).controller!.text, 'rice');
+      await tap(tester, 'nutrition-save');
+      expect(repository.patches.last, {
+        'liked_ingredients': ['rice'],
+      });
     },
   );
 }

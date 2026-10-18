@@ -1,6 +1,8 @@
 import '../../../l10n/generated/app_localizations.dart';
 import '../domain/nutrition_failure.dart';
 import '../domain/nutrition_profile.dart';
+import '../domain/nutrition_preferences.dart';
+import '../domain/nutrition_calculation.dart';
 
 String nutritionFieldLabel(NutritionField field, AppLocalizations l10n) =>
     switch (field) {
@@ -47,3 +49,39 @@ String nutritionFailureLabel(NutritionFailure failure, AppLocalizations l10n) =>
       NutritionFailureType.connection => l10n.nutritionConnection,
       NutritionFailureType.unexpected => l10n.nutritionUnexpected,
     };
+
+String preferenceFieldLabel(PreferenceField field, AppLocalizations l10n) =>
+    switch (field) {
+      PreferenceField.diet => l10n.nutritionDiet,
+      PreferenceField.cookingTime => l10n.nutritionCookingTime,
+      PreferenceField.budgetAmount => l10n.nutritionBudget,
+      PreferenceField.currency => l10n.nutritionCurrency,
+    };
+String preferenceListLabel(PreferenceList field, AppLocalizations l10n) =>
+    switch (field) {
+      PreferenceList.allergies => l10n.nutritionAllergies,
+      PreferenceList.likes => l10n.nutritionLikes,
+      PreferenceList.dislikes => l10n.nutritionDislikes,
+    };
+String? preferenceErrorLabel(PreferenceError? error, AppLocalizations l10n) =>
+    switch (error) {
+      null => null,
+      PreferenceError.diet => l10n.nutritionDietInvalid,
+      PreferenceError.cookingTime => l10n.nutritionCookingInvalid,
+      PreferenceError.budgetAmount => l10n.nutritionBudgetInvalid,
+      PreferenceError.currency => l10n.nutritionCurrencyInvalid,
+      PreferenceError.budgetPair => l10n.nutritionBudgetPair,
+    };
+String nutritionReasonLabel(
+  NutritionUnsupportedReason reason,
+  AppLocalizations l10n,
+) => switch (reason) {
+  NutritionUnsupportedReason.birthDateAfterCalculationDate =>
+    l10n.nutritionReasonBirthDate,
+  NutritionUnsupportedReason.age => l10n.nutritionReasonAge,
+  NutritionUnsupportedReason.height => l10n.nutritionReasonHeight,
+  NutritionUnsupportedReason.weight => l10n.nutritionReasonWeight,
+  NutritionUnsupportedReason.bmi => l10n.nutritionReasonBmi,
+  NutritionUnsupportedReason.energy => l10n.nutritionReasonEnergy,
+  NutritionUnsupportedReason.calories => l10n.nutritionReasonCalories,
+};

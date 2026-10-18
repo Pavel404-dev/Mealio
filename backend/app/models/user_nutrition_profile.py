@@ -116,6 +116,13 @@ class UserNutritionProfile(Base):
         server_default=text("'[]'::jsonb"),
     )
 
+    liked_ingredients: Mapped[list[str]] = mapped_column(
+        MutableList.as_mutable(JSONB),
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
+
     preferred_meals_per_day: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,

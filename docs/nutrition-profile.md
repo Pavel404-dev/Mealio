@@ -1,4 +1,4 @@
-# Backend nutrition profile (W4)
+# Backend nutrition profile (W4 + W7)
 
 `GET /api/v1/user-preferences/nutrition` and
 `PATCH /api/v1/user-preferences/nutrition` require authentication and operate only
@@ -7,8 +7,9 @@ without `id` or `user_id`. An unauthenticated request returns 401.
 
 The profile is stored in `user_nutrition_profiles`, with at most one row per user.
 GET returns defaults without inserting a row when no profile exists. PATCH
-creates or partially updates that row. New fields default to `null`, including
-for profiles created before W4; no demographic or financial data is inferred.
+creates or partially updates that row. W4 demographic and financial fields
+default to `null`, including for profiles created before W4; no such data is
+inferred. W7 likes default to `[]`.
 
 ## Fields
 
@@ -24,6 +25,7 @@ All ranges below are technical storage/input bounds, **not medical advice**.
 | `daily_fat_target_g` | nullable integer, g/day | 1–2147483647 | `null` |
 | `allergies` | array of strings | entries trimmed, blanks removed | `[]` |
 | `disliked_ingredients` | array of strings | entries trimmed, blanks removed | `[]` |
+| `liked_ingredients` | array of strings | entries trimmed, blanks removed; no exclusion override | `[]` |
 | `preferred_meals_per_day` | nullable integer | 1–8 | `3` |
 | `sex` | nullable string | `male`, `female` | `null` |
 | `birth_date` | nullable date | `YYYY-MM-DD`, 1900-01-01 through the current UTC date, inclusive | `null` |
@@ -58,7 +60,7 @@ local timezone. Neither stored nor computed age is part of this API.
 ## Partial updates and validation
 
 - Omitted fields are preserved; explicit `null` clears a nullable field.
-- `goal`, `allergies`, and `disliked_ingredients` cannot be `null`.
+- `goal`, `allergies`, `disliked_ingredients`, and `liked_ingredients` cannot be `null`.
 - `[]` clears a list. Normalization preserves order and duplicates.
 - Empty `{}` creates a default profile when absent, otherwise changes nothing.
 - Unknown fields, including `id`, `user_id`, and `age`, return 422.
@@ -118,7 +120,8 @@ coefficients, recipe time filters, budget conversion, or dietary recommendations
 The AI context continues to include only the previous explicitly selected fields;
 none of the eight new fields is sent to the provider. Pantry personalization and
 nutrition progress/gaps continue to use explicit existing targets/preferences.
-Flutter onboarding is outside this change.
+W7 extends the [optional Flutter setup](frontend-nutrition-setup.md) using this
+same profile and endpoints; it adds no completion state or forced onboarding.
 
 W5 adds a separate, read-only
 [personal nutrition calculation endpoint](nutrition-calculation.md). Its support
@@ -134,8 +137,36 @@ and the budget pair. Numeric scale is provided by column types; direct SQL write
 can be rounded by PostgreSQL's Numeric coercion, so exact input validation belongs
 at the API boundary.
 
-Downgrading to `b7e3c9a1d5f8` removes only the new constraints and eight columns.
+Downgrading from `e9c4a7b2d610` to `b7e3c9a1d5f8` removes the W4 constraints
+and eight columns. From a later revision it also traverses later migrations;
+see the W7 likes data-loss warning below.
 **Values of all new fields are lost on downgrade**; the original profile row,
 its identity, existing goals, targets, lists, and timestamps remain. Export any
 new-field data that must be retained before downgrade, and coordinate application
 and schema versions: W4 code requires the new columns.
+
+## W7 likes and explicit adoption
+
+Migration `a7203c91d602` follows `f3b197a01c02`, adding only non-null JSONB
+`liked_ingredients` with a database/Python/schema default of `[]`. Existing rows
+retain their identities, values, targets and timestamps. Default GET exposes
+`[]` without INSERT. Omission preserves likes; `[]` clears; null returns 422.
+Normalization trims entries and removes blanks, retaining order, duplicates and
+overlaps with allergies/dislikes. There are no AI-specific list limits.
+
+Likes are stored only. They are absent from AI/provider context and cannot weaken
+existing allergies/dislikes exclusions. Cooking/budget enforcement and new diet
+or allergen filters are not part of W7. Existing consumers continue using saved
+`daily_*` targets. W5 calculate stays read-only. Flutter applies a displayed
+estimate only by an explicit targets-only PATCH of all four integers; preserving
+manual/partial targets sends no target mutation. The multi-step flow is not one
+transaction. Calculate/apply remains last-write-wins across devices, without
+revisions or stale-confirm rejection; an intervening target update can be
+replaced by the confirmed snapshot.
+
+Roll out backend/schema before the new frontend, whose reader requires the likes
+field. Preferred rollback removes the new frontend while retaining this additive
+column and data. Downgrade to `f3b197a01c02` **permanently removes saved likes**;
+all older columns/row identities remain. It requires an explicit backup/migration
+plan and target-specific approval. Do not downgrade real data as a verification
+step. Authorized migration tests use only disposable local `mealio_test`.

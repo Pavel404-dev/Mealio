@@ -817,6 +817,7 @@ async def test_w4_fields_do_not_change_ai_context_or_explicit_targets(
             "max_cooking_time_minutes": 1,
             "weekly_food_budget_amount": "120.50",
             "budget_currency": "EUR",
+            "liked_ingredients": ["Peanuts", *["x" * 101] * 26],
         },
     )
     assert updated.status_code == 200

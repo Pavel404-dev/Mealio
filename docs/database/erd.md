@@ -64,6 +64,7 @@ erDiagram
         int daily_fat_target_g
         jsonb allergies
         jsonb disliked_ingredients
+        jsonb liked_ingredients
         int preferred_meals_per_day
         string sex
         date birth_date
@@ -563,6 +564,11 @@ failed
 ---
 
 ## user_nutrition_profiles
+
+W7 migration `a7203c91d602` adds non-null JSONB `liked_ingredients` with default
+`[]` after `f3b197a01c02`. It preserves all existing columns, profile identity and
+targets. Likes do not override exclusions or enter AI context. Removing this
+column on downgrade loses likes; prefer application rollback retaining the schema.
 
 An optional profile belongs to exactly one user (`UNIQUE(user_id)`, cascading
 foreign key to `users.id`). GET defaults do not create a row. The eight W4 inputs

@@ -10,6 +10,7 @@ import 'package:mealio/core/storage/secure_storage_provider.dart';
 import 'package:mealio/features/nutrition/data/nutrition_repository.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_failure.dart';
 import 'package:mealio/features/nutrition/domain/nutrition_profile.dart';
+import 'package:mealio/features/nutrition/domain/nutrition_preferences.dart';
 
 import '../../../helpers/auth_test_fakes.dart';
 import '../../../helpers/nutrition_test_fakes.dart';
@@ -36,7 +37,7 @@ void main() {
   Future<NutritionProfile> request(bool save) => save
       ? repository.save(
           lifetime: storage.sessionLifetime,
-          changes: {NutritionField.weight: '78,40'},
+          changes: NutritionPatch.formula({NutritionField.weight: '78,40'}),
         )
       : repository.load(lifetime: storage.sessionLifetime);
 
@@ -67,11 +68,11 @@ void main() {
       };
       final result = await repository.save(
         lifetime: storage.sessionLifetime,
-        changes: {
+        changes: NutritionPatch.formula({
           NutritionField.height: '193,0',
           NutritionField.weight: '78,40',
           NutritionField.birthDate: '2000-02-29',
-        },
+        }),
       );
       final sent = adapter.requests.single;
       expect(sent.method, 'PATCH');
@@ -176,19 +177,25 @@ void main() {
     });
   }
 
-  test('empty/invalid PATCH never dispatches', () async {
-    for (final changes in [
-      <NutritionField, String>{},
-      {NutritionField.height: '170.00'},
-      {NutritionField.goal: 'unknown'},
-    ]) {
+  test(
+    'empty PATCH never dispatches; invalid typed input cannot be built',
+    () async {
       await expectLater(
-        repository.save(lifetime: storage.sessionLifetime, changes: changes),
+        repository.save(
+          lifetime: storage.sessionLifetime,
+          changes: NutritionPatch.formula({}),
+        ),
         throwsA(isA<NutritionFailure>()),
       );
-    }
-    expect(adapter.requests, isEmpty);
-  });
+      for (final changes in [
+        {NutritionField.height: '170.00'},
+        {NutritionField.goal: 'unknown'},
+      ]) {
+        expect(() => NutritionPatch.formula(changes), throwsFormatException);
+      }
+      expect(adapter.requests, isEmpty);
+    },
+  );
 
   test(
     'same-lifetime refresh retries the exact PATCH with rotated credentials',
@@ -247,7 +254,9 @@ void main() {
           save
               ? repository.save(
                   lifetime: owner,
-                  changes: {NutritionField.goal: 'gain_weight'},
+                  changes: NutritionPatch.formula({
+                    NutritionField.goal: 'gain_weight',
+                  }),
                 )
               : repository.load(lifetime: owner),
           throwsA(isA<SessionSuperseded>()),

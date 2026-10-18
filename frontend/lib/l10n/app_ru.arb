@@ -687,11 +687,14 @@
   "@nutritionDescription": {
     "description": "nutritionDescription"
   },
-  "nutritionStep": "Шаг {step} из 3",
+  "nutritionStep": "Шаг {step} из {total}",
   "@nutritionStep": {
     "description": "nutritionStep",
     "placeholders": {
       "step": {
+        "type": "int"
+      },
+      "total": {
         "type": "int"
       }
     }
@@ -851,5 +854,189 @@
   "nutritionLeaveDiscard": "Выйти и отбросить правки",
   "@nutritionLeaveDiscard": {
     "description": "nutritionLeaveDiscard"
+  },
+  "nutritionFood": "Пищевые предпочтения",
+  "@nutritionFood": {
+    "description": "nutritionFood"
+  },
+  "nutritionPractical": "Время приготовления и бюджет",
+  "@nutritionPractical": {
+    "description": "nutritionPractical"
+  },
+  "nutritionSummary": "Итог и цели питания",
+  "@nutritionSummary": {
+    "description": "nutritionSummary"
+  },
+  "nutritionDiet": "Рацион (необязательно, свободный текст)",
+  "@nutritionDiet": {
+    "description": "nutritionDiet"
+  },
+  "nutritionAllergies": "Аллергии",
+  "@nutritionAllergies": {
+    "description": "nutritionAllergies"
+  },
+  "nutritionLikes": "Любимые ингредиенты",
+  "@nutritionLikes": {
+    "description": "nutritionLikes"
+  },
+  "nutritionDislikes": "Нелюбимые ингредиенты",
+  "@nutritionDislikes": {
+    "description": "nutritionDislikes"
+  },
+  "nutritionCookingTime": "Максимальное полное время блюда (минуты)",
+  "@nutritionCookingTime": {
+    "description": "nutritionCookingTime"
+  },
+  "nutritionBudget": "Бюджет питания на человека на 7 дней",
+  "@nutritionBudget": {
+    "description": "nutritionBudget"
+  },
+  "nutritionCurrency": "Валюта (3 буквы)",
+  "@nutritionCurrency": {
+    "description": "nutritionCurrency"
+  },
+  "nutritionClear": "Очистить",
+  "@nutritionClear": {
+    "description": "nutritionClear"
+  },
+  "nutritionClearBudget": "Очистить сумму и валюту",
+  "@nutritionClearBudget": {
+    "description": "nutritionClearBudget"
+  },
+  "nutritionAddIngredient": "Добавить ингредиент",
+  "@nutritionAddIngredient": {
+    "description": "nutritionAddIngredient"
+  },
+  "nutritionRemoveIngredient": "Удалить ингредиент",
+  "@nutritionRemoveIngredient": {
+    "description": "nutritionRemoveIngredient"
+  },
+  "nutritionIngredient": "Ингредиент",
+  "@nutritionIngredient": {
+    "description": "nutritionIngredient"
+  },
+  "nutritionDietInvalid": "Не более 100 символов.",
+  "@nutritionDietInvalid": {
+    "description": "nutritionDietInvalid"
+  },
+  "nutritionCookingInvalid": "Введите целое число от 1 до 480.",
+  "@nutritionCookingInvalid": {
+    "description": "nutritionCookingInvalid"
+  },
+  "nutritionBudgetInvalid": "Введите 0,01–1000000,00, максимум 2 знака после запятой. Без округления.",
+  "@nutritionBudgetInvalid": {
+    "description": "nutritionBudgetInvalid"
+  },
+  "nutritionCurrencyInvalid": "Введите ровно 3 латинские буквы (например EUR).",
+  "@nutritionCurrencyInvalid": {
+    "description": "nutritionCurrencyInvalid"
+  },
+  "nutritionBudgetPair": "Укажите сумму и валюту либо очистите оба поля.",
+  "@nutritionBudgetPair": {
+    "description": "nutritionBudgetPair"
+  },
+  "nutritionSavedTargets": "Сохранённые суточные цели",
+  "@nutritionSavedTargets": {
+    "description": "nutritionSavedTargets"
+  },
+  "nutritionEstimate": "Расчёт — ещё не сохранён",
+  "@nutritionEstimate": {
+    "description": "nutritionEstimate"
+  },
+  "nutritionSummaryNote": "Сохранённые шаги уже в профиле. Цели изменятся только при явном сохранении показанного расчёта.",
+  "@nutritionSummaryNote": {
+    "description": "nutritionSummaryNote"
+  },
+  "nutritionCalculate": "Рассчитать цели",
+  "@nutritionCalculate": {
+    "description": "nutritionCalculate"
+  },
+  "nutritionCalculating": "Вычисление…",
+  "@nutritionCalculating": {
+    "description": "nutritionCalculating"
+  },
+  "nutritionKeepTargets": "Сохранить прежние цели и вернуться на главную",
+  "@nutritionKeepTargets": {
+    "description": "nutritionKeepTargets"
+  },
+  "nutritionUseEstimate": "Заменить сохранённые цели этим расчётом",
+  "@nutritionUseEstimate": {
+    "description": "nutritionUseEstimate"
+  },
+  "nutritionApplyEstimate": "Подтвердить и сохранить показанные цели",
+  "@nutritionApplyEstimate": {
+    "description": "nutritionApplyEstimate"
+  },
+  "nutritionMissing": "Для расчёта нужны поля профиля:",
+  "@nutritionMissing": {
+    "description": "nutritionMissing"
+  },
+  "nutritionUnsupported": "Расчёт для этого профиля недоступен. Сохранённые предпочтения и цели остаются.",
+  "@nutritionUnsupported": {
+    "description": "nutritionUnsupported"
+  },
+  "nutritionReasonBirthDate": "Дата рождения позже даты расчёта.",
+  "@nutritionReasonBirthDate": {
+    "description": "nutritionReasonBirthDate"
+  },
+  "nutritionReasonAge": "Расчёт поддерживает возраст 19–78 лет.",
+  "@nutritionReasonAge": {
+    "description": "nutritionReasonAge"
+  },
+  "nutritionReasonHeight": "Рост вне диапазона расчёта (130–230 см).",
+  "@nutritionReasonHeight": {
+    "description": "nutritionReasonHeight"
+  },
+  "nutritionReasonWeight": "Вес вне диапазона расчёта (35–250 кг).",
+  "@nutritionReasonWeight": {
+    "description": "nutritionReasonWeight"
+  },
+  "nutritionReasonBmi": "ИМТ вне диапазона расчёта (от 18,5 до менее 40).",
+  "@nutritionReasonBmi": {
+    "description": "nutritionReasonBmi"
+  },
+  "nutritionReasonEnergy": "Энергозатраты вне поддерживаемого диапазона расчёта.",
+  "@nutritionReasonEnergy": {
+    "description": "nutritionReasonEnergy"
+  },
+  "nutritionReasonCalories": "Калории вне диапазона расчёта (1000–6000 ккал/день).",
+  "@nutritionReasonCalories": {
+    "description": "nutritionReasonCalories"
+  },
+  "nutritionCalories": "Калории (ккал/день)",
+  "@nutritionCalories": {
+    "description": "nutritionCalories"
+  },
+  "nutritionProtein": "Белки (г/день)",
+  "@nutritionProtein": {
+    "description": "nutritionProtein"
+  },
+  "nutritionCarbs": "Углеводы (г/день)",
+  "@nutritionCarbs": {
+    "description": "nutritionCarbs"
+  },
+  "nutritionFat": "Жиры (г/день)",
+  "@nutritionFat": {
+    "description": "nutritionFat"
+  },
+  "nutritionNotSet": "Не задано",
+  "@nutritionNotSet": {
+    "description": "nutritionNotSet"
+  },
+  "nutritionSaveInputsFirst": "Сохраните изменённые шаги профиля перед расчётом или подтверждением целей.",
+  "@nutritionSaveInputsFirst": {
+    "description": "nutritionSaveInputsFirst"
+  },
+  "nutritionCalculationDetails": "Дата: {date} · Правила: {rules}",
+  "@nutritionCalculationDetails": {
+    "description": "nutritionCalculationDetails",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -14,9 +14,10 @@ from app.services.user_nutrition_profiles import UserNutritionProfilesService
 from tests.test_user_preferences_nutrition_api import create_authenticated_user
 
 
+@pytest.mark.parametrize("same_likes", [False, True])
 @pytest.mark.parametrize("existing", [False, True])
 async def test_concurrent_partial_patches_are_serialized(
-    client, async_session_maker, monkeypatch, existing
+    client, async_session_maker, monkeypatch, existing, same_likes
 ):
     user, _ = await create_authenticated_user(client)
     user_id = UUID(user["id"])
@@ -80,6 +81,7 @@ async def test_concurrent_partial_patches_are_serialized(
                             user_id=user_id,
                             data=UserNutritionProfileUpdate(
                                 height_cm="180.0",
+                                liked_ingredients=["rice"],
                                 weekly_food_budget_amount="80.50",
                                 budget_currency="EUR",
                             ),
@@ -92,7 +94,13 @@ async def test_concurrent_partial_patches_are_serialized(
                         second_service.create_or_update_current_user_profile(
                             user_id=user_id,
                             data=UserNutritionProfileUpdate(
-                                weight_kg="75.25", weekly_food_budget_amount="90.25"
+                                weight_kg="75.25",
+                                weekly_food_budget_amount="90.25",
+                                **(
+                                    {"liked_ingredients": ["oats"]}
+                                    if same_likes
+                                    else {}
+                                ),
                             ),
                         )
                     )
@@ -116,6 +124,8 @@ async def test_concurrent_partial_patches_are_serialized(
                 if not task.done():
                     task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+        assert first_result.liked_ingredients == ["rice"]
+        assert second_result.liked_ingredients == (["oats"] if same_likes else ["rice"])
         assert first_result.height_cm == Decimal("180.0")
         assert second_result.height_cm == Decimal("180.0")
         assert second_result.budget_currency == "EUR"
@@ -134,6 +144,7 @@ async def test_concurrent_partial_patches_are_serialized(
         ).all()
         assert len(profiles) == 1
         profile = profiles[0]
+        assert profile.liked_ingredients == (["oats"] if same_likes else ["rice"])
         assert profile.height_cm == Decimal("180.0")
         assert profile.weight_kg == Decimal("75.25")
         assert profile.weekly_food_budget_amount == Decimal("90.25")

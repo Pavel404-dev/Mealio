@@ -1,3 +1,5 @@
+import 'nutrition_preferences.dart';
+
 enum NutritionField {
   goal('goal', 0),
   sex('sex', 1),
@@ -26,12 +28,17 @@ enum NutritionField {
 
 enum NutritionInputError { required, choice, birthDate, height, weight }
 
-/// Only the six W6 fields. There is intentionally no full-profile serializer.
+/// Formula inputs plus typed canonical preferences and saved targets.
 class NutritionProfile {
-  NutritionProfile._(Map<NutritionField, String?> values)
-    : values = Map.unmodifiable(values);
+  NutritionProfile._(
+    Map<NutritionField, String?> values,
+    this.preferences,
+    this.targets,
+  ) : values = Map.unmodifiable(values);
 
   final Map<NutritionField, String?> values;
+  final NutritionPreferences preferences;
+  final NutritionTargets targets;
 
   factory NutritionProfile.fromJson(Object? json, {DateTime? now}) {
     if (json is! Map<String, dynamic>) {
@@ -56,7 +63,11 @@ class NutritionProfile {
         throw const FormatException('Invalid nutrition field');
       }
     }
-    return NutritionProfile._(values);
+    return NutritionProfile._(
+      values,
+      NutritionPreferences.fromJson(json),
+      NutritionTargets.fromJson(json),
+    );
   }
 }
 

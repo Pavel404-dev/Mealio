@@ -10,6 +10,8 @@ import '../../../core/storage/secure_storage_provider.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/nutrition_repository.dart';
 import '../domain/nutrition_profile.dart';
+import '../domain/nutrition_preferences.dart';
+import '../domain/nutrition_calculation.dart';
 import 'nutrition_localization.dart';
 import 'nutrition_setup_controller.dart';
 
@@ -74,7 +76,7 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
     if (!mounted || !_controller.checkOwnership()) return;
     setState(() => _submitting = false);
     if (result == NutritionSaveResult.finished) {
-      _finished = true;
+      _finished = _controller.calculation is NutritionCalculated;
       _requestExit();
     }
   }
@@ -177,7 +179,10 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
                         Semantics(
                           liveRegion: true,
                           child: Text(
-                            l10n.nutritionStep(_controller.step + 1),
+                            l10n.nutritionStep(
+                              _controller.step + 1,
+                              NutritionSetupController.stepCount,
+                            ),
                             key: const Key('nutrition-step'),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
@@ -186,7 +191,10 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
                         Text(switch (_controller.step) {
                           0 => l10n.nutritionGoal,
                           1 => l10n.nutritionBody,
-                          _ => l10n.nutritionActivity,
+                          2 => l10n.nutritionActivity,
+                          3 => l10n.nutritionFood,
+                          4 => l10n.nutritionPractical,
+                          _ => l10n.nutritionSummary,
                         }, style: Theme.of(context).textTheme.headlineSmall),
                         if (_controller.lastSaveWrote != null) ...[
                           const SizedBox(height: 12),
@@ -202,6 +210,9 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
                         for (final field in NutritionField.values.where(
                           (field) => field.step == _controller.step,
                         )) ...[const SizedBox(height: 20), _field(field)],
+                        if (_controller.step == 3 || _controller.step == 4)
+                          ..._preferences(),
+                        if (_controller.step == 5) ..._summary(),
                       ],
                       if (_controller.failure case final failure?) ...[
                         const SizedBox(height: 16),
@@ -228,12 +239,24 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
                         const SizedBox(height: 24),
                         FilledButton(
                           key: const Key('nutrition-save'),
-                          onPressed: _locked ? null : _save,
+                          onPressed:
+                              _locked ||
+                                  (_controller.step == 5 &&
+                                      (_controller.calculating ||
+                                          _controller.dirty ||
+                                          (!_controller.targets.any &&
+                                              _controller.calculation
+                                                  is! NutritionCalculated)))
+                              ? null
+                              : _save,
                           child: Text(
                             _locked
                                 ? l10n.nutritionSaving
-                                : _controller.step == 2
-                                ? l10n.nutritionSave
+                                : _controller.step == 5
+                                ? (_controller.targets.any &&
+                                          !_controller.useEstimate
+                                      ? l10n.nutritionKeepTargets
+                                      : l10n.nutritionApplyEstimate)
                                 : l10n.nutritionSaveContinue,
                           ),
                         ),
@@ -251,6 +274,137 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
       );
     },
   );
+
+  List<Widget> _preferences() {
+    final l10n = context.l10n;
+    return [
+      for (final field in PreferenceField.values.where(
+        (f) => (f == PreferenceField.diet ? 3 : 4) == _controller.step,
+      )) ...[
+        const SizedBox(height: 20),
+        _PreferenceInput(
+          key: ValueKey('preference-${field.name}'),
+          value: _controller.preferenceInput(field),
+          enabled: !_locked,
+          label: preferenceFieldLabel(field, l10n),
+          error: preferenceErrorLabel(
+            _controller.preferenceErrors[field],
+            l10n,
+          ),
+          keyboardType: switch (field) {
+            PreferenceField.cookingTime => TextInputType.number,
+            PreferenceField.budgetAmount =>
+              const TextInputType.numberWithOptions(decimal: true),
+            _ => TextInputType.text,
+          },
+          onChanged: (value) => _controller.editPreference(field, value),
+        ),
+      ],
+      if (_controller.step == 4)
+        TextButton(
+          key: const Key('nutrition-clear-budget'),
+          onPressed: _locked
+              ? null
+              : () {
+                  _controller.editPreference(PreferenceField.budgetAmount, '');
+                  _controller.editPreference(PreferenceField.currency, '');
+                },
+          child: Text(l10n.nutritionClearBudget),
+        ),
+      if (_controller.step == 3)
+        for (final field in PreferenceList.values) ...[
+          const SizedBox(height: 20),
+          _IngredientEditor(
+            key: ValueKey('ingredients-${field.name}'),
+            label: preferenceListLabel(field, l10n),
+            values: _controller.ingredients(field),
+            enabled: !_locked,
+            onChanged: (values) => _controller.editIngredients(field, values),
+          ),
+        ],
+    ];
+  }
+
+  List<Widget> _targetValues(NutritionTargets targets) {
+    final l10n = context.l10n;
+    return [
+      Text(
+        '${l10n.nutritionCalories}: ${targets.calories ?? l10n.nutritionNotSet}',
+      ),
+      Text(
+        '${l10n.nutritionProtein}: ${targets.protein ?? l10n.nutritionNotSet}',
+      ),
+      Text('${l10n.nutritionCarbs}: ${targets.carbs ?? l10n.nutritionNotSet}'),
+      Text('${l10n.nutritionFat}: ${targets.fat ?? l10n.nutritionNotSet}'),
+    ];
+  }
+
+  List<Widget> _summary() {
+    final l10n = context.l10n;
+    final outcome = _controller.calculation;
+    return [
+      const SizedBox(height: 16),
+      Text(l10n.nutritionSummaryNote),
+      const SizedBox(height: 16),
+      Text(
+        l10n.nutritionSavedTargets,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      ..._targetValues(_controller.targets),
+      if (_controller.dirty) Text(l10n.nutritionSaveInputsFirst),
+      const SizedBox(height: 16),
+      if (outcome != null)
+        Text(
+          l10n.nutritionCalculationDetails(
+            outcome.date,
+            NutritionCalculation.rulesVersion,
+          ),
+        ),
+      if (outcome is NutritionCalculated) ...[
+        Text(
+          l10n.nutritionEstimate,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        ..._targetValues(outcome.targets),
+        if (_controller.targets.any)
+          CheckboxListTile(
+            key: const Key('nutrition-select-estimate'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.nutritionUseEstimate),
+            value: _controller.useEstimate,
+            onChanged: _locked || _controller.calculating
+                ? null
+                : (value) => _controller.selectEstimate(value ?? false),
+          ),
+      ],
+      if (outcome is NutritionIncomplete) ...[
+        Text(l10n.nutritionMissing),
+        for (final field in outcome.missing)
+          Text(nutritionFieldLabel(field, l10n)),
+      ],
+      if (outcome is NutritionUnsupported) ...[
+        Text(l10n.nutritionUnsupported),
+        for (final reason in outcome.reasons)
+          Text(nutritionReasonLabel(reason, l10n)),
+      ],
+      if (_controller.calculating)
+        LinearProgressIndicator(semanticsLabel: l10n.nutritionCalculating),
+      OutlinedButton(
+        key: const Key('nutrition-calculate'),
+        onPressed:
+            _locked || _controller.calculating || _controller.formulaDirty
+            ? null
+            : () => _controller.calculate(),
+        child: Text(
+          _controller.calculating
+              ? l10n.nutritionCalculating
+              : _controller.failure != null
+              ? l10n.retry
+              : l10n.nutritionCalculate,
+        ),
+      ),
+    ];
+  }
 
   Widget _field(NutritionField field) {
     final l10n = context.l10n;
@@ -299,4 +453,136 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
       onChanged: (value) => _controller.edit(field, value),
     );
   }
+}
+
+class _PreferenceInput extends StatefulWidget {
+  const _PreferenceInput({
+    super.key,
+    required this.value,
+    required this.label,
+    required this.error,
+    required this.enabled,
+    required this.keyboardType,
+    required this.onChanged,
+  });
+  final String value, label;
+  final String? error;
+  final bool enabled;
+  final TextInputType keyboardType;
+  final ValueChanged<String> onChanged;
+  @override
+  State<_PreferenceInput> createState() => _PreferenceInputState();
+}
+
+class _PreferenceInputState extends State<_PreferenceInput> {
+  late final TextEditingController text = TextEditingController(
+    text: widget.value,
+  );
+  @override
+  void didUpdateWidget(_PreferenceInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (text.text != widget.value) text.text = widget.value;
+  }
+
+  @override
+  void dispose() {
+    text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: text,
+    enabled: widget.enabled,
+    keyboardType: widget.keyboardType,
+    autocorrect: false,
+    onChanged: widget.onChanged,
+    decoration: InputDecoration(
+      labelText: widget.label,
+      errorText: widget.error,
+      errorMaxLines: 5,
+      suffixIcon: IconButton(
+        tooltip: context.l10n.nutritionClear,
+        onPressed: widget.enabled ? () => widget.onChanged('') : null,
+        icon: const Icon(Icons.clear),
+      ),
+    ),
+  );
+}
+
+class _IngredientEditor extends StatefulWidget {
+  const _IngredientEditor({
+    super.key,
+    required this.label,
+    required this.values,
+    required this.enabled,
+    required this.onChanged,
+  });
+  final String label;
+  final List<String> values;
+  final bool enabled;
+  final ValueChanged<List<String>> onChanged;
+  @override
+  State<_IngredientEditor> createState() => _IngredientEditorState();
+}
+
+class _IngredientEditorState extends State<_IngredientEditor> {
+  late final List<TextEditingController> entries = [
+    for (final v in widget.values) TextEditingController(text: v),
+  ];
+  // Keep removed controllers alive until disposal: their TextFields can still
+  // be mounted for the remainder of the current frame.
+  final retired = <TextEditingController>[];
+  void changed() => widget.onChanged([for (final e in entries) e.text]);
+  @override
+  void dispose() {
+    for (final e in [...entries, ...retired]) {
+      e.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(widget.label, style: Theme.of(context).textTheme.titleMedium),
+      for (final entry in entries)
+        Padding(
+          key: ObjectKey(entry),
+          padding: const EdgeInsets.only(top: 8),
+          child: TextField(
+            controller: entry,
+            enabled: widget.enabled,
+            onChanged: (_) => changed(),
+            decoration: InputDecoration(
+              labelText: context.l10n.nutritionIngredient,
+              suffixIcon: IconButton(
+                tooltip: context.l10n.nutritionRemoveIngredient,
+                onPressed: !widget.enabled
+                    ? null
+                    : () {
+                        setState(() {
+                          entries.remove(entry);
+                          retired.add(entry);
+                        });
+                        changed();
+                      },
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+            ),
+          ),
+        ),
+      TextButton.icon(
+        onPressed: !widget.enabled
+            ? null
+            : () {
+                setState(() => entries.add(TextEditingController()));
+                changed();
+              },
+        icon: const Icon(Icons.add),
+        label: Text(context.l10n.nutritionAddIngredient),
+      ),
+    ],
+  );
 }

@@ -263,3 +263,12 @@ Rollback removes the new calculation endpoint, service operation, calculator,
 schemas, tests and documentation. Keep W4 code, tables, fields and migration
 history intact. No database downgrade or data conversion is needed; no computed
 recommendations were persisted.
+
+## W7 client adoption boundary
+
+The [optional setup](frontend-nutrition-setup.md) now displays these outcomes and
+can explicitly apply the shown estimate via the existing profile PATCH. This
+does not change W5 formulas, support bounds, read-only semantics or provider
+behavior. Saved partial/manual targets remain selected for preservation by
+default. Calculate and apply are separate operations with owner-serialized
+last-write-wins writes; no cross-device stale-confirm rejection is promised.
