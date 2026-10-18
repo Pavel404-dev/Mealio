@@ -85,6 +85,7 @@ class FakeNutritionRepository implements NutritionRepository {
 Map<String, dynamic> calculationJson({
   String date = '2026-10-04',
   Map<String, dynamic>? profile,
+  Map<String, Object?> resultOverrides = const {},
 }) => {
   'rules_version': 'mealio-nutrition-v1',
   'calculation_date': date,
@@ -113,5 +114,55 @@ Map<String, dynamic> calculationJson({
     'fat_target_g': 107,
     'carbs_target_g': 400,
     'energy_delta_kcal': -1,
+    ...resultOverrides,
+  },
+};
+
+// Corrupt one part of the otherwise valid 3204 kcal response. Shared by
+// decoder and HTTP repository tests so every rejection has a safe mapping.
+final invalidCalculationResults = <String, Map<String, Object?>>{
+  for (final field in ['protein_target_g', 'carbs_target_g', 'fat_target_g'])
+    for (final value in [2147483647, 0, -1, null, '160', 160.5])
+      '$field=$value': {field: value},
+  'matching delta above limit': {'carbs_target_g': 401, 'energy_delta_kcal': 3},
+  'matching delta below limit': {
+    'calories_target_kcal': 3206,
+    'energy_delta_kcal': -3,
+  },
+  for (final delta in [-2, 0, 1, 2, 3, -3, null, '-1', -1.0])
+    'incorrect delta=$delta': {'energy_delta_kcal': delta},
+  for (final age in [18, 79, null, '30', 30.0])
+    'invalid age=$age': {'age_years': age},
+  for (final field in [
+    'activity_factor',
+    'goal_factor',
+    'ree_kcal',
+    'tdee_kcal',
+  ])
+    for (final value in [
+      '0',
+      '0.00',
+      '000.000',
+      '-1.00',
+      'NaN',
+      'Infinity',
+      null,
+      1,
+    ])
+      '$field=$value': {field: value},
+};
+
+// Literal boundary fixtures, not a frontend copy of the calculator.
+Map<String, Object?> calorieBoundaryResult(int calories) => {
+  'calories_target_kcal': calories,
+  'protein_target_g': calories < 2000 ? 50 : 300,
+  'carbs_target_g': calories < 2000 ? 126 : 750,
+  'fat_target_g': calories < 2000 ? 33 : 200,
+  'energy_delta_kcal': switch (calories) {
+    999 => 2,
+    1000 => 1,
+    6000 => 0,
+    6001 => -1,
+    _ => throw ArgumentError.value(calories),
   },
 };

@@ -51,11 +51,15 @@ sealed class NutritionCalculation {
         ]) {
           final value = result[key];
           if (value is! String ||
-              !RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(value)) {
+              !RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(value) ||
+              !RegExp(r'[1-9]').hasMatch(value)) {
             throw const FormatException('Invalid calculation metadata');
           }
         }
-        if (result['age_years'] is! int ||
+        final age = result['age_years'];
+        if (age is! int ||
+            age < 19 ||
+            age > 78 ||
             result['energy_delta_kcal'] is! int) {
           throw const FormatException('Invalid calculation metadata');
         }
@@ -71,6 +75,15 @@ sealed class NutritionCalculation {
         });
         if (!targets.complete) {
           throw const FormatException('Incomplete estimate');
+        }
+        // Validate the returned snapshot, without recalculating the estimate.
+        final delta =
+            4 * targets.protein! +
+            4 * targets.carbs! +
+            9 * targets.fat! -
+            calories;
+        if (delta.abs() > 2 || result['energy_delta_kcal'] != delta) {
+          throw const FormatException('Invalid calculated energy delta');
         }
         return NutritionCalculated(date, targets, inputs);
       case 'incomplete_profile':

@@ -211,9 +211,9 @@ void main() {
   }
   for (final calories in [999, 6001]) {
     test('calculate maps invalid calories $calories to safe failure', () async {
-      final json = calculationJson();
-      (json['result'] as Map<String, dynamic>)['calories_target_kcal'] =
-          calories;
+      final json = calculationJson(
+        resultOverrides: calorieBoundaryResult(calories),
+      );
       adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
       await expectLater(
         request('calculate'),
@@ -228,6 +228,31 @@ void main() {
       expect(adapter.requests, hasLength(1));
     });
   }
+  for (final entry in invalidCalculationResults.entries) {
+    test('calculate safely rejects ${entry.key} without PATCH', () async {
+      adapter.enqueue(
+        FakeHttpResponse(
+          statusCode: 200,
+          body: calculationJson(resultOverrides: entry.value),
+        ),
+      );
+      await expectLater(
+        request('calculate'),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.unexpected,
+          ),
+        ),
+      );
+      expect(adapter.requests.single.method, 'POST');
+      expect(
+        adapter.requests.single.path,
+        '/user-preferences/nutrition/calculate',
+      );
+    });
+  }
   for (final calories in [1, 999, 6001, 2147483647]) {
     test(
       'load retains saved calories $calories outside calculation range',
@@ -235,13 +260,22 @@ void main() {
         adapter.enqueue(
           FakeHttpResponse(
             statusCode: 200,
-            body: nutritionJson()..['daily_calories_target'] = calories,
+            body: nutritionJson()
+              ..addAll({
+                'daily_calories_target': calories,
+                'daily_protein_target_g': 2147483647,
+                'daily_carbs_target_g': 1,
+                'daily_fat_target_g': 2147483647,
+              }),
           ),
         );
         final profile = await repository.load(
           lifetime: storage.sessionLifetime,
         );
         expect(profile.targets.calories, calories);
+        expect(profile.targets.protein, 2147483647);
+        expect(profile.targets.carbs, 1);
+        expect(profile.targets.fat, 2147483647);
         expect(adapter.requests.single.method, 'GET');
       },
     );
