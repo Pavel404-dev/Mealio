@@ -750,9 +750,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pantry'), findsOneWidget);
-    expect(find.text('AI Recipe'), findsOneWidget);
-    expect(find.text('Meal Plan'), findsOneWidget);
-    expect(find.text('Shopping List'), findsOneWidget);
 
     for (final feature in const [
       ('ai-recipe-card', 'AI Recipe'),
@@ -760,7 +757,9 @@ void main() {
       ('shopping-list-card', 'Shopping List'),
     ]) {
       final card = find.byKey(Key(feature.$1));
-      await tester.ensureVisible(card);
+      await tester.scrollUntilVisible(card, 200);
+      await tester.pumpAndSettle();
+      expect(find.text(feature.$2), findsOneWidget);
       await tester.tap(card);
       await tester.pump();
       expect(

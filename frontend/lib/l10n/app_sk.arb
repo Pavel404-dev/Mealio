@@ -674,5 +674,182 @@
         "type": "String"
       }
     }
+  },
+  "nutritionSetup": "Nastavenie výživy",
+  "@nutritionSetup": {
+    "description": "nutritionSetup"
+  },
+  "nutritionEntryDescription": "Zadajte cieľ, telesné údaje a aktivitu.",
+  "@nutritionEntryDescription": {
+    "description": "nutritionEntryDescription"
+  },
+  "nutritionDescription": "Voliteľné nastavenie. Každý uložený krok aktualizuje váš profil. Kedykoľvek môžete odísť.",
+  "@nutritionDescription": {
+    "description": "nutritionDescription"
+  },
+  "nutritionStep": "Krok {step} z 3",
+  "@nutritionStep": {
+    "description": "nutritionStep",
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoal": "Cieľ",
+  "@nutritionGoal": {
+    "description": "nutritionGoal"
+  },
+  "nutritionBody": "Telesné údaje",
+  "@nutritionBody": {
+    "description": "nutritionBody"
+  },
+  "nutritionSex": "Pohlavie",
+  "@nutritionSex": {
+    "description": "nutritionSex"
+  },
+  "nutritionBirthDate": "Dátum narodenia",
+  "@nutritionBirthDate": {
+    "description": "nutritionBirthDate"
+  },
+  "nutritionDateHint": "RRRR-MM-DD — zadajte skutočný dátum narodenia.",
+  "@nutritionDateHint": {
+    "description": "nutritionDateHint"
+  },
+  "nutritionHeight": "Výška (cm)",
+  "@nutritionHeight": {
+    "description": "nutritionHeight"
+  },
+  "nutritionWeight": "Hmotnosť (kg)",
+  "@nutritionWeight": {
+    "description": "nutritionWeight"
+  },
+  "nutritionActivity": "Úroveň aktivity",
+  "@nutritionActivity": {
+    "description": "nutritionActivity"
+  },
+  "nutritionLose": "Znížiť hmotnosť",
+  "@nutritionLose": {
+    "description": "nutritionLose"
+  },
+  "nutritionMaintain": "Udržať hmotnosť",
+  "@nutritionMaintain": {
+    "description": "nutritionMaintain"
+  },
+  "nutritionGain": "Zvýšiť hmotnosť",
+  "@nutritionGain": {
+    "description": "nutritionGain"
+  },
+  "nutritionMale": "Mužské",
+  "@nutritionMale": {
+    "description": "nutritionMale"
+  },
+  "nutritionFemale": "Ženské",
+  "@nutritionFemale": {
+    "description": "nutritionFemale"
+  },
+  "nutritionSedentary": "Sedavá",
+  "@nutritionSedentary": {
+    "description": "nutritionSedentary"
+  },
+  "nutritionLightlyActive": "Nízka aktivita",
+  "@nutritionLightlyActive": {
+    "description": "nutritionLightlyActive"
+  },
+  "nutritionModeratelyActive": "Stredná aktivita",
+  "@nutritionModeratelyActive": {
+    "description": "nutritionModeratelyActive"
+  },
+  "nutritionVeryActive": "Vysoká aktivita",
+  "@nutritionVeryActive": {
+    "description": "nutritionVeryActive"
+  },
+  "nutritionExtraActive": "Veľmi vysoká aktivita",
+  "@nutritionExtraActive": {
+    "description": "nutritionExtraActive"
+  },
+  "nutritionChoose": "Vyberte možnosť",
+  "@nutritionChoose": {
+    "description": "nutritionChoose"
+  },
+  "nutritionRequired": "Toto pole je povinné.",
+  "@nutritionRequired": {
+    "description": "nutritionRequired"
+  },
+  "nutritionDateInvalid": "Zadajte platný dátum od 1900-01-01 po dnešok (UTC) vo formáte RRRR-MM-DD.",
+  "@nutritionDateInvalid": {
+    "description": "nutritionDateInvalid"
+  },
+  "nutritionHeightInvalid": "Zadajte výšku 50–250 cm, najviac s 1 desatinným miestom.",
+  "@nutritionHeightInvalid": {
+    "description": "nutritionHeightInvalid"
+  },
+  "nutritionWeightInvalid": "Zadajte hmotnosť 10–500 kg, najviac s 2 desatinnými miestami.",
+  "@nutritionWeightInvalid": {
+    "description": "nutritionWeightInvalid"
+  },
+  "nutritionAuthentication": "Na prístup k profilu sa znova prihláste.",
+  "@nutritionAuthentication": {
+    "description": "nutritionAuthentication"
+  },
+  "nutritionValidation": "Skontrolujte údaje a skúste ich znova uložiť.",
+  "@nutritionValidation": {
+    "description": "nutritionValidation"
+  },
+  "nutritionConnection": "Spojenie sa prerušilo. Zadané údaje zostali na obrazovke. Ak ste ich ukladali, server ich už mohol uložiť. Môžete to skúsiť znova.",
+  "@nutritionConnection": {
+    "description": "nutritionConnection"
+  },
+  "nutritionUnexpected": "Výsledok sa nepodarilo potvrdiť. Skúste to znova.",
+  "@nutritionUnexpected": {
+    "description": "nutritionUnexpected"
+  },
+  "nutritionLoading": "Načítava sa profil…",
+  "@nutritionLoading": {
+    "description": "nutritionLoading"
+  },
+  "nutritionSaving": "Ukladá sa…",
+  "@nutritionSaving": {
+    "description": "nutritionSaving"
+  },
+  "nutritionSave": "Uložiť",
+  "@nutritionSave": {
+    "description": "nutritionSave"
+  },
+  "nutritionSaveContinue": "Uložiť a pokračovať",
+  "@nutritionSaveContinue": {
+    "description": "nutritionSaveContinue"
+  },
+  "nutritionStepSaved": "Predchádzajúci krok je uložený.",
+  "@nutritionStepSaved": {
+    "description": "nutritionStepSaved"
+  },
+  "nutritionNoChanges": "V predchádzajúcom kroku nie sú zmeny na uloženie.",
+  "@nutritionNoChanges": {
+    "description": "nutritionNoChanges"
+  },
+  "nutritionSaved": "Profil je uložený.",
+  "@nutritionSaved": {
+    "description": "nutritionSaved"
+  },
+  "nutritionReturnHome": "Na hlavnú stránku",
+  "@nutritionReturnHome": {
+    "description": "nutritionReturnHome"
+  },
+  "nutritionDiscardTitle": "Odísť bez uloženia úprav?",
+  "@nutritionDiscardTitle": {
+    "description": "nutritionDiscardTitle"
+  },
+  "nutritionDiscardDescription": "Neuložené úpravy sa zahodia. Už uložené kroky zostanú vo vašom profile.",
+  "@nutritionDiscardDescription": {
+    "description": "nutritionDiscardDescription"
+  },
+  "nutritionStay": "Zostať",
+  "@nutritionStay": {
+    "description": "nutritionStay"
+  },
+  "nutritionLeaveDiscard": "Odísť a zahodiť úpravy",
+  "@nutritionLeaveDiscard": {
+    "description": "nutritionLeaveDiscard"
   }
 }

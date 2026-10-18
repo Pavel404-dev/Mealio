@@ -674,5 +674,182 @@
         "type": "String"
       }
     }
+  },
+  "nutritionSetup": "Настройка питания",
+  "@nutritionSetup": {
+    "description": "nutritionSetup"
+  },
+  "nutritionEntryDescription": "Укажите цель, параметры тела и активность.",
+  "@nutritionEntryDescription": {
+    "description": "nutritionEntryDescription"
+  },
+  "nutritionDescription": "Необязательная настройка. Сохранение каждого шага обновляет ваш профиль. Можно выйти в любой момент.",
+  "@nutritionDescription": {
+    "description": "nutritionDescription"
+  },
+  "nutritionStep": "Шаг {step} из 3",
+  "@nutritionStep": {
+    "description": "nutritionStep",
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoal": "Цель",
+  "@nutritionGoal": {
+    "description": "nutritionGoal"
+  },
+  "nutritionBody": "Параметры тела",
+  "@nutritionBody": {
+    "description": "nutritionBody"
+  },
+  "nutritionSex": "Пол",
+  "@nutritionSex": {
+    "description": "nutritionSex"
+  },
+  "nutritionBirthDate": "Дата рождения",
+  "@nutritionBirthDate": {
+    "description": "nutritionBirthDate"
+  },
+  "nutritionDateHint": "ГГГГ-ММ-ДД — укажите фактическую дату рождения.",
+  "@nutritionDateHint": {
+    "description": "nutritionDateHint"
+  },
+  "nutritionHeight": "Рост (см)",
+  "@nutritionHeight": {
+    "description": "nutritionHeight"
+  },
+  "nutritionWeight": "Вес (кг)",
+  "@nutritionWeight": {
+    "description": "nutritionWeight"
+  },
+  "nutritionActivity": "Уровень активности",
+  "@nutritionActivity": {
+    "description": "nutritionActivity"
+  },
+  "nutritionLose": "Снизить вес",
+  "@nutritionLose": {
+    "description": "nutritionLose"
+  },
+  "nutritionMaintain": "Поддерживать вес",
+  "@nutritionMaintain": {
+    "description": "nutritionMaintain"
+  },
+  "nutritionGain": "Увеличить вес",
+  "@nutritionGain": {
+    "description": "nutritionGain"
+  },
+  "nutritionMale": "Мужской",
+  "@nutritionMale": {
+    "description": "nutritionMale"
+  },
+  "nutritionFemale": "Женский",
+  "@nutritionFemale": {
+    "description": "nutritionFemale"
+  },
+  "nutritionSedentary": "Малоподвижный",
+  "@nutritionSedentary": {
+    "description": "nutritionSedentary"
+  },
+  "nutritionLightlyActive": "Невысокая активность",
+  "@nutritionLightlyActive": {
+    "description": "nutritionLightlyActive"
+  },
+  "nutritionModeratelyActive": "Умеренная активность",
+  "@nutritionModeratelyActive": {
+    "description": "nutritionModeratelyActive"
+  },
+  "nutritionVeryActive": "Высокая активность",
+  "@nutritionVeryActive": {
+    "description": "nutritionVeryActive"
+  },
+  "nutritionExtraActive": "Очень высокая активность",
+  "@nutritionExtraActive": {
+    "description": "nutritionExtraActive"
+  },
+  "nutritionChoose": "Выберите вариант",
+  "@nutritionChoose": {
+    "description": "nutritionChoose"
+  },
+  "nutritionRequired": "Заполните это поле.",
+  "@nutritionRequired": {
+    "description": "nutritionRequired"
+  },
+  "nutritionDateInvalid": "Введите корректную дату от 1900-01-01 до сегодняшнего дня (UTC) в формате ГГГГ-ММ-ДД.",
+  "@nutritionDateInvalid": {
+    "description": "nutritionDateInvalid"
+  },
+  "nutritionHeightInvalid": "Введите рост от 50 до 250 см, не более 1 знака после запятой.",
+  "@nutritionHeightInvalid": {
+    "description": "nutritionHeightInvalid"
+  },
+  "nutritionWeightInvalid": "Введите вес от 10 до 500 кг, не более 2 знаков после запятой.",
+  "@nutritionWeightInvalid": {
+    "description": "nutritionWeightInvalid"
+  },
+  "nutritionAuthentication": "Войдите снова для доступа к профилю.",
+  "@nutritionAuthentication": {
+    "description": "nutritionAuthentication"
+  },
+  "nutritionValidation": "Проверьте введённые данные и повторите сохранение.",
+  "@nutritionValidation": {
+    "description": "nutritionValidation"
+  },
+  "nutritionConnection": "Связь прервана. Введённые данные сохранены на экране. Если вы сохраняли профиль, сервер мог принять изменения. Можно повторить попытку.",
+  "@nutritionConnection": {
+    "description": "nutritionConnection"
+  },
+  "nutritionUnexpected": "Не удалось подтвердить результат. Повторите попытку.",
+  "@nutritionUnexpected": {
+    "description": "nutritionUnexpected"
+  },
+  "nutritionLoading": "Загрузка профиля…",
+  "@nutritionLoading": {
+    "description": "nutritionLoading"
+  },
+  "nutritionSaving": "Сохранение…",
+  "@nutritionSaving": {
+    "description": "nutritionSaving"
+  },
+  "nutritionSave": "Сохранить",
+  "@nutritionSave": {
+    "description": "nutritionSave"
+  },
+  "nutritionSaveContinue": "Сохранить и продолжить",
+  "@nutritionSaveContinue": {
+    "description": "nutritionSaveContinue"
+  },
+  "nutritionStepSaved": "Предыдущий шаг сохранён.",
+  "@nutritionStepSaved": {
+    "description": "nutritionStepSaved"
+  },
+  "nutritionNoChanges": "На предыдущем шаге нет изменений для сохранения.",
+  "@nutritionNoChanges": {
+    "description": "nutritionNoChanges"
+  },
+  "nutritionSaved": "Профиль сохранён.",
+  "@nutritionSaved": {
+    "description": "nutritionSaved"
+  },
+  "nutritionReturnHome": "На главную",
+  "@nutritionReturnHome": {
+    "description": "nutritionReturnHome"
+  },
+  "nutritionDiscardTitle": "Выйти без сохранения правок?",
+  "@nutritionDiscardTitle": {
+    "description": "nutritionDiscardTitle"
+  },
+  "nutritionDiscardDescription": "Несохранённые правки будут потеряны. Уже сохранённые шаги останутся в профиле.",
+  "@nutritionDiscardDescription": {
+    "description": "nutritionDiscardDescription"
+  },
+  "nutritionStay": "Остаться",
+  "@nutritionStay": {
+    "description": "nutritionStay"
+  },
+  "nutritionLeaveDiscard": "Выйти и отбросить правки",
+  "@nutritionLeaveDiscard": {
+    "description": "nutritionLeaveDiscard"
   }
 }
