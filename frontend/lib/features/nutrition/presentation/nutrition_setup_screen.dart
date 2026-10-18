@@ -42,7 +42,6 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
   late final NutritionSetupController _controller;
   bool _submitting = false;
   bool _confirmExit = false;
-  bool _finished = false;
 
   @override
   void initState() {
@@ -75,9 +74,9 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
     final result = await _controller.save();
     if (!mounted || !_controller.checkOwnership()) return;
     setState(() => _submitting = false);
-    if (result == NutritionSaveResult.finished) {
-      _finished = _controller.calculation is NutritionCalculated;
-      _requestExit();
+    if (result == NutritionSaveResult.finishedWithoutWrite ||
+        result == NutritionSaveResult.targetsApplied) {
+      _leave(targetsApplied: result == NutritionSaveResult.targetsApplied);
     }
   }
 
@@ -101,9 +100,9 @@ class _NutritionWizardState extends ConsumerState<_NutritionWizard> {
     }
   }
 
-  void _leave() {
+  void _leave({bool targetsApplied = false}) {
     if (!mounted || _locked || !_controller.checkOwnership()) return;
-    if (_finished) {
+    if (targetsApplied) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Builder(

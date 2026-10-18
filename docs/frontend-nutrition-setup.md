@@ -81,7 +81,10 @@ requires selecting the displayed estimate and pressing its explicit confirmation
 button. With no saved targets the button explicitly confirms and saves the
 shown estimate. Apply sends exactly four integer `daily_*` fields in one PATCH;
 it never recalculates or applies unseen numbers. A failed apply retains the shown
-snapshot for explicit retry.
+snapshot for explicit retry. The final saved notification is shown only after a
+successful target PATCH from the current confirmation in the current login
+lifetime. Keeping existing targets exits without that notification, even when
+an estimate is available or earlier steps were saved.
 
 The owner-serialized last-write-wins contract remains. Calculate and apply are
 separate operations: another device can change inputs or targets between them,

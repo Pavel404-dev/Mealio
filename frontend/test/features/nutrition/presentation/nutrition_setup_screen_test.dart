@@ -598,6 +598,84 @@ void main() {
     }
   }
 
+  for (final complete in [false, true]) {
+    testWidgets(
+      'W7 keep ${complete ? 'complete' : 'partial'} targets after calculation exits without save notification',
+      (tester) async {
+        configure();
+        repository.json.addAll(nutritionJson(full: true));
+        if (complete) {
+          repository.json.addAll({
+            'daily_carbs_target_g': 300,
+            'daily_fat_target_g': 80,
+          });
+        }
+        await start(tester);
+        await summary(tester);
+        await tap(tester, 'nutrition-calculate');
+        expect(find.text('Calories (kcal/day): 3204'), findsOneWidget);
+        await tap(tester, 'nutrition-save');
+        expect(key('home-screen'), findsOneWidget);
+        expect(repository.patches, isEmpty);
+        expect(find.text('Profile saved.'), findsNothing);
+      },
+    );
+  }
+  for (final fail in [false, true]) {
+    testWidgets(
+      'W7 explicit apply notifies only after successful PATCH; failure=$fail',
+      (tester) async {
+        configure();
+        repository.json.addAll(nutritionJson(full: true));
+        await start(tester);
+        await summary(tester);
+        await tap(tester, 'nutrition-calculate');
+        await tester.ensureVisible(key('nutrition-select-estimate'));
+        tester
+            .widget<CheckboxListTile>(key('nutrition-select-estimate'))
+            .onChanged!(true);
+        await tester.pump();
+        final response = Completer<NutritionProfile>();
+        repository.saveHandler = (_) => response.future;
+        tester.widget<FilledButton>(key('nutrition-save')).onPressed!();
+        await tester.pump();
+        expect(repository.patches.single, {
+          'daily_calories_target': 3204,
+          'daily_protein_target_g': 160,
+          'daily_carbs_target_g': 400,
+          'daily_fat_target_g': 107,
+        });
+        expect(key('nutrition-setup-screen'), findsOneWidget);
+        expect(find.text('Profile saved.'), findsNothing);
+        if (fail) {
+          response.completeError(
+            const NutritionFailure(NutritionFailureType.connection),
+          );
+        } else {
+          response.complete(
+            NutritionProfile.fromJson({
+              ...repository.json,
+              ...repository.patches.single,
+            }),
+          );
+        }
+        await tester.pumpAndSettle();
+        expect(repository.patches, hasLength(1));
+        if (fail) {
+          expect(key('nutrition-setup-screen'), findsOneWidget);
+          expect(key('nutrition-error'), findsOneWidget);
+          expect(find.text('Profile saved.'), findsNothing);
+          await tap(tester, 'nutrition-exit');
+          expect(key('home-screen'), findsOneWidget);
+          expect(find.text('Profile saved.'), findsNothing);
+        } else {
+          expect(key('home-screen'), findsOneWidget);
+          expect(find.text('Profile saved.'), findsOneWidget);
+        }
+      },
+    );
+  }
+
   testWidgets(
     'W7 no targets explicitly saves displayed estimate; locale retains estimate',
     (tester) async {

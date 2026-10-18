@@ -119,10 +119,13 @@ void main() {
       await controller.calculate(now: DateTime.utc(2026, 10, 4));
       expect(controller.useEstimate, isFalse);
       expect(controller.targets.carbs, isNull);
-      expect(await controller.confirm(), NutritionSaveResult.finished);
+      expect(
+        await controller.confirm(),
+        NutritionSaveResult.finishedWithoutWrite,
+      );
       expect(repo.patches, isEmpty);
       controller.selectEstimate(true);
-      expect(await controller.confirm(), NutritionSaveResult.finished);
+      expect(await controller.confirm(), NutritionSaveResult.targetsApplied);
       expect(repo.patches.single, {
         'daily_calories_target': 3204,
         'daily_protein_target_g': 160,
@@ -147,7 +150,7 @@ void main() {
       expect(await controller.confirm(), NutritionSaveResult.rejected);
       await controller.calculate();
       expect(repo.patches, isEmpty);
-      expect(await controller.confirm(), NutritionSaveResult.finished);
+      expect(await controller.confirm(), NutritionSaveResult.targetsApplied);
       expect(repo.patches.single.length, 4);
     },
   );
@@ -234,7 +237,10 @@ void main() {
         controller.selectEstimate(true);
         expect(controller.useEstimate, isFalse);
         expect(controller.targets.calories, 2400);
-        expect(await controller.confirm(), NutritionSaveResult.finished);
+        expect(
+          await controller.confirm(),
+          NutritionSaveResult.finishedWithoutWrite,
+        );
         expect(repo.patches, isEmpty);
       }
     },
@@ -259,7 +265,7 @@ void main() {
       expect(await operation, NutritionSaveResult.rejected);
       expect(controller.calculation, isA<NutritionCalculated>());
       repo.saveHandler = null;
-      await controller.confirm();
+      expect(await controller.confirm(), NutritionSaveResult.targetsApplied);
       expect(repo.patches, hasLength(2));
       expect(repo.patches[0], repo.patches[1]);
       expect(repo.calculations, 1);
@@ -322,7 +328,10 @@ void main() {
                 save.complete(NutritionProfile.fromJson(nutritionJson()));
               }
             }
-            await pending;
+            final result = await pending;
+            if (action == 'confirm') {
+              expect(result, NutritionSaveResult.stale);
+            }
             expect(old.calculation, isNull);
             expect(old.failure, isNull);
             expect(old.useEstimate, isFalse);

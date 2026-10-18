@@ -7,7 +7,13 @@ import '../domain/nutrition_profile.dart';
 import '../domain/nutrition_preferences.dart';
 import '../domain/nutrition_calculation.dart';
 
-enum NutritionSaveResult { advanced, finished, rejected, stale }
+enum NutritionSaveResult {
+  advanced,
+  finishedWithoutWrite,
+  targetsApplied,
+  rejected,
+  stale,
+}
 
 /// One route visit in one login lifetime. Never persisted or rebound to a login.
 class NutritionSetupController extends ChangeNotifier {
@@ -381,7 +387,9 @@ class NutritionSetupController extends ChangeNotifier {
     if (!loaded || step != 5 || saving || calculating || dirty) {
       return NutritionSaveResult.rejected;
     }
-    if (targets.any && !useEstimate) return NutritionSaveResult.finished;
+    if (targets.any && !useEstimate) {
+      return NutritionSaveResult.finishedWithoutWrite;
+    }
     final shown = calculation;
     if (shown is! NutritionCalculated) return NutritionSaveResult.rejected;
     saving = true;
@@ -399,7 +407,7 @@ class NutritionSetupController extends ChangeNotifier {
       targets = profile.targets;
       saving = false;
       notifyListeners();
-      return NutritionSaveResult.finished;
+      return NutritionSaveResult.targetsApplied;
     } catch (error) {
       if (!checkOwnership()) return NutritionSaveResult.stale;
       saving = false;
