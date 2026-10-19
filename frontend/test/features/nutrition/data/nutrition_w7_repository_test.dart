@@ -67,6 +67,135 @@ void main() {
   Object body(String action) =>
       action == 'calculate' ? calculationJson() : nutritionJson();
 
+  NutritionSetupController dietController() {
+    final controller = NutritionSetupController(
+      repository: repository,
+      storage: storage,
+      isAuthenticated: () => true,
+    );
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
+  for (final invalid in <String, Object?>{
+    'empty': '',
+    'spaces': '   ',
+    'tabs': '\t\n',
+    'leading space': ' vegan',
+    'trailing space': 'vegan ',
+    'surrounding tabs': '\tvegan\t',
+    'Unicode whitespace': '\u00a0custom diet\u3000',
+    'Unicode blank': '\u00a0\u3000',
+    '101 code points': '🥕' * 101,
+    'non-string': 1,
+  }.entries) {
+    for (final action in ['load', 'save', 'confirm']) {
+      test(
+        'diet $action rejects ${invalid.key} without false acknowledgement or extra writes',
+        () async {
+          final controller = dietController();
+          final json = nutritionJson(full: true);
+          final response = {...json, 'diet_type': invalid.value};
+          if (action == 'load') {
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+            await controller.load();
+            expect(controller.loaded, isFalse);
+            expect(controller.dirty, isFalse);
+            expect(await controller.save(), NutritionSaveResult.rejected);
+            expect(adapter.requests.single.method, 'GET');
+          } else {
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+            await controller.load();
+            final step = action == 'save' ? 3 : 5;
+            while (controller.step < step) {
+              expect(await controller.save(), NutritionSaveResult.advanced);
+            }
+            final savedTargets = controller.targets;
+            if (action == 'save') {
+              controller.editPreference(PreferenceField.diet, 'custom diet');
+            } else {
+              adapter.enqueue(
+                FakeHttpResponse(
+                  statusCode: 200,
+                  body: calculationJson(profile: json),
+                ),
+              );
+              await controller.calculate(now: DateTime.utc(2026, 10, 4));
+              controller.selectEstimate(true);
+              response.addAll(
+                NutritionPatch.targets(
+                  (controller.calculation as NutritionCalculated).targets,
+                ).json,
+              );
+            }
+            final shown = controller.calculation;
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+            expect(await controller.save(), NutritionSaveResult.rejected);
+            expect(controller.step, step);
+            expect(controller.lastSaveWrote, isNot(true));
+            expect(controller.targets, same(savedTargets));
+            expect(controller.calculation, same(shown));
+            if (action == 'save') {
+              expect(
+                controller.preferenceInput(PreferenceField.diet),
+                'custom diet',
+              );
+              expect(controller.dirty, isTrue);
+              expect(adapter.requests.last.data, {'diet_type': 'custom diet'});
+            } else {
+              expect(controller.useEstimate, isTrue);
+              expect(
+                adapter.requests.last.data,
+                NutritionPatch.targets(
+                  (shown as NutritionCalculated).targets,
+                ).json,
+              );
+            }
+            expect(
+              adapter.requests.map((r) => r.method),
+              action == 'save' ? ['GET', 'PATCH'] : ['GET', 'POST', 'PATCH'],
+            );
+          }
+          expect(controller.failure?.type, NutritionFailureType.unexpected);
+          expect(controller.saving, isFalse);
+        },
+      );
+    }
+  }
+  for (final valid in <String, String?>{
+    'null': null,
+    'free text': 'custom  diet',
+    'Unicode and internal whitespace': 'Їжа\t蘑菇 🍄 cre\u0300me',
+    '100 ASCII code points': 'x' * 100,
+    '100 supplementary code points': '🥕' * 100,
+  }.entries) {
+    test('diet ${valid.key} loads unchanged and clean without PATCH', () async {
+      final json = nutritionJson(full: true)..['diet_type'] = valid.value;
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      final profile = await repository.load(lifetime: storage.sessionLifetime);
+      expect(profile.preferences.diet, valid.value);
+      final controller = dietController();
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      await controller.load();
+      expect(controller.loaded, isTrue);
+      expect(controller.failure, isNull);
+      expect(
+        controller.preferenceInput(PreferenceField.diet),
+        valid.value ?? '',
+      );
+      expect(controller.dirty, isFalse);
+      for (var step = 0; step < 5; step++) {
+        expect(await controller.save(), NutritionSaveResult.advanced);
+        expect(
+          controller.preferenceInput(PreferenceField.diet),
+          valid.value ?? '',
+        );
+        expect(controller.dirty, isFalse);
+      }
+      expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+    });
+  }
+
   for (final field in {
     'allergies': PreferenceList.allergies,
     'liked_ingredients': PreferenceList.likes,

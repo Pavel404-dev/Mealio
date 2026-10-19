@@ -103,7 +103,8 @@ class NutritionPreferences {
     final time = requiredValue('max_cooking_time_minutes');
     final amount = nullableText('weekly_food_budget_amount');
     final currency = nullableText('budget_currency');
-    if ((diet != null && diet.runes.length > 100) ||
+    if ((diet != null &&
+            (diet.isEmpty || diet != diet.trim() || diet.runes.length > 100)) ||
         (time != null && (time is! int || time < 1 || time > 480)) ||
         (amount == null) != (currency == null) ||
         (amount != null && (!validMoney(amount) || amount.contains(','))) ||
