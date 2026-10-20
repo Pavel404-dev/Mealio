@@ -687,11 +687,14 @@
   "@nutritionDescription": {
     "description": "nutritionDescription"
   },
-  "nutritionStep": "Krok {step} z 3",
+  "nutritionStep": "Krok {step} z {total}",
   "@nutritionStep": {
     "description": "nutritionStep",
     "placeholders": {
       "step": {
+        "type": "int"
+      },
+      "total": {
         "type": "int"
       }
     }
@@ -851,5 +854,189 @@
   "nutritionLeaveDiscard": "Odísť a zahodiť úpravy",
   "@nutritionLeaveDiscard": {
     "description": "nutritionLeaveDiscard"
+  },
+  "nutritionFood": "Stravovacie preferencie",
+  "@nutritionFood": {
+    "description": "nutritionFood"
+  },
+  "nutritionPractical": "Čas varenia a rozpočet",
+  "@nutritionPractical": {
+    "description": "nutritionPractical"
+  },
+  "nutritionSummary": "Zhrnutie a výživové ciele",
+  "@nutritionSummary": {
+    "description": "nutritionSummary"
+  },
+  "nutritionDiet": "Strava (voliteľný text)",
+  "@nutritionDiet": {
+    "description": "nutritionDiet"
+  },
+  "nutritionAllergies": "Alergie",
+  "@nutritionAllergies": {
+    "description": "nutritionAllergies"
+  },
+  "nutritionLikes": "Obľúbené suroviny",
+  "@nutritionLikes": {
+    "description": "nutritionLikes"
+  },
+  "nutritionDislikes": "Neobľúbené suroviny",
+  "@nutritionDislikes": {
+    "description": "nutritionDislikes"
+  },
+  "nutritionCookingTime": "Maximálny celkový čas na jedlo (minúty)",
+  "@nutritionCookingTime": {
+    "description": "nutritionCookingTime"
+  },
+  "nutritionBudget": "Rozpočet na stravu na osobu na 7 dní",
+  "@nutritionBudget": {
+    "description": "nutritionBudget"
+  },
+  "nutritionCurrency": "Mena (3 písmená)",
+  "@nutritionCurrency": {
+    "description": "nutritionCurrency"
+  },
+  "nutritionClear": "Vymazať",
+  "@nutritionClear": {
+    "description": "nutritionClear"
+  },
+  "nutritionClearBudget": "Vymazať sumu aj menu",
+  "@nutritionClearBudget": {
+    "description": "nutritionClearBudget"
+  },
+  "nutritionAddIngredient": "Pridať surovinu",
+  "@nutritionAddIngredient": {
+    "description": "nutritionAddIngredient"
+  },
+  "nutritionRemoveIngredient": "Odstrániť surovinu",
+  "@nutritionRemoveIngredient": {
+    "description": "nutritionRemoveIngredient"
+  },
+  "nutritionIngredient": "Surovina",
+  "@nutritionIngredient": {
+    "description": "nutritionIngredient"
+  },
+  "nutritionDietInvalid": "Použite najviac 100 znakov.",
+  "@nutritionDietInvalid": {
+    "description": "nutritionDietInvalid"
+  },
+  "nutritionCookingInvalid": "Zadajte celé číslo od 1 do 480.",
+  "@nutritionCookingInvalid": {
+    "description": "nutritionCookingInvalid"
+  },
+  "nutritionBudgetInvalid": "Zadajte 0,01–1000000,00 s najviac 2 desatinnými miestami. Bez zaokrúhľovania.",
+  "@nutritionBudgetInvalid": {
+    "description": "nutritionBudgetInvalid"
+  },
+  "nutritionCurrencyInvalid": "Použite presne 3 písmená ASCII (napríklad EUR).",
+  "@nutritionCurrencyInvalid": {
+    "description": "nutritionCurrencyInvalid"
+  },
+  "nutritionBudgetPair": "Zadajte sumu aj menu alebo vymažte obe.",
+  "@nutritionBudgetPair": {
+    "description": "nutritionBudgetPair"
+  },
+  "nutritionSavedTargets": "Uložené denné ciele",
+  "@nutritionSavedTargets": {
+    "description": "nutritionSavedTargets"
+  },
+  "nutritionEstimate": "Odhad — zatiaľ neuložený",
+  "@nutritionEstimate": {
+    "description": "nutritionEstimate"
+  },
+  "nutritionSummaryNote": "Uložené kroky sú už v profile. Ciele sa zmenia až po výslovnom uložení zobrazeného odhadu.",
+  "@nutritionSummaryNote": {
+    "description": "nutritionSummaryNote"
+  },
+  "nutritionCalculate": "Vypočítať odhad",
+  "@nutritionCalculate": {
+    "description": "nutritionCalculate"
+  },
+  "nutritionCalculating": "Počítam…",
+  "@nutritionCalculating": {
+    "description": "nutritionCalculating"
+  },
+  "nutritionKeepTargets": "Ponechať uložené ciele a vrátiť sa domov",
+  "@nutritionKeepTargets": {
+    "description": "nutritionKeepTargets"
+  },
+  "nutritionUseEstimate": "Nahradiť uložené ciele týmto odhadom",
+  "@nutritionUseEstimate": {
+    "description": "nutritionUseEstimate"
+  },
+  "nutritionApplyEstimate": "Potvrdiť a uložiť zobrazené ciele",
+  "@nutritionApplyEstimate": {
+    "description": "nutritionApplyEstimate"
+  },
+  "nutritionMissing": "Na výpočet sú potrebné tieto údaje:",
+  "@nutritionMissing": {
+    "description": "nutritionMissing"
+  },
+  "nutritionUnsupported": "Pre tento profil odhad nie je dostupný. Uložené preferencie a ciele zostávajú zachované.",
+  "@nutritionUnsupported": {
+    "description": "nutritionUnsupported"
+  },
+  "nutritionReasonBirthDate": "Dátum narodenia je po dátume výpočtu.",
+  "@nutritionReasonBirthDate": {
+    "description": "nutritionReasonBirthDate"
+  },
+  "nutritionReasonAge": "Výpočet podporuje vek 19–78 rokov.",
+  "@nutritionReasonAge": {
+    "description": "nutritionReasonAge"
+  },
+  "nutritionReasonHeight": "Výška je mimo rozsahu výpočtu (130–230 cm).",
+  "@nutritionReasonHeight": {
+    "description": "nutritionReasonHeight"
+  },
+  "nutritionReasonWeight": "Hmotnosť je mimo rozsahu výpočtu (35–250 kg).",
+  "@nutritionReasonWeight": {
+    "description": "nutritionReasonWeight"
+  },
+  "nutritionReasonBmi": "BMI je mimo rozsahu výpočtu (od 18,5 do menej ako 40).",
+  "@nutritionReasonBmi": {
+    "description": "nutritionReasonBmi"
+  },
+  "nutritionReasonEnergy": "Energiu nemožno odhadnúť v podporovanom rozsahu.",
+  "@nutritionReasonEnergy": {
+    "description": "nutritionReasonEnergy"
+  },
+  "nutritionReasonCalories": "Kalórie sú mimo rozsahu výpočtu (1000–6000 kcal/deň).",
+  "@nutritionReasonCalories": {
+    "description": "nutritionReasonCalories"
+  },
+  "nutritionCalories": "Kalórie (kcal/deň)",
+  "@nutritionCalories": {
+    "description": "nutritionCalories"
+  },
+  "nutritionProtein": "Bielkoviny (g/deň)",
+  "@nutritionProtein": {
+    "description": "nutritionProtein"
+  },
+  "nutritionCarbs": "Sacharidy (g/deň)",
+  "@nutritionCarbs": {
+    "description": "nutritionCarbs"
+  },
+  "nutritionFat": "Tuky (g/deň)",
+  "@nutritionFat": {
+    "description": "nutritionFat"
+  },
+  "nutritionNotSet": "Nezadané",
+  "@nutritionNotSet": {
+    "description": "nutritionNotSet"
+  },
+  "nutritionSaveInputsFirst": "Pred výpočtom alebo potvrdením cieľov uložte upravené kroky profilu.",
+  "@nutritionSaveInputsFirst": {
+    "description": "nutritionSaveInputsFirst"
+  },
+  "nutritionCalculationDetails": "Dátum: {date} · Pravidlá: {rules}",
+  "@nutritionCalculationDetails": {
+    "description": "nutritionCalculationDetails",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "String"
+      }
+    }
   }
 }

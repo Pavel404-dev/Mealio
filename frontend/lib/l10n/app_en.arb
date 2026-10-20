@@ -687,11 +687,14 @@
   "@nutritionDescription": {
     "description": "nutritionDescription"
   },
-  "nutritionStep": "Step {step} of 3",
+  "nutritionStep": "Step {step} of {total}",
   "@nutritionStep": {
     "description": "nutritionStep",
     "placeholders": {
       "step": {
+        "type": "int"
+      },
+      "total": {
         "type": "int"
       }
     }
@@ -851,5 +854,189 @@
   "nutritionLeaveDiscard": "Leave and discard edits",
   "@nutritionLeaveDiscard": {
     "description": "nutritionLeaveDiscard"
+  },
+  "nutritionFood": "Food preferences",
+  "@nutritionFood": {
+    "description": "nutritionFood"
+  },
+  "nutritionPractical": "Cooking time and budget",
+  "@nutritionPractical": {
+    "description": "nutritionPractical"
+  },
+  "nutritionSummary": "Summary and targets",
+  "@nutritionSummary": {
+    "description": "nutritionSummary"
+  },
+  "nutritionDiet": "Diet (optional, free text)",
+  "@nutritionDiet": {
+    "description": "nutritionDiet"
+  },
+  "nutritionAllergies": "Allergies",
+  "@nutritionAllergies": {
+    "description": "nutritionAllergies"
+  },
+  "nutritionLikes": "Liked ingredients",
+  "@nutritionLikes": {
+    "description": "nutritionLikes"
+  },
+  "nutritionDislikes": "Disliked ingredients",
+  "@nutritionDislikes": {
+    "description": "nutritionDislikes"
+  },
+  "nutritionCookingTime": "Maximum total time per dish (minutes)",
+  "@nutritionCookingTime": {
+    "description": "nutritionCookingTime"
+  },
+  "nutritionBudget": "Food budget per person for 7 days",
+  "@nutritionBudget": {
+    "description": "nutritionBudget"
+  },
+  "nutritionCurrency": "Currency (3 letters)",
+  "@nutritionCurrency": {
+    "description": "nutritionCurrency"
+  },
+  "nutritionClear": "Clear",
+  "@nutritionClear": {
+    "description": "nutritionClear"
+  },
+  "nutritionClearBudget": "Clear amount and currency",
+  "@nutritionClearBudget": {
+    "description": "nutritionClearBudget"
+  },
+  "nutritionAddIngredient": "Add ingredient",
+  "@nutritionAddIngredient": {
+    "description": "nutritionAddIngredient"
+  },
+  "nutritionRemoveIngredient": "Remove ingredient",
+  "@nutritionRemoveIngredient": {
+    "description": "nutritionRemoveIngredient"
+  },
+  "nutritionIngredient": "Ingredient",
+  "@nutritionIngredient": {
+    "description": "nutritionIngredient"
+  },
+  "nutritionDietInvalid": "Use at most 100 characters.",
+  "@nutritionDietInvalid": {
+    "description": "nutritionDietInvalid"
+  },
+  "nutritionCookingInvalid": "Enter a whole number from 1 to 480.",
+  "@nutritionCookingInvalid": {
+    "description": "nutritionCookingInvalid"
+  },
+  "nutritionBudgetInvalid": "Enter 0.01–1000000.00 with at most 2 decimal places. No rounding.",
+  "@nutritionBudgetInvalid": {
+    "description": "nutritionBudgetInvalid"
+  },
+  "nutritionCurrencyInvalid": "Use exactly 3 ASCII letters (for example EUR).",
+  "@nutritionCurrencyInvalid": {
+    "description": "nutritionCurrencyInvalid"
+  },
+  "nutritionBudgetPair": "Set both amount and currency, or clear both.",
+  "@nutritionBudgetPair": {
+    "description": "nutritionBudgetPair"
+  },
+  "nutritionSavedTargets": "Saved daily targets",
+  "@nutritionSavedTargets": {
+    "description": "nutritionSavedTargets"
+  },
+  "nutritionEstimate": "Estimate — not saved",
+  "@nutritionEstimate": {
+    "description": "nutritionEstimate"
+  },
+  "nutritionSummaryNote": "Saved steps are already in your profile. Targets change only when you explicitly save the displayed estimate.",
+  "@nutritionSummaryNote": {
+    "description": "nutritionSummaryNote"
+  },
+  "nutritionCalculate": "Calculate estimate",
+  "@nutritionCalculate": {
+    "description": "nutritionCalculate"
+  },
+  "nutritionCalculating": "Calculating…",
+  "@nutritionCalculating": {
+    "description": "nutritionCalculating"
+  },
+  "nutritionKeepTargets": "Keep saved targets and return Home",
+  "@nutritionKeepTargets": {
+    "description": "nutritionKeepTargets"
+  },
+  "nutritionUseEstimate": "Replace saved targets with this estimate",
+  "@nutritionUseEstimate": {
+    "description": "nutritionUseEstimate"
+  },
+  "nutritionApplyEstimate": "Confirm and save displayed targets",
+  "@nutritionApplyEstimate": {
+    "description": "nutritionApplyEstimate"
+  },
+  "nutritionMissing": "Calculation needs these profile fields:",
+  "@nutritionMissing": {
+    "description": "nutritionMissing"
+  },
+  "nutritionUnsupported": "No estimate is available for this profile. Saved preferences and targets are retained.",
+  "@nutritionUnsupported": {
+    "description": "nutritionUnsupported"
+  },
+  "nutritionReasonBirthDate": "Birth date is after the calculation date.",
+  "@nutritionReasonBirthDate": {
+    "description": "nutritionReasonBirthDate"
+  },
+  "nutritionReasonAge": "The calculation supports ages 19–78.",
+  "@nutritionReasonAge": {
+    "description": "nutritionReasonAge"
+  },
+  "nutritionReasonHeight": "Height is outside the calculation range (130–230 cm).",
+  "@nutritionReasonHeight": {
+    "description": "nutritionReasonHeight"
+  },
+  "nutritionReasonWeight": "Weight is outside the calculation range (35–250 kg).",
+  "@nutritionReasonWeight": {
+    "description": "nutritionReasonWeight"
+  },
+  "nutritionReasonBmi": "BMI is outside the calculation range (18.5 to below 40).",
+  "@nutritionReasonBmi": {
+    "description": "nutritionReasonBmi"
+  },
+  "nutritionReasonEnergy": "Energy could not be estimated within the supported range.",
+  "@nutritionReasonEnergy": {
+    "description": "nutritionReasonEnergy"
+  },
+  "nutritionReasonCalories": "Calories are outside the calculation range (1000–6000 kcal/day).",
+  "@nutritionReasonCalories": {
+    "description": "nutritionReasonCalories"
+  },
+  "nutritionCalories": "Calories (kcal/day)",
+  "@nutritionCalories": {
+    "description": "nutritionCalories"
+  },
+  "nutritionProtein": "Protein (g/day)",
+  "@nutritionProtein": {
+    "description": "nutritionProtein"
+  },
+  "nutritionCarbs": "Carbs (g/day)",
+  "@nutritionCarbs": {
+    "description": "nutritionCarbs"
+  },
+  "nutritionFat": "Fat (g/day)",
+  "@nutritionFat": {
+    "description": "nutritionFat"
+  },
+  "nutritionNotSet": "Not set",
+  "@nutritionNotSet": {
+    "description": "nutritionNotSet"
+  },
+  "nutritionSaveInputsFirst": "Save edited profile steps before calculating or confirming targets.",
+  "@nutritionSaveInputsFirst": {
+    "description": "nutritionSaveInputsFirst"
+  },
+  "nutritionCalculationDetails": "Date: {date} · Rules: {rules}",
+  "@nutritionCalculationDetails": {
+    "description": "nutritionCalculationDetails",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "String"
+      }
+    }
   }
 }

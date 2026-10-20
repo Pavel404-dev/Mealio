@@ -96,7 +96,7 @@ void main() {
         NutritionInputError.required,
       );
       controller.edit(NutritionField.activity, 'very_active');
-      expect(await controller.save(), NutritionSaveResult.finished);
+      expect(await controller.save(), NutritionSaveResult.advanced);
       expect(repository.saves.last, {NutritionField.activity: 'very_active'});
       expect(repository.json['daily_calories_target'], 2400);
       expect(repository.json['allergies'], ['synthetic-allergen']);

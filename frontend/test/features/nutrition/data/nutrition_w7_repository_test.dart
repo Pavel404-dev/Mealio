@@ -1,0 +1,569 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mealio/core/auth/auth_token_pair.dart';
+import 'package:mealio/core/network/api_client.dart';
+import 'package:mealio/core/network/auth_interceptor.dart';
+import 'package:mealio/core/network/token_refresh_coordinator.dart';
+import 'package:mealio/core/storage/secure_storage_provider.dart';
+import 'package:mealio/features/nutrition/data/nutrition_repository.dart';
+import 'package:mealio/features/nutrition/domain/nutrition_preferences.dart';
+import 'package:mealio/features/nutrition/domain/nutrition_calculation.dart';
+import 'package:mealio/features/nutrition/domain/nutrition_failure.dart';
+import 'package:mealio/features/nutrition/presentation/nutrition_setup_controller.dart';
+import '../../../helpers/auth_test_fakes.dart';
+import '../../../helpers/nutrition_test_fakes.dart';
+
+void main() {
+  late FakeHttpClientAdapter adapter;
+  late FakeHttpClientAdapter refresh;
+  late FakeSecureStorageService storage;
+  late NutritionRepository repository;
+  late Dio dio;
+  setUp(() {
+    adapter = FakeHttpClientAdapter();
+    refresh = FakeHttpClientAdapter();
+    storage = FakeSecureStorageService(
+      accessToken: 'synthetic-a',
+      refreshToken: 'synthetic-r',
+    );
+    dio = createFakeDio(adapter);
+    repository = NutritionRepository(
+      apiClient: ApiClient(dio, storage: storage),
+      storage: storage,
+    );
+  });
+  void auth() => dio.interceptors.add(
+    AuthInterceptor(
+      dio: dio,
+      storage: storage,
+      refreshCoordinator: TokenRefreshCoordinator(
+        refreshDio: createFakeDio(refresh),
+        storage: storage,
+        onSessionInvalidated: () {},
+      ),
+    ),
+  );
+  Future<Object?> request(String action, [int? owner]) => action == 'calculate'
+      ? repository.calculate(
+          lifetime: owner ?? storage.sessionLifetime,
+          date: DateTime.parse('2026-10-05T00:30:00+02:00'),
+        )
+      : repository.save(
+          lifetime: owner ?? storage.sessionLifetime,
+          changes: action == 'confirm'
+              ? NutritionPatch.targets(
+                  const NutritionTargets(
+                    calories: 3204,
+                    protein: 160,
+                    carbs: 400,
+                    fat: 107,
+                  ),
+                )
+              : NutritionPatch.food(
+                  likes: const NutritionChange([' rice ', '', 'rice']),
+                ),
+        );
+  Object body(String action) =>
+      action == 'calculate' ? calculationJson() : nutritionJson();
+
+  NutritionSetupController dietController() {
+    final controller = NutritionSetupController(
+      repository: repository,
+      storage: storage,
+      isAuthenticated: () => true,
+    );
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
+  for (final invalid in <String, Object?>{
+    'empty': '',
+    'spaces': '   ',
+    'tabs': '\t\n',
+    'leading space': ' vegan',
+    'trailing space': 'vegan ',
+    'surrounding tabs': '\tvegan\t',
+    'Unicode whitespace': '\u00a0custom diet\u3000',
+    'Unicode blank': '\u00a0\u3000',
+    '101 code points': '🥕' * 101,
+    'non-string': 1,
+  }.entries) {
+    for (final action in ['load', 'save', 'confirm']) {
+      test(
+        'diet $action rejects ${invalid.key} without false acknowledgement or extra writes',
+        () async {
+          final controller = dietController();
+          final json = nutritionJson(full: true);
+          final response = {...json, 'diet_type': invalid.value};
+          if (action == 'load') {
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+            await controller.load();
+            expect(controller.loaded, isFalse);
+            expect(controller.dirty, isFalse);
+            expect(await controller.save(), NutritionSaveResult.rejected);
+            expect(adapter.requests.single.method, 'GET');
+          } else {
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+            await controller.load();
+            final step = action == 'save' ? 3 : 5;
+            while (controller.step < step) {
+              expect(await controller.save(), NutritionSaveResult.advanced);
+            }
+            final savedTargets = controller.targets;
+            if (action == 'save') {
+              controller.editPreference(PreferenceField.diet, 'custom diet');
+            } else {
+              adapter.enqueue(
+                FakeHttpResponse(
+                  statusCode: 200,
+                  body: calculationJson(profile: json),
+                ),
+              );
+              await controller.calculate(now: DateTime.utc(2026, 10, 4));
+              controller.selectEstimate(true);
+              response.addAll(
+                NutritionPatch.targets(
+                  (controller.calculation as NutritionCalculated).targets,
+                ).json,
+              );
+            }
+            final shown = controller.calculation;
+            adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+            expect(await controller.save(), NutritionSaveResult.rejected);
+            expect(controller.step, step);
+            expect(controller.lastSaveWrote, isNot(true));
+            expect(controller.targets, same(savedTargets));
+            expect(controller.calculation, same(shown));
+            if (action == 'save') {
+              expect(
+                controller.preferenceInput(PreferenceField.diet),
+                'custom diet',
+              );
+              expect(controller.dirty, isTrue);
+              expect(adapter.requests.last.data, {'diet_type': 'custom diet'});
+            } else {
+              expect(controller.useEstimate, isTrue);
+              expect(
+                adapter.requests.last.data,
+                NutritionPatch.targets(
+                  (shown as NutritionCalculated).targets,
+                ).json,
+              );
+            }
+            expect(
+              adapter.requests.map((r) => r.method),
+              action == 'save' ? ['GET', 'PATCH'] : ['GET', 'POST', 'PATCH'],
+            );
+          }
+          expect(controller.failure?.type, NutritionFailureType.unexpected);
+          expect(controller.saving, isFalse);
+        },
+      );
+    }
+  }
+  for (final valid in <String, String?>{
+    'null': null,
+    'free text': 'custom  diet',
+    'Unicode and internal whitespace': 'Їжа\t蘑菇 🍄 cre\u0300me',
+    '100 ASCII code points': 'x' * 100,
+    '100 supplementary code points': '🥕' * 100,
+  }.entries) {
+    test('diet ${valid.key} loads unchanged and clean without PATCH', () async {
+      final json = nutritionJson(full: true)..['diet_type'] = valid.value;
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      final profile = await repository.load(lifetime: storage.sessionLifetime);
+      expect(profile.preferences.diet, valid.value);
+      final controller = dietController();
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      await controller.load();
+      expect(controller.loaded, isTrue);
+      expect(controller.failure, isNull);
+      expect(
+        controller.preferenceInput(PreferenceField.diet),
+        valid.value ?? '',
+      );
+      expect(controller.dirty, isFalse);
+      for (var step = 0; step < 5; step++) {
+        expect(await controller.save(), NutritionSaveResult.advanced);
+        expect(
+          controller.preferenceInput(PreferenceField.diet),
+          valid.value ?? '',
+        );
+        expect(controller.dirty, isFalse);
+      }
+      expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+    });
+  }
+
+  for (final field in {
+    'allergies': PreferenceList.allergies,
+    'liked_ingredients': PreferenceList.likes,
+    'disliked_ingredients': PreferenceList.dislikes,
+  }.entries) {
+    for (final invalid in <String, Object?>{
+      'number': 1,
+      'null': null,
+      'boolean': true,
+      'empty': '',
+      'spaces': '   ',
+      'tabs and newline': '\t\n',
+      'leading space': ' rice',
+      'trailing space': 'rice ',
+      'surrounding whitespace': '\t rice \n',
+      'Unicode whitespace': '\u00a0рис\u00a0',
+    }.entries) {
+      test(
+        '${field.key} rejects ${invalid.key} with safe failure and no PATCH',
+        () async {
+          final json = nutritionJson(full: true)
+            ..[field.key] = ['valid ingredient', invalid.value];
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await expectLater(
+            repository.load(lifetime: storage.sessionLifetime),
+            throwsA(
+              isA<NutritionFailure>().having(
+                (f) => f.type,
+                'type',
+                NutritionFailureType.unexpected,
+              ),
+            ),
+          );
+
+          final controller = NutritionSetupController(
+            repository: repository,
+            storage: storage,
+            isAuthenticated: () => true,
+          );
+          addTearDown(controller.dispose);
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await controller.load();
+          expect(controller.loaded, isFalse);
+          expect(controller.failure?.type, NutritionFailureType.unexpected);
+          expect(controller.dirty, isFalse);
+          expect(await controller.save(), NutritionSaveResult.rejected);
+          expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+        },
+      );
+    }
+    for (final values in <List<String>>[
+      [],
+      ['рис', 'brown  rice', 'рис', '蘑菇 🍄', 'cre\u0300me', 'salt\tpepper'],
+    ]) {
+      test(
+        '${field.key} valid ${values.isEmpty ? 'empty' : 'Unicode'} list stays unchanged and clean',
+        () async {
+          final json = nutritionJson(full: true)..[field.key] = values;
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          final profile = await repository.load(
+            lifetime: storage.sessionLifetime,
+          );
+          expect(profile.preferences.list(field.value), values);
+
+          final controller = NutritionSetupController(
+            repository: repository,
+            storage: storage,
+            isAuthenticated: () => true,
+          );
+          addTearDown(controller.dispose);
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+          await controller.load();
+          expect(controller.loaded, isTrue);
+          expect(controller.failure, isNull);
+          expect(controller.ingredients(field.value), values);
+          expect(controller.dirty, isFalse);
+          for (var step = 0; step < 5; step++) {
+            expect(await controller.save(), NutritionSaveResult.advanced);
+            expect(controller.ingredients(field.value), values);
+            expect(controller.dirty, isFalse);
+          }
+          expect(adapter.requests.map((r) => r.method), ['GET', 'GET']);
+        },
+      );
+    }
+  }
+
+  for (final action in ['preferences', 'calculate', 'confirm']) {
+    test('$action exact canonical typed wire request', () async {
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: body(action)));
+      await request(action);
+      expect(
+        adapter.requests.single.method,
+        action == 'calculate' ? 'POST' : 'PATCH',
+      );
+      expect(
+        adapter.requests.single.path,
+        '/user-preferences/nutrition${action == 'calculate' ? '/calculate' : ''}',
+      );
+      expect(adapter.requests.single.data, switch (action) {
+        'calculate' => {
+          'calculation_date': '2026-10-04',
+          'rules_version': 'mealio-nutrition-v1',
+        },
+        'confirm' => {
+          'daily_calories_target': 3204,
+          'daily_protein_target_g': 160,
+          'daily_carbs_target_g': 400,
+          'daily_fat_target_g': 107,
+        },
+        _ => {
+          'liked_ingredients': ['rice', 'rice'],
+        },
+      });
+    });
+    for (final status in [401, 422, 429, 500]) {
+      test(
+        '$action maps $status without private detail or compensation',
+        () async {
+          adapter.enqueue(
+            FakeHttpResponse(
+              statusCode: status,
+              body: {'detail': 'synthetic-private'},
+            ),
+          );
+          final type = switch (status) {
+            401 => NutritionFailureType.authentication,
+            422 => NutritionFailureType.validation,
+            429 => NutritionFailureType.rateLimited,
+            _ => NutritionFailureType.unexpected,
+          };
+          await expectLater(
+            request(action),
+            throwsA(
+              isA<NutritionFailure>()
+                  .having((f) => f.type, 'type', type)
+                  .having(
+                    (f) => f.toString(),
+                    'safe text',
+                    isNot(contains('synthetic-private')),
+                  ),
+            ),
+          );
+          expect(adapter.requests, hasLength(1));
+        },
+      );
+    }
+    test('$action connection timeout keeps retry explicit', () async {
+      adapter.enqueue(FakeHttpResponse.error(DioExceptionType.receiveTimeout));
+      await expectLater(
+        request(action),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.connection,
+          ),
+        ),
+      );
+      expect(adapter.requests, hasLength(1));
+    });
+    test('$action final ownership check rejects stale dispatch', () async {
+      final owner = storage.sessionLifetime;
+      await storage.deleteTokenPair();
+      await expectLater(
+        request(action, owner),
+        throwsA(isA<SessionSuperseded>()),
+      );
+      expect(adapter.requests, isEmpty);
+    });
+    test(
+      '$action lifetime cannot change during credential preparation',
+      () async {
+        auth();
+        final started = Completer<void>();
+        final read = Completer<String?>();
+        storage.accessReadStarted = started;
+        storage.pendingRead = read;
+        final assertion = expectLater(
+          request(action),
+          throwsA(isA<SessionSuperseded>()),
+        );
+        await started.future;
+        final login = storage.writeTokenPair(
+          const AuthTokenPair(
+            accessToken: 'synthetic-b',
+            refreshToken: 'synthetic-new',
+          ),
+        );
+        read.complete('synthetic-a');
+        await login;
+        await assertion;
+        expect(adapter.requests, isEmpty);
+      },
+    );
+    for (final sameUser in [false, true]) {
+      for (final status in [200, 401, 500]) {
+        test(
+          '$action late $status after ${sameUser ? 'A→A' : 'A→B'} does not publish/refresh/replay',
+          () async {
+            auth();
+            final started = Completer<void>();
+            final response = Completer<FakeHttpResponse>();
+            adapter.responseHandler = (_) {
+              started.complete();
+              return response.future;
+            };
+            final assertion = expectLater(
+              request(action),
+              throwsA(isA<SessionSuperseded>()),
+            );
+            await started.future;
+            await storage.writeTokenPair(
+              AuthTokenPair(
+                accessToken: sameUser ? 'synthetic-a' : 'synthetic-b',
+                refreshToken: 'synthetic-new',
+              ),
+            );
+            response.complete(
+              FakeHttpResponse(statusCode: status, body: body(action)),
+            );
+            await assertion;
+            expect(adapter.requests, hasLength(1));
+            expect(refresh.requests, isEmpty);
+            expect(storage.refreshToken, 'synthetic-new');
+          },
+        );
+      }
+    }
+  }
+  for (final calories in [999, 6001]) {
+    test('calculate maps invalid calories $calories to safe failure', () async {
+      final json = calculationJson(
+        resultOverrides: calorieBoundaryResult(calories),
+      );
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: json));
+      await expectLater(
+        request('calculate'),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.unexpected,
+          ),
+        ),
+      );
+      expect(adapter.requests, hasLength(1));
+    });
+  }
+  for (final entry in invalidCalculationResults.entries) {
+    test('calculate safely rejects ${entry.key} without PATCH', () async {
+      adapter.enqueue(
+        FakeHttpResponse(
+          statusCode: 200,
+          body: calculationJson(resultOverrides: entry.value),
+        ),
+      );
+      await expectLater(
+        request('calculate'),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.unexpected,
+          ),
+        ),
+      );
+      expect(adapter.requests.single.method, 'POST');
+      expect(
+        adapter.requests.single.path,
+        '/user-preferences/nutrition/calculate',
+      );
+    });
+  }
+  for (final calories in [1, 999, 6001, 2147483647]) {
+    test(
+      'load retains saved calories $calories outside calculation range',
+      () async {
+        adapter.enqueue(
+          FakeHttpResponse(
+            statusCode: 200,
+            body: nutritionJson()
+              ..addAll({
+                'daily_calories_target': calories,
+                'daily_protein_target_g': 2147483647,
+                'daily_carbs_target_g': 1,
+                'daily_fat_target_g': 2147483647,
+              }),
+          ),
+        );
+        final profile = await repository.load(
+          lifetime: storage.sessionLifetime,
+        );
+        expect(profile.targets.calories, calories);
+        expect(profile.targets.protein, 2147483647);
+        expect(profile.targets.carbs, 1);
+        expect(profile.targets.fat, 2147483647);
+        expect(adapter.requests.single.method, 'GET');
+      },
+    );
+  }
+  test('paired money clearing survives actual JSON PATCH', () async {
+    for (final change in [
+      const NutritionChange(NutritionBudget('50,12', 'eur')),
+      const NutritionChange<NutritionBudget?>(null),
+    ]) {
+      adapter.enqueue(FakeHttpResponse(statusCode: 200, body: nutritionJson()));
+      await repository.save(
+        lifetime: storage.sessionLifetime,
+        changes: NutritionPatch.practical(budget: change),
+      );
+    }
+    expect(adapter.requests[0].data, {
+      'weekly_food_budget_amount': '50.12',
+      'budget_currency': 'EUR',
+    });
+    expect(adapter.requests[1].data, {
+      'weekly_food_budget_amount': null,
+      'budget_currency': null,
+    });
+  });
+  test(
+    'absent likes is a safe compatibility failure, not a saved empty list',
+    () async {
+      adapter.enqueue(
+        FakeHttpResponse(
+          statusCode: 200,
+          body: nutritionJson()..remove('liked_ingredients'),
+        ),
+      );
+      await expectLater(
+        repository.load(lifetime: storage.sessionLifetime),
+        throwsA(
+          isA<NutritionFailure>().having(
+            (f) => f.type,
+            'type',
+            NutritionFailureType.unexpected,
+          ),
+        ),
+      );
+    },
+  );
+  test(
+    'malformed and unknown calculation outcomes expose safe retry failure',
+    () async {
+      for (final response in [
+        {},
+        calculationJson()..['status'] = 'future',
+        {
+          'status': 'unsupported_profile',
+          'result': null,
+          'reason_codes': ['future'],
+          'calculation_date': '2026-10-04',
+          'rules_version': NutritionCalculation.rulesVersion,
+        },
+      ]) {
+        adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+        await expectLater(
+          request('calculate'),
+          throwsA(
+            isA<NutritionFailure>().having(
+              (f) => f.type,
+              'type',
+              NutritionFailureType.unexpected,
+            ),
+          ),
+        );
+      }
+    },
+  );
+}

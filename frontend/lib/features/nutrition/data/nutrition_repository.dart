@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage_provider.dart';
 import '../domain/nutrition_failure.dart';
 import '../domain/nutrition_profile.dart';
+import '../domain/nutrition_preferences.dart';
+import '../domain/nutrition_calculation.dart';
 
 final nutritionRepositoryProvider = Provider<NutritionRepository>((ref) {
   return NutritionRepository(
@@ -25,43 +27,55 @@ class NutritionRepository {
   final SecureStorageService _storage;
   static const _path = '/user-preferences/nutrition';
 
-  Future<NutritionProfile> load({required int lifetime}) =>
-      _request(lifetime, null);
+  Future<NutritionProfile> load({required int lifetime}) => _request(
+    lifetime,
+    () => _apiClient.get<Object?>(_path, sessionLifetime: lifetime),
+    NutritionProfile.fromJson,
+  );
 
   Future<NutritionProfile> save({
     required int lifetime,
-    required Map<NutritionField, String> changes,
-  }) => _request(lifetime, changes);
+    required NutritionPatch changes,
+  }) => _request(lifetime, () {
+    if (changes.isEmpty) {
+      throw const NutritionFailure(NutritionFailureType.validation);
+    }
+    return _apiClient.patch<Object?>(_path, data: changes.json);
+  }, NutritionProfile.fromJson);
 
-  Future<NutritionProfile> _request(
+  Future<NutritionCalculation> calculate({
+    required int lifetime,
+    required DateTime date,
+  }) {
+    final day = nutritionCalculationDate(date);
+    return _request(
+      lifetime,
+      () => _apiClient.post<Object?>(
+        '$_path/calculate',
+        data: {
+          'calculation_date': day,
+          'rules_version': NutritionCalculation.rulesVersion,
+        },
+      ),
+      (json) => NutritionCalculation.fromJson(json, date: day),
+    );
+  }
+
+  Future<T> _request<T>(
     int lifetime,
-    Map<NutritionField, String>? changes,
+    Future<Response<Object?>> Function() dispatch,
+    T Function(Object?) parse,
   ) async {
     try {
-      if (changes != null &&
-          (changes.isEmpty ||
-              changes.entries.any(
-                (e) => nutritionInputError(e.key, e.value) != null,
-              ))) {
-        throw const NutritionFailure(NutritionFailureType.validation);
-      }
-      // No await between this owner check and ApiClient invocation. ApiClient
-      // then pins that same lifetime through async transport preparation/retry.
+      // Dispatch is synchronous up to ApiClient's lifetime capture. No await
+      // may be inserted between this final owner check and invocation.
       _storage.checkSession(lifetime);
-      final response = await (changes == null
-          ? _apiClient.get<Object?>(_path, sessionLifetime: lifetime)
-          : _apiClient.patch<Object?>(
-              _path,
-              data: {
-                for (final entry in changes.entries)
-                  entry.key.wireName: nutritionWireValue(entry.value),
-              },
-            ));
+      final response = await dispatch();
       _storage.checkSession(lifetime);
       if (response.statusCode != 200) {
         throw const FormatException('Unexpected nutrition status');
       }
-      return NutritionProfile.fromJson(response.data);
+      return parse(response.data);
     } on SessionSuperseded {
       rethrow;
     } on NutritionFailure {

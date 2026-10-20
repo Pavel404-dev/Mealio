@@ -32,6 +32,7 @@ class UserNutritionProfileBase(BaseModel):
     daily_fat_target_g: int | None = Field(default=None, gt=0, le=POSTGRES_INTEGER_MAX)
     allergies: list[str] = Field(default_factory=list)
     disliked_ingredients: list[str] = Field(default_factory=list)
+    liked_ingredients: list[str] = Field(default_factory=list)
     preferred_meals_per_day: int | None = Field(default=3, ge=1, le=8)
     sex: NutritionSex | None = None
     birth_date: date | None = Field(default=None, ge=date(1900, 1, 1))
@@ -83,7 +84,7 @@ class UserNutritionProfileBase(BaseModel):
 
         return value
 
-    @field_validator("allergies", "disliked_ingredients")
+    @field_validator("allergies", "disliked_ingredients", "liked_ingredients")
     @classmethod
     def normalize_string_list(cls, values: list[str]) -> list[str]:
         normalized_values: list[str] = []

@@ -687,11 +687,14 @@
   "@nutritionDescription": {
     "description": "nutritionDescription"
   },
-  "nutritionStep": "Крок {step} із 3",
+  "nutritionStep": "Крок {step} із {total}",
   "@nutritionStep": {
     "description": "nutritionStep",
     "placeholders": {
       "step": {
+        "type": "int"
+      },
+      "total": {
         "type": "int"
       }
     }
@@ -851,5 +854,189 @@
   "nutritionLeaveDiscard": "Вийти й відкинути правки",
   "@nutritionLeaveDiscard": {
     "description": "nutritionLeaveDiscard"
+  },
+  "nutritionFood": "Харчові вподобання",
+  "@nutritionFood": {
+    "description": "nutritionFood"
+  },
+  "nutritionPractical": "Час приготування та бюджет",
+  "@nutritionPractical": {
+    "description": "nutritionPractical"
+  },
+  "nutritionSummary": "Підсумок і цілі харчування",
+  "@nutritionSummary": {
+    "description": "nutritionSummary"
+  },
+  "nutritionDiet": "Раціон (необов’язково, довільний текст)",
+  "@nutritionDiet": {
+    "description": "nutritionDiet"
+  },
+  "nutritionAllergies": "Алергії",
+  "@nutritionAllergies": {
+    "description": "nutritionAllergies"
+  },
+  "nutritionLikes": "Улюблені інгредієнти",
+  "@nutritionLikes": {
+    "description": "nutritionLikes"
+  },
+  "nutritionDislikes": "Небажані інгредієнти",
+  "@nutritionDislikes": {
+    "description": "nutritionDislikes"
+  },
+  "nutritionCookingTime": "Максимальний повний час страви (хвилини)",
+  "@nutritionCookingTime": {
+    "description": "nutritionCookingTime"
+  },
+  "nutritionBudget": "Бюджет харчування на людину на 7 днів",
+  "@nutritionBudget": {
+    "description": "nutritionBudget"
+  },
+  "nutritionCurrency": "Валюта (3 літери)",
+  "@nutritionCurrency": {
+    "description": "nutritionCurrency"
+  },
+  "nutritionClear": "Очистити",
+  "@nutritionClear": {
+    "description": "nutritionClear"
+  },
+  "nutritionClearBudget": "Очистити суму та валюту",
+  "@nutritionClearBudget": {
+    "description": "nutritionClearBudget"
+  },
+  "nutritionAddIngredient": "Додати інгредієнт",
+  "@nutritionAddIngredient": {
+    "description": "nutritionAddIngredient"
+  },
+  "nutritionRemoveIngredient": "Видалити інгредієнт",
+  "@nutritionRemoveIngredient": {
+    "description": "nutritionRemoveIngredient"
+  },
+  "nutritionIngredient": "Інгредієнт",
+  "@nutritionIngredient": {
+    "description": "nutritionIngredient"
+  },
+  "nutritionDietInvalid": "Не більше 100 символів.",
+  "@nutritionDietInvalid": {
+    "description": "nutritionDietInvalid"
+  },
+  "nutritionCookingInvalid": "Введіть ціле число від 1 до 480.",
+  "@nutritionCookingInvalid": {
+    "description": "nutritionCookingInvalid"
+  },
+  "nutritionBudgetInvalid": "Введіть 0,01–1000000,00, максимум 2 десяткові знаки. Без округлення.",
+  "@nutritionBudgetInvalid": {
+    "description": "nutritionBudgetInvalid"
+  },
+  "nutritionCurrencyInvalid": "Введіть рівно 3 латинські літери (наприклад EUR).",
+  "@nutritionCurrencyInvalid": {
+    "description": "nutritionCurrencyInvalid"
+  },
+  "nutritionBudgetPair": "Укажіть суму й валюту або очистіть обидва поля.",
+  "@nutritionBudgetPair": {
+    "description": "nutritionBudgetPair"
+  },
+  "nutritionSavedTargets": "Збережені добові цілі",
+  "@nutritionSavedTargets": {
+    "description": "nutritionSavedTargets"
+  },
+  "nutritionEstimate": "Розрахунок — ще не збережено",
+  "@nutritionEstimate": {
+    "description": "nutritionEstimate"
+  },
+  "nutritionSummaryNote": "Збережені кроки вже в профілі. Цілі зміняться лише після явного збереження показаного розрахунку.",
+  "@nutritionSummaryNote": {
+    "description": "nutritionSummaryNote"
+  },
+  "nutritionCalculate": "Розрахувати цілі",
+  "@nutritionCalculate": {
+    "description": "nutritionCalculate"
+  },
+  "nutritionCalculating": "Обчислення…",
+  "@nutritionCalculating": {
+    "description": "nutritionCalculating"
+  },
+  "nutritionKeepTargets": "Залишити попередні цілі й повернутися на головну",
+  "@nutritionKeepTargets": {
+    "description": "nutritionKeepTargets"
+  },
+  "nutritionUseEstimate": "Замінити збережені цілі цим розрахунком",
+  "@nutritionUseEstimate": {
+    "description": "nutritionUseEstimate"
+  },
+  "nutritionApplyEstimate": "Підтвердити й зберегти показані цілі",
+  "@nutritionApplyEstimate": {
+    "description": "nutritionApplyEstimate"
+  },
+  "nutritionMissing": "Для розрахунку потрібні поля профілю:",
+  "@nutritionMissing": {
+    "description": "nutritionMissing"
+  },
+  "nutritionUnsupported": "Розрахунок для цього профілю недоступний. Збережені вподобання й цілі залишаються.",
+  "@nutritionUnsupported": {
+    "description": "nutritionUnsupported"
+  },
+  "nutritionReasonBirthDate": "Дата народження пізніша за дату розрахунку.",
+  "@nutritionReasonBirthDate": {
+    "description": "nutritionReasonBirthDate"
+  },
+  "nutritionReasonAge": "Розрахунок підтримує вік 19–78 років.",
+  "@nutritionReasonAge": {
+    "description": "nutritionReasonAge"
+  },
+  "nutritionReasonHeight": "Зріст поза діапазоном розрахунку (130–230 см).",
+  "@nutritionReasonHeight": {
+    "description": "nutritionReasonHeight"
+  },
+  "nutritionReasonWeight": "Вага поза діапазоном розрахунку (35–250 кг).",
+  "@nutritionReasonWeight": {
+    "description": "nutritionReasonWeight"
+  },
+  "nutritionReasonBmi": "ІМТ поза діапазоном розрахунку (від 18,5 до менше 40).",
+  "@nutritionReasonBmi": {
+    "description": "nutritionReasonBmi"
+  },
+  "nutritionReasonEnergy": "Енерговитрати поза підтримуваним діапазоном розрахунку.",
+  "@nutritionReasonEnergy": {
+    "description": "nutritionReasonEnergy"
+  },
+  "nutritionReasonCalories": "Калорії поза діапазоном розрахунку (1000–6000 ккал/день).",
+  "@nutritionReasonCalories": {
+    "description": "nutritionReasonCalories"
+  },
+  "nutritionCalories": "Калорії (ккал/день)",
+  "@nutritionCalories": {
+    "description": "nutritionCalories"
+  },
+  "nutritionProtein": "Білки (г/день)",
+  "@nutritionProtein": {
+    "description": "nutritionProtein"
+  },
+  "nutritionCarbs": "Вуглеводи (г/день)",
+  "@nutritionCarbs": {
+    "description": "nutritionCarbs"
+  },
+  "nutritionFat": "Жири (г/день)",
+  "@nutritionFat": {
+    "description": "nutritionFat"
+  },
+  "nutritionNotSet": "Не задано",
+  "@nutritionNotSet": {
+    "description": "nutritionNotSet"
+  },
+  "nutritionSaveInputsFirst": "Збережіть змінені кроки профілю перед розрахунком або підтвердженням цілей.",
+  "@nutritionSaveInputsFirst": {
+    "description": "nutritionSaveInputsFirst"
+  },
+  "nutritionCalculationDetails": "Дата: {date} · Правила: {rules}",
+  "@nutritionCalculationDetails": {
+    "description": "nutritionCalculationDetails",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "String"
+      }
+    }
   }
 }
