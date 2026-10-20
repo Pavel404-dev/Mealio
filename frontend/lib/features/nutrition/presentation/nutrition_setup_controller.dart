@@ -240,6 +240,15 @@ class NutritionSetupController extends ChangeNotifier {
           changes: NutritionPatch.formula(changes),
         );
         if (!checkOwnership()) return NutritionSaveResult.stale;
+        if (changes.entries.any(
+          (entry) => !nutritionValuesEqual(
+            entry.key,
+            entry.value,
+            profile.values[entry.key],
+          ),
+        )) {
+          throw const NutritionFailure(NutritionFailureType.unexpected);
+        }
         // Only this step is acknowledged. Other steps keep their input and
         // comparison baseline, including dirty edits made before revisiting.
         for (final field in fields) {
@@ -325,6 +334,7 @@ class NutritionSetupController extends ChangeNotifier {
           changes: patch,
         );
         if (!checkOwnership()) return NutritionSaveResult.stale;
+        _validatePreferenceAcknowledgement(profile.preferences, patch);
         _ackPreferences(profile.preferences, step);
       }
       if (!checkOwnership()) return NutritionSaveResult.stale;
@@ -339,6 +349,38 @@ class NutritionSetupController extends ChangeNotifier {
       failure = _safeFailure(error);
       notifyListeners();
       return NutritionSaveResult.rejected;
+    }
+  }
+
+  void _validatePreferenceAcknowledgement(
+    NutritionPreferences profile,
+    NutritionPatch patch,
+  ) {
+    // Compare only submitted fields. A mismatching response does not establish
+    // rollback: preserve the draft/baseline for an explicit retry.
+    for (final entry in patch.json.entries) {
+      final expected = entry.value;
+      final matches = switch (entry.key) {
+        'diet_type' => profile.diet == expected,
+        'max_cooking_time_minutes' => profile.cookingTime == expected,
+        'budget_currency' => profile.budget?.currency == expected,
+        'weekly_food_budget_amount' =>
+          expected == null
+              ? profile.budget == null
+              : profile.budget != null &&
+                    moneyCents(profile.budget!.amount) ==
+                        moneyCents(expected as String),
+        'allergies' => listEquals(profile.allergies, expected as List),
+        'liked_ingredients' => listEquals(profile.likes, expected as List),
+        'disliked_ingredients' => listEquals(
+          profile.dislikes,
+          expected as List,
+        ),
+        _ => false,
+      };
+      if (!matches) {
+        throw const NutritionFailure(NutritionFailureType.unexpected);
+      }
     }
   }
 

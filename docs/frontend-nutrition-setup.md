@@ -45,7 +45,12 @@ are omitted. No-change navigation sends no PATCH. Meals-per-day and targets
 are never included in preference or formula writes.
 
 Each successful PATCH immediately saves that step on the server. Its response
-acknowledges only that step; dirty input and comparison baselines of other steps
+must match every submitted field before the client acknowledges that step.
+Formula values use the existing numeric equality, money uses exact integer
+cents and currency, lists preserve order and duplicates, and explicit nulls
+must be confirmed. Unsubmitted fields need not match. A mismatch retains the
+step, draft and baseline for explicit retry, without a follow-up GET, automatic
+retry or compensation. Dirty input and comparison baselines of other steps
 survive. Back retains current-visit edits. Exit with unsaved edits offers
 stay/discard; saved steps are not undone. Failures retain input and position
 and allow an explicit retry. Timeout may have committed; there are no

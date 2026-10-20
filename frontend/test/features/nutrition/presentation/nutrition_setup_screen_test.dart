@@ -225,6 +225,68 @@ void main() {
     },
   );
 
+  for (final step in [0, 3, 4]) {
+    testWidgets(
+      'PATCH acknowledgement step $step rejects old response and retries explicitly',
+      (tester) async {
+        configure();
+        repository.json.addAll(nutritionJson(full: true));
+        await start(tester);
+        await open(tester);
+        for (var i = 0; i < step; i++) {
+          await tap(tester, 'nutrition-save');
+        }
+        final field = step == 3 ? 'diet' : 'budgetAmount';
+        if (step == 0) {
+          select(tester, NutritionField.goal, 'gain_weight');
+          await tester.pump();
+        } else {
+          await tester.ensureVisible(key('preference-$field'));
+          await tester.enterText(
+            find.descendant(
+              of: key('preference-$field'),
+              matching: find.byType(TextField),
+            ),
+            step == 3 ? 'custom diet' : '50,12',
+          );
+        }
+        repository.saveHandler = (_) async =>
+            NutritionProfile.fromJson(repository.json);
+        await tap(tester, 'nutrition-save');
+        expect(key('nutrition-error'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          key('nutrition-step'),
+          -250,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Step ${step + 1} of 6'), findsOneWidget);
+        expect(key('home-screen'), findsNothing);
+        expect(find.text('Profile saved.'), findsNothing);
+        expect(find.text('Previous step saved.'), findsNothing);
+        expect(repository.patches, hasLength(1));
+        expect(repository.loads, 1);
+        // A rejected acknowledgement retains dirty input: exit still asks.
+        await tap(tester, 'nutrition-exit');
+        expect(key('nutrition-stay'), findsOneWidget);
+        await tap(tester, 'nutrition-stay');
+        repository.saveHandler = null;
+        await tap(tester, 'nutrition-save');
+        await tester.scrollUntilVisible(
+          key('nutrition-step'),
+          -250,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Step ${step + 2} of 6'), findsOneWidget);
+        expect(key('nutrition-error'), findsNothing);
+        expect(repository.patches, hasLength(2));
+        expect(repository.patches.last, repository.patches.first);
+        expect(repository.loads, 1);
+      },
+    );
+  }
+
   testWidgets(
     'initial loading, safe error and retry; Back exits clean first step',
     (tester) async {
