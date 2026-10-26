@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate
+from app.schemas.ingredient_text import trim_ingredient_name
 from app.schemas.user_nutrition_profile import NutritionGoal
 
 MAX_AI_PANTRY_ITEMS = 50
@@ -111,10 +112,9 @@ class AIRecipeIngredientMatchSuggestionsRequest(BaseModel):
     @classmethod
     def normalize_and_validate_ingredient_names(cls, values: list[str]) -> list[str]:
         normalized_names: list[str] = []
-        normalized_keys: set[str] = set()
 
         for value in values:
-            normalized_name = value.strip()
+            normalized_name = trim_ingredient_name(value)
 
             if not normalized_name:
                 raise ValueError("Ingredient names cannot contain blank values")
@@ -122,13 +122,7 @@ class AIRecipeIngredientMatchSuggestionsRequest(BaseModel):
             if len(normalized_name) > 255:
                 raise ValueError("Ingredient name is too long")
 
-            normalized_key = normalized_name.casefold()
-
-            if normalized_key in normalized_keys:
-                raise ValueError("Ingredient names must be unique")
-
             normalized_names.append(normalized_name)
-            normalized_keys.add(normalized_key)
 
         return normalized_names
 

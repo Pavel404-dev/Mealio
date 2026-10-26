@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
+from tests.db_target import target_url, verify_connection, verify_asyncpg
 
 PARENT = "e9c4a7b2d610"
 REVISION = "f3b197a01c02"
@@ -64,18 +65,12 @@ class MigrationDatabase:
 
     async def execute(self, sql, params=None):
         async with self.engine.begin() as connection:
-            assert (
-                await connection.scalar(text("SELECT current_database()"))
-                == "mealio_test"
-            )
+            await verify_connection(connection)
             return await connection.execute(text(sql), params or {})
 
     async def reset(self):
         async with self.engine.begin() as connection:
-            assert (
-                await connection.scalar(text("SELECT current_database()"))
-                == "mealio_test"
-            )
+            await verify_connection(connection)
             await connection.execute(text("DROP SCHEMA public CASCADE"))
             await connection.execute(text("CREATE SCHEMA public"))
 
@@ -98,9 +93,7 @@ class MigrationDatabase:
             timeout=10,
         )
         try:
-            assert (
-                await connection.fetchval("SELECT current_database()") == "mealio_test"
-            )
+            await verify_asyncpg(connection)
             await connection.execute("SET statement_timeout = '60s'")
             await connection.execute("SET lock_timeout = '10s'")
             # Submit the complete, unmodified output, including BEGIN/COMMIT.
@@ -201,28 +194,9 @@ class MigrationDatabase:
 async def migration_db():
     # Never fall back to DATABASE_URL, a developer .env or an arbitrary target.
     raw_url = os.environ["TEST_DATABASE_URL"]
-    url = make_url(raw_url)
-    assert (url.drivername, url.host, url.port, url.database, url.username) == (
-        "postgresql+asyncpg",
-        "localhost",
-        5432,
-        "mealio_test",
-        "mealio_user",
-    )
+    url, _ = target_url()
     assert make_url(get_settings().database_url) == url
 
-    def guard_connection(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("SELECT current_database()")
-            assert cursor.fetchone() == ("mealio_test",)
-            cursor.execute("SET statement_timeout = '60s'")
-            cursor.execute("SET lock_timeout = '10s'")
-        finally:
-            cursor.close()
-
-    # Also guard physical connections created internally by Alembic env.py.
-    event.listen(Engine, "connect", guard_connection)
     database = MigrationDatabase(raw_url)
     try:
         await database.reset()
@@ -233,7 +207,6 @@ async def migration_db():
             await database.reset()
         finally:
             await database.engine.dispose()
-            event.remove(Engine, "connect", guard_connection)
 
 
 @pytest.mark.parametrize("portions", [[], ["0.01", "100.000", "999999.99"]])

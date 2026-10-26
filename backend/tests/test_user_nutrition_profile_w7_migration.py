@@ -10,6 +10,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 from tests import test_ingredient_portion_migration as portion_migration
+from tests.db_target import verify_asyncpg
 
 migration_db = portion_migration.migration_db
 
@@ -45,7 +46,7 @@ async def upgrade_likes(db, mode):
         timeout=10,
     )
     try:
-        assert await connection.fetchval("SELECT current_database()") == "mealio_test"
+        await verify_asyncpg(connection)
         await connection.execute("SET statement_timeout = '60s'")
         await connection.execute("SET lock_timeout = '10s'")
         try:
@@ -122,4 +123,5 @@ async def test_likes_additive_upgrade_lossy_downgrade_reupgrade(
         await db.execute("SELECT version_num FROM alembic_version")
     ).scalar_one() == REVISION
     # Real migrated schema must agree with model metadata.
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)

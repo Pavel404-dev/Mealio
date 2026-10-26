@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Text, bindparam, cast, column, delete, func, or_, select
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +12,20 @@ from app.models.ingredient import Ingredient, NutritionValue, UserIngredient
 from app.models.recipe import RecipeIngredient
 from app.repositories.exceptions import DuplicateResourceError
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+
+
+def is_ingredient_name_conflict(error: IntegrityError) -> bool:
+    # asyncpg's structured server error is the adapter exception's cause.
+    current = error.orig
+    seen = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, "sqlstate", None) == "23505" and getattr(
+            current, "constraint_name", None
+        ) in {"ux_ingredients_identity_v1", "ix_ingredients_name"}:
+            return True
+        current = current.__cause__
+    return False
 
 
 class IngredientsRepository:
@@ -27,13 +42,25 @@ class IngredientsRepository:
         stmt = (
             select(Ingredient)
             .options(selectinload(Ingredient.nutrition_value))
-            .order_by(Ingredient.name.asc())
+            .order_by(Ingredient.name.collate("C").asc(), Ingredient.id.asc())
             .limit(limit)
             .offset(offset)
         )
 
-        if search:
-            stmt = stmt.where(Ingredient.name.ilike(f"%{search}%"))
+        if search is not None:
+            query = (
+                select(func.public.mealio_ingredient_key_v1(search).label("key"))
+                .cte("search_key")
+                .prefix_with("MATERIALIZED")
+            )
+            query_key = select(query.c.key).scalar_subquery()
+            name_key = func.public.mealio_ingredient_key_v1(Ingredient.name)
+            stmt = stmt.where(
+                or_(
+                    func.char_length(query_key) == 0,
+                    func.strpos(name_key.collate("C"), query_key.collate("C")) > 0,
+                )
+            )
 
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
@@ -52,30 +79,42 @@ class IngredientsRepository:
         stmt = (
             select(Ingredient)
             .options(selectinload(Ingredient.nutrition_value))
-            .where(func.lower(Ingredient.name) == name.lower())
+            .where(
+                func.public.mealio_ingredient_bits_v1(Ingredient.name)
+                == func.public.mealio_ingredient_bits_v1(name)
+            )
         )
 
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def list_by_exact_names_case_insensitive(
-        self,
-        names: list[str],
-    ) -> list[Ingredient]:
-        if not names:
-            return []
-
-        normalized_names = [name.lower() for name in names]
-        stmt = select(Ingredient).where(
-            func.lower(Ingredient.name).in_(normalized_names)
+    async def match_exact_names(self, names: list[str]):
+        inputs = (
+            func.unnest(cast(bindparam("names"), ARRAY(Text)))
+            .table_valued(column("name", Text), with_ordinality="ordinal")
+            .render_derived(name="inputs")
         )
-
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
+        keyed = select(
+            inputs.c.ordinal,
+            inputs.c.name,
+            func.public.mealio_ingredient_bits_v1(inputs.c.name).label("key"),
+        ).cte("keyed")
+        counted = select(
+            keyed, func.count().over(partition_by=keyed.c.key).label("duplicates")
+        ).cte("counted")
+        statement = (
+            select(counted.c.ordinal, counted.c.name, counted.c.duplicates, Ingredient)
+            .outerjoin(
+                Ingredient,
+                func.public.mealio_ingredient_bits_v1(Ingredient.name) == counted.c.key,
+            )
+            .order_by(counted.c.ordinal)
+        )
+        return (await self.db.execute(statement, {"names": names})).all()
 
     async def create(self, data: IngredientCreate) -> Ingredient:
         ingredient = Ingredient(
-            name=data.name.strip(),
+            name=data.name,
             category=data.category.strip() if data.category else None,
         )
 
@@ -94,9 +133,11 @@ class IngredientsRepository:
             await self.db.commit()
         except IntegrityError as exc:
             await self.db.rollback()
-            raise DuplicateResourceError(
-                "Ingredient with this name already exists"
-            ) from exc
+            if is_ingredient_name_conflict(exc):
+                raise DuplicateResourceError(
+                    "Ingredient with this name already exists"
+                ) from exc
+            raise
 
         created = await self.get_by_id(ingredient.id)
         if created is None:
@@ -112,7 +153,7 @@ class IngredientsRepository:
         update_data = data.model_dump(exclude_unset=True)
 
         if "name" in update_data and data.name is not None:
-            ingredient.name = data.name.strip()
+            ingredient.name = data.name
 
         if "category" in update_data:
             ingredient.category = data.category.strip() if data.category else None
@@ -138,9 +179,11 @@ class IngredientsRepository:
             await self.db.commit()
         except IntegrityError as exc:
             await self.db.rollback()
-            raise DuplicateResourceError(
-                "Ingredient with this name already exists"
-            ) from exc
+            if is_ingredient_name_conflict(exc):
+                raise DuplicateResourceError(
+                    "Ingredient with this name already exists"
+                ) from exc
+            raise
 
         updated = await self.get_by_id(ingredient.id)
         if updated is None:

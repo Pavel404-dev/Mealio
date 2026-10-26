@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import HTTPException, status
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.exceptions import DuplicateResourceError
@@ -38,17 +39,21 @@ class IngredientsService:
         self,
         ingredient_names: list[str],
     ) -> AIRecipeIngredientMatchSuggestionsResponse:
-        ingredients = await self.repository.list_by_exact_names_case_insensitive(
-            ingredient_names
-        )
-        ingredients_by_name = {
-            ingredient.name.casefold(): ingredient for ingredient in ingredients
-        }
+        matches = await self.repository.match_exact_names(ingredient_names)
+        if any(row.duplicates > 1 for row in matches):
+            raise RequestValidationError(
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("body", "ingredient_names"),
+                        "msg": "Value error, Ingredient names must be unique",
+                        "ctx": {"error": ValueError("Ingredient names must be unique")},
+                    }
+                ]
+            )
 
         results: list[AIRecipeIngredientMatchSuggestion] = []
-
-        for generated_name in ingredient_names:
-            ingredient = ingredients_by_name.get(generated_name.casefold())
+        for _ordinal, generated_name, _duplicates, ingredient in matches:
             exact_match = None
 
             if ingredient is not None:
@@ -79,7 +84,7 @@ class IngredientsService:
         return ingredient
 
     async def create_ingredient(self, data: IngredientCreate):
-        existing = await self.repository.get_by_name(data.name.strip())
+        existing = await self.repository.get_by_name(data.name)
 
         if existing is not None:
             raise HTTPException(
@@ -103,7 +108,7 @@ class IngredientsService:
         ingredient = await self.get_ingredient(ingredient_id)
 
         if data.name is not None:
-            existing = await self.repository.get_by_name(data.name.strip())
+            existing = await self.repository.get_by_name(data.name)
 
             if existing is not None and existing.id != ingredient_id:
                 raise HTTPException(

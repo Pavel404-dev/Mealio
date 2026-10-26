@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.ingredient_text import trim_ingredient_name
+
 
 class NutritionValueBase(BaseModel):
     calories: Decimal = Field(..., ge=0)
@@ -68,6 +70,8 @@ class IngredientBase(BaseModel):
 class IngredientCreate(IngredientBase):
     nutrition_value: NutritionValueCreate | None = None
 
+    _trim_name = field_validator("name", mode="before")(trim_ingredient_name)
+
 
 class IngredientUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -75,6 +79,8 @@ class IngredientUpdate(BaseModel):
     nutrition_value: NutritionValueCreate | None = None
 
     model_config = ConfigDict(str_strip_whitespace=True)
+
+    _trim_name = field_validator("name", mode="before")(trim_ingredient_name)
 
     @field_validator("name")
     @classmethod
