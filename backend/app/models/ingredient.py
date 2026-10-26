@@ -6,6 +6,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Numeric,
     String,
     UniqueConstraint,
@@ -15,6 +16,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.ddl import ingredient_identity_v1 as identity
+from app.db.ingredient_identity import register_identity_ddl
 
 
 class Ingredient(Base):
@@ -51,6 +54,11 @@ class Ingredient(Base):
         cascade="all, delete-orphan",
     )
 
+    __table_args__ = (
+        CheckConstraint(identity.CHECK_EXPRESSION, name=identity.CHECK),
+        Index(identity.INDEX, func.public.mealio_ingredient_bits_v1(name), unique=True),
+    )
+
     user_ingredients = relationship(
         "UserIngredient",
         back_populates="ingredient",
@@ -60,6 +68,9 @@ class Ingredient(Base):
         "RecipeIngredient",
         back_populates="ingredient",
     )
+
+
+register_identity_ddl(Ingredient.__table__)
 
 
 class NutritionValue(Base):

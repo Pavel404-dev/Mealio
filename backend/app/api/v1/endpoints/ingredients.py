@@ -1,4 +1,7 @@
 import uuid
+from typing import Annotated
+
+from pydantic import AfterValidator
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,13 +11,16 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.ingredient import IngredientCreate, IngredientRead, IngredientUpdate
 from app.services.ingredients import IngredientsService
+from app.schemas.ingredient_text import validate_storage_text
 
 router = APIRouter(prefix="/ingredients", tags=["Ingredients"])
 
 
 @router.get("", response_model=list[IngredientRead])
 async def list_ingredients(
-    search: str | None = Query(default=None, min_length=1),
+    search: Annotated[str, AfterValidator(validate_storage_text)] | None = Query(
+        default=None, min_length=1
+    ),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),

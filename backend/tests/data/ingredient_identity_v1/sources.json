@@ -1,0 +1,27 @@
+{
+  "CaseFolding15": {
+    "url": "https://www.unicode.org/Public/15.0.0/ucd/CaseFolding.txt",
+    "sha256": "cdd49e55eae3bbf1f0a3f6580c974a0263cb86a6a08daa10fbf705b4808a56f7",
+    "bytes": 84690
+  },
+  "UnicodeData15": {
+    "url": "https://www.unicode.org/Public/15.0.0/ucd/UnicodeData.txt",
+    "sha256": "806e9aed65037197f1ec85e12be6e8cd870fc5608b4de0fffd990f689f376a73",
+    "bytes": 1913704
+  },
+  "NormalizationTest15": {
+    "url": "https://www.unicode.org/Public/15.0.0/ucd/NormalizationTest.txt",
+    "sha256": "fb9ac8cc154a80cad6caac9897af55a4e75176af6f4e2bb6edc2bf8b1d57f326",
+    "bytes": 2625136
+  },
+  "NormalizationTest16": {
+    "url": "https://www.unicode.org/Public/16.0.0/ucd/NormalizationTest.txt",
+    "sha256": "d811971453e7075e1ad56fb1b301eece5aa80757b81f6156e74a1bfb3ae5ceb1",
+    "bytes": 2798671
+  },
+  "UnicodeData16": {
+    "url": "https://www.unicode.org/Public/16.0.0/ucd/UnicodeData.txt",
+    "sha256": "ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f",
+    "bytes": 2175362
+  }
+}

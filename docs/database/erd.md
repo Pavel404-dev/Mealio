@@ -1,6 +1,6 @@
 # Mealio Database Schema
 
-This document describes the initial database schema for the Mealio application.
+This document describes Mealio tables; the ingredient/reference sections below reflect W8 core.
 
 Mealio is a mobile application that allows users to manage available ingredients, generate recipes using AI, calculate nutritional values, and create meal plans.
 
@@ -35,7 +35,7 @@ erDiagram
     users ||--o{ meal_plans : owns
     users ||--o{ recipe_ai_requests : sends
 
-    ingredients ||--|| nutrition_values : has
+    ingredients ||--o| nutrition_values : has
     ingredients ||--o{ user_ingredients : stored_in
     ingredients ||--o{ recipe_ingredients : used_in
 
@@ -83,7 +83,6 @@ erDiagram
         string name
         string category
         datetime created_at
-        datetime updated_at
     }
 
     nutrition_values {
@@ -100,8 +99,8 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid ingredient_id FK
-        decimal quantity
-        string unit
+        decimal quantity_g
+        datetime expires_at
         datetime created_at
         datetime updated_at
     }
@@ -126,10 +125,7 @@ erDiagram
         uuid id PK
         uuid recipe_id FK
         uuid ingredient_id FK
-        decimal quantity
-        string unit
-        datetime created_at
-        datetime updated_at
+        decimal quantity_g
     }
 
     meal_plans {
@@ -228,17 +224,17 @@ olive oil
 | Field | Type | Description |
 |---|---|---|
 | id | UUID | Primary key |
-| name | String | Ingredient name |
-| category | String | Ingredient category |
+| name | VARCHAR(255), NOT NULL | Human-readable base label, independent of locale |
+| category | VARCHAR(100), nullable | Optional free text, no taxonomy |
 | created_at | DateTime | Record creation date |
-| updated_at | DateTime | Last update date |
 
 ### Constraints
 
 | Constraint | Description |
 |---|---|
 | Primary Key | `id` |
-| Recommended Unique | `name` |
+| Unique | Raw `ix_ingredients_name` and full Unicode15 expression `ux_ingredients_identity_v1` |
+| CHECK | `ck_ingredients_identity_v1_valid`: normalized key length 1..1020 |
 
 ### Example Categories
 
@@ -255,6 +251,10 @@ other
 ```
 
 ---
+
+UUID remains the sole reference identity; labels are not IDs. Future translated
+display labels need separate storage/API. Existing labels are not rewritten.
+See [identity policy, migration and recovery](../ingredient-identity.md).
 
 ## 3. nutrition_values
 
@@ -305,28 +305,17 @@ This table represents the user's pantry.
 | id | UUID | Primary key |
 | user_id | UUID | Foreign key to `users.id` |
 | ingredient_id | UUID | Foreign key to `ingredients.id` |
-| quantity | Decimal | Ingredient quantity |
-| unit | String | Measurement unit |
+| quantity_g | Numeric(10,2) | Quantity in grams |
+| expires_at | DateTime, nullable | Expiration date/time |
 | created_at | DateTime | Record creation date |
 | updated_at | DateTime | Last update date |
-
-### Example Units
-
-```txt
-g
-kg
-ml
-l
-pcs
-tbsp
-tsp
-```
 
 ### Constraints
 
 | Constraint | Description |
 |---|---|
 | Primary Key | `id` |
+| Unique | `(user_id, ingredient_id)` |
 | Foreign Key | `user_id` references `users.id` |
 | Foreign Key | `ingredient_id` references `ingredients.id` |
 
@@ -413,10 +402,7 @@ This table creates a many-to-many relationship between `recipes` and `ingredient
 | id | UUID | Primary key |
 | recipe_id | UUID | Foreign key to `recipes.id` |
 | ingredient_id | UUID | Foreign key to `ingredients.id` |
-| quantity | Decimal | Ingredient quantity used in the recipe |
-| unit | String | Measurement unit |
-| created_at | DateTime | Record creation date |
-| updated_at | DateTime | Last update date |
+| quantity_g | Numeric(10,2) | Ingredient grams used in the recipe |
 
 ### Constraints
 
@@ -554,7 +540,7 @@ failed
 | users → recipes | One-to-many | One user can create many recipes |
 | users → meal_plans | One-to-many | One user can have many meal plans |
 | users → recipe_ai_requests | One-to-many | One user can send many AI requests |
-| ingredients → nutrition_values | One-to-one | One ingredient has one nutrition profile |
+| ingredients → nutrition_values | One-to-zero-or-one | One ingredient may have a nutrition record |
 | ingredients → user_ingredients | One-to-many | One ingredient can appear in many user pantries |
 | ingredients → recipe_ingredients | One-to-many | One ingredient can be used in many recipes |
 | recipes → recipe_ingredients | One-to-many | One recipe contains many ingredients |

@@ -2,11 +2,13 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from alembic.script import ScriptDirectory
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.db.ingredient_identity import register_alembic_validator, validate_identity_ddl
 import app.models  # noqa: F401
 
 config = context.config
@@ -18,6 +20,7 @@ settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 target_metadata = Base.metadata
+register_alembic_validator()
 
 
 def run_migrations_offline() -> None:
@@ -44,6 +47,18 @@ def do_run_migrations(connection) -> None:
 
     with context.begin_transaction():
         context.run_migrations()
+
+        # Even a no-op online `upgrade head` must reject altered v1 helpers.
+        # Offline generation cannot inspect the target; its executable DDL
+        # performs its own checks when run against the parent schema.
+        script = ScriptDirectory.from_config(config)
+        installed = {
+            revision.revision
+            for head in context.get_context().get_current_heads()
+            for revision in script.iterate_revisions(head, "base")
+        }
+        if "b205c8d15a01" in installed:
+            validate_identity_ddl(connection)
 
 
 async def run_async_migrations() -> None:

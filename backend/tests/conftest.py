@@ -14,6 +14,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+from tests.db_target import before_connect, after_connect, verify_connection
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -35,6 +39,13 @@ os.environ.setdefault(
     "test_auth_abuse_pepper_with_more_than_32_chars",
 )
 os.environ.pop("OPENAI_API_KEY", None)
+
+# Tests must never load a developer .env, even when all required values are set.
+from app.core.config import Settings
+
+Settings.model_config["env_file"] = None
+event.listen(Engine, "do_connect", before_connect)
+event.listen(Engine, "connect", after_connect)
 
 from app.api.deps import (
     get_email_verification_mailer,
@@ -89,12 +100,14 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     )
 
     async with engine.begin() as connection:
+        await verify_connection(connection)
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
 
     yield engine
 
     async with engine.begin() as connection:
+        await verify_connection(connection)
         await connection.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
