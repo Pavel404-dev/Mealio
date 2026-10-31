@@ -2,19 +2,20 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.ingredient import IngredientRead
+from app.schemas.storage_decimal import QuantityWrite
 
 
 class PantryItemCreate(BaseModel):
     ingredient_id: uuid.UUID
-    quantity_g: Decimal = Field(..., gt=0)
+    quantity_g: QuantityWrite
     expires_at: datetime | None = None
 
 
 class PantryItemUpdate(BaseModel):
-    quantity_g: Decimal | None = Field(default=None, gt=0)
+    quantity_g: QuantityWrite | None = None
     expires_at: datetime | None = None
 
 

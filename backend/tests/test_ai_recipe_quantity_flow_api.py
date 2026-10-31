@@ -185,16 +185,16 @@ async def test_generated_quantity_g_flows_through_explicit_match_and_save(
             )
         ).scalar_one()
         assert Decimal(str(recipe_ingredient.quantity_g)) == Decimal("200.25")
-        quantity_g = Decimal(str(generated_ingredient["quantity_g"]))
-        nutrition_factor = quantity_g / Decimal("100")
-
-        assert Decimal(str(saved["total_calories"])) == (
-            Decimal("165") * nutrition_factor
-        )
-        assert Decimal(str(saved["total_protein_g"])) == (
-            Decimal("31") * nutrition_factor
-        )
-        assert Decimal(str(saved["total_carbs_g"])) == (Decimal("0") * nutrition_factor)
-        assert Decimal(str(saved["total_fat_g"])) == (Decimal("3.6") * nutrition_factor)
+        # W9: creation response and independent-session storage must agree
+        # after final HALF_UP rounding, while the exact mass remains 200.25 g.
+        reloaded = await db_session.get(Recipe, UUID(saved["id"]))
+        for field, expected in {
+            "total_calories": "330.41",
+            "total_protein_g": "62.08",
+            "total_carbs_g": "0.00",
+            "total_fat_g": "7.21",
+        }.items():
+            assert Decimal(saved[field]) == Decimal(expected)
+            assert getattr(reloaded, field) == Decimal(expected)
     finally:
         app.dependency_overrides.pop(get_recipe_generation_provider, None)

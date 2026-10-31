@@ -5,6 +5,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.storage_decimal import QuantityWrite
+
 
 @dataclass(frozen=True)
 class RecipeNutritionTotals:
@@ -20,7 +22,7 @@ class RecipeIngredientBase(BaseModel):
 
 
 class RecipeIngredientCreate(RecipeIngredientBase):
-    pass
+    quantity_g: QuantityWrite
 
 
 class RecipeIngredientRead(RecipeIngredientBase):

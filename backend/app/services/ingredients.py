@@ -13,11 +13,13 @@ from app.schemas.ai_recipe import (
     AIRecipeIngredientMatchSuggestionsResponse,
 )
 from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.services.nutrition_transaction import nutrition_transaction
 from app.services.recipe_nutrition import RecipeNutritionCalculator
 
 
 class IngredientsService:
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.repository = IngredientsRepository(db)
         self.recipes_repository = RecipesRepository(db)
         self.nutrition_calculator = RecipeNutritionCalculator()
@@ -105,43 +107,45 @@ class IngredientsService:
         ingredient_id: uuid.UUID,
         data: IngredientUpdate,
     ):
-        ingredient = await self.get_ingredient(ingredient_id)
+        async with nutrition_transaction(self.db):
+            ingredient = await self.get_ingredient(ingredient_id)
 
-        if data.name is not None:
-            existing = await self.repository.get_by_name(data.name)
+            if data.name is not None:
+                existing = await self.repository.get_by_name(data.name)
 
-            if existing is not None and existing.id != ingredient_id:
+                if existing is not None and existing.id != ingredient_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Ingredient with this name already exists",
+                    )
+
+            try:
+                updated_ingredient = await self.repository.update(ingredient, data)
+            except DuplicateResourceError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Ingredient with this name already exists",
-                )
+                    detail=str(exc),
+                ) from exc
 
-        try:
-            updated_ingredient = await self.repository.update(ingredient, data)
-        except DuplicateResourceError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=str(exc),
-            ) from exc
+            if data.nutrition_value is not None:
+                await self._recalculate_recipes_using_ingredient(ingredient_id)
 
-        if data.nutrition_value is not None:
-            await self._recalculate_recipes_using_ingredient(ingredient_id)
-
-        return updated_ingredient
+            return updated_ingredient
 
     async def delete_ingredient(self, ingredient_id: uuid.UUID) -> None:
-        await self.get_ingredient(ingredient_id)
+        async with nutrition_transaction(self.db):
+            await self.get_ingredient(ingredient_id)
 
-        is_used_in_recipes = await self.repository.is_used_in_recipes(ingredient_id)
-        is_used_in_pantry = await self.repository.is_used_in_pantry(ingredient_id)
+            is_used_in_recipes = await self.repository.is_used_in_recipes(ingredient_id)
+            is_used_in_pantry = await self.repository.is_used_in_pantry(ingredient_id)
 
-        if is_used_in_recipes or is_used_in_pantry:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Ingredient is used and cannot be deleted",
-            )
+            if is_used_in_recipes or is_used_in_pantry:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ingredient is used and cannot be deleted",
+                )
 
-        await self.repository.delete(ingredient_id)
+            await self.repository.delete(ingredient_id)
 
     async def _recalculate_recipes_using_ingredient(
         self,

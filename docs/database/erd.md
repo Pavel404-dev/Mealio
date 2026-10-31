@@ -602,6 +602,8 @@ recipes.total_fat_g
 
 ---
 
+See [W9 numeric writes, rounding, and atomic transaction/lock order](../nutrition-storage-consistency.md) for gram-based calculations.
+
 ### AI Request Storage
 
 AI requests are stored separately from recipes.
