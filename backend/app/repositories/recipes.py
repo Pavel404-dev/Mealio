@@ -29,6 +29,7 @@ class RecipesRepository:
             select(Ingredient)
             .options(selectinload(Ingredient.nutrition_value))
             .where(Ingredient.id.in_(ingredient_ids))
+            .execution_options(populate_existing=True)
         )
         result = await self.db.execute(stmt)
 
@@ -177,6 +178,7 @@ class RecipesRepository:
             select(Recipe)
             .options(selectinload(Recipe.recipe_ingredients))
             .where(Recipe.id == recipe_id)
+            .execution_options(populate_existing=True)
         )
 
         if created_by_user_id is not None:
@@ -199,6 +201,8 @@ class RecipesRepository:
                 .selectinload(Ingredient.nutrition_value)
             )
             .where(RecipeIngredient.ingredient_id == ingredient_id)
+            .order_by(Recipe.id)
+            .execution_options(populate_existing=True)
         )
 
         result = await self.db.execute(stmt)
@@ -233,7 +237,7 @@ class RecipesRepository:
         ]
 
         self.db.add(recipe)
-        await self.db.commit()
+        await self.db.flush()
 
         created = await self.get_by_id(
             recipe.id,
@@ -285,7 +289,7 @@ class RecipesRepository:
                 for item in data.ingredients
             )
 
-        await self.db.commit()
+        await self.db.flush()
 
         updated = await self.get_by_id(recipe.id)
 
@@ -314,7 +318,7 @@ class RecipesRepository:
             recipe.total_carbs_g = nutrition_totals.total_carbs_g
             recipe.total_fat_g = nutrition_totals.total_fat_g
 
-        await self.db.commit()
+        await self.db.flush()
 
     async def is_used_in_meal_plan_items(self, recipe_id: uuid.UUID) -> bool:
         stmt = (
@@ -328,4 +332,4 @@ class RecipesRepository:
         stmt = delete(Recipe).where(Recipe.id == recipe_id)
 
         await self.db.execute(stmt)
-        await self.db.commit()
+        await self.db.flush()

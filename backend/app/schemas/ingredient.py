@@ -5,6 +5,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.ingredient_text import trim_ingredient_name
+from app.schemas.storage_decimal import NutrientWrite
 
 
 class NutritionValueBase(BaseModel):
@@ -36,7 +37,10 @@ class NutritionValueBase(BaseModel):
 
 
 class NutritionValueCreate(NutritionValueBase):
-    pass
+    calories: NutrientWrite
+    protein_g: NutrientWrite = Decimal("0")
+    carbs_g: NutrientWrite = Decimal("0")
+    fat_g: NutrientWrite = Decimal("0")
 
 
 class NutritionValueRead(NutritionValueBase):

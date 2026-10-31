@@ -15,6 +15,7 @@ from app.repositories import ingredients as repository_module
 from app.repositories.ingredients import IngredientsRepository
 from app.schemas.ingredient import IngredientCreate
 from app.services.ingredients import IngredientsService
+from app.services import nutrition_transaction as transaction_module
 from tests.test_ingredient_portion_api import create_dependencies, fresh_state
 from tests.test_ingredients_api import create_authenticated_user
 
@@ -89,9 +90,26 @@ async def test_concurrent_rename_conflicts_rollback_without_recalculation(
 
     async def lookup(self, name):
         result = await original_lookup(self, name)
-        async with asyncio.timeout(10):
-            await barrier.wait()
+        if kind == "create_rename":
+            # Create does not take the nutrition gate: retain the W8 witness
+            # that both lookups miss and the database resolves the conflict.
+            async with asyncio.timeout(10):
+                await barrier.wait()
         return result
+
+    if kind == "rename_rename":
+        original_lock = transaction_module.lock_nutrition_writes
+
+        async def synchronized_lock(db):
+            # W9 serializes PATCH before reading mutable state. Synchronizing
+            # after lookup would deadlock the test itself behind that gate.
+            async with asyncio.timeout(10):
+                await barrier.wait()
+            await original_lock(db)
+
+        monkeypatch.setattr(
+            transaction_module, "lock_nutrition_writes", synchronized_lock
+        )
 
     def classify(error):
         cause = error.orig.__cause__
@@ -128,7 +146,11 @@ async def test_concurrent_rename_conflicts_rollback_without_recalculation(
         )
     assert sum(r.status_code == 409 for r in responses) == 1
     assert sum(r.status_code in (200, 201) for r in responses) == 1
-    assert observed == [("23505", "ux_ingredients_identity_v1")]
+    # The second serialized PATCH must see the committed name and reject it
+    # before mutation; create/PATCH still exercises the database race mapping.
+    assert observed == (
+        [] if kind == "rename_rename" else [("23505", "ux_ingredients_identity_v1")]
+    )
     for i, response in enumerate(responses):
         if response.status_code == 409:
             assert (

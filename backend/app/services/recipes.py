@@ -17,6 +17,7 @@ from app.schemas.recipe import (
     RecipeUpdate,
 )
 from app.schemas.user_nutrition_profile import UserNutritionProfileRead
+from app.services.nutrition_transaction import nutrition_transaction
 from app.services.recipe_nutrition import RecipeNutritionCalculator
 from app.services.recipe_suggestion_personalization import (
     RecipeSuggestionPersonalization,
@@ -26,6 +27,7 @@ from app.services.recipe_suggestion_personalization import (
 
 class RecipesService:
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.repository = RecipesRepository(db)
         self.user_nutrition_profiles_repository = UserNutritionProfilesRepository(db)
         self.nutrition_calculator = RecipeNutritionCalculator()
@@ -184,38 +186,7 @@ class RecipesService:
         user_id: uuid.UUID,
         data: RecipeCreate,
     ):
-        ingredients_by_id = await self._get_existing_ingredients_by_id(data.ingredients)
-        self._validate_all_ingredients_exist(
-            ingredients=data.ingredients,
-            ingredients_by_id=ingredients_by_id,
-        )
-
-        nutrition_totals = self.nutrition_calculator.calculate_from_ingredient_inputs(
-            ingredients=data.ingredients,
-            ingredients_by_id=ingredients_by_id,
-        )
-
-        return await self.repository.create(
-            created_by_user_id=user_id,
-            data=data,
-            nutrition_totals=nutrition_totals,
-        )
-
-    async def update_recipe(
-        self,
-        *,
-        user_id: uuid.UUID,
-        recipe_id: uuid.UUID,
-        data: RecipeUpdate,
-    ):
-        recipe = await self.get_recipe(
-            user_id=user_id,
-            recipe_id=recipe_id,
-        )
-
-        nutrition_totals: RecipeNutritionTotals | None = None
-
-        if data.ingredients is not None:
+        async with nutrition_transaction(self.db):
             ingredients_by_id = await self._get_existing_ingredients_by_id(
                 data.ingredients
             )
@@ -231,11 +202,48 @@ class RecipesService:
                 )
             )
 
-        return await self.repository.update(
-            recipe=recipe,
-            data=data,
-            nutrition_totals=nutrition_totals,
-        )
+            return await self.repository.create(
+                created_by_user_id=user_id,
+                data=data,
+                nutrition_totals=nutrition_totals,
+            )
+
+    async def update_recipe(
+        self,
+        *,
+        user_id: uuid.UUID,
+        recipe_id: uuid.UUID,
+        data: RecipeUpdate,
+    ):
+        async with nutrition_transaction(self.db):
+            recipe = await self.get_recipe(
+                user_id=user_id,
+                recipe_id=recipe_id,
+            )
+
+            nutrition_totals: RecipeNutritionTotals | None = None
+
+            if data.ingredients is not None:
+                ingredients_by_id = await self._get_existing_ingredients_by_id(
+                    data.ingredients
+                )
+                self._validate_all_ingredients_exist(
+                    ingredients=data.ingredients,
+                    ingredients_by_id=ingredients_by_id,
+                )
+
+                nutrition_totals = (
+                    self.nutrition_calculator.calculate_from_ingredient_inputs(
+                        ingredients=data.ingredients,
+                        ingredients_by_id=ingredients_by_id,
+                    )
+                )
+
+            return await self.repository.update(
+                recipe=recipe,
+                data=data,
+                nutrition_totals=nutrition_totals,
+            )
 
     async def delete_recipe(
         self,
@@ -243,17 +251,18 @@ class RecipesService:
         user_id: uuid.UUID,
         recipe_id: uuid.UUID,
     ) -> None:
-        recipe = await self.get_recipe(
-            user_id=user_id,
-            recipe_id=recipe_id,
-        )
-
-        if await self.repository.is_used_in_meal_plan_items(recipe.id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Recipe is used in meal plans and cannot be deleted",
+        async with nutrition_transaction(self.db):
+            recipe = await self.get_recipe(
+                user_id=user_id,
+                recipe_id=recipe_id,
             )
-        await self.repository.delete(recipe.id)
+
+            if await self.repository.is_used_in_meal_plan_items(recipe.id):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Recipe is used in meal plans and cannot be deleted",
+                )
+            await self.repository.delete(recipe.id)
 
     async def _get_existing_ingredients_by_id(
         self,

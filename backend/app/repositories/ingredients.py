@@ -70,6 +70,7 @@ class IngredientsRepository:
             select(Ingredient)
             .options(selectinload(Ingredient.nutrition_value))
             .where(Ingredient.id == ingredient_id)
+            .execution_options(populate_existing=True)
         )
 
         result = await self.db.execute(stmt)
@@ -176,7 +177,7 @@ class IngredientsRepository:
                 ingredient.nutrition_value.portion_g = data.nutrition_value.portion_g
 
         try:
-            await self.db.commit()
+            await self.db.flush()
         except IntegrityError as exc:
             await self.db.rollback()
             if is_ingredient_name_conflict(exc):
@@ -214,4 +215,4 @@ class IngredientsRepository:
     async def delete(self, ingredient_id: uuid.UUID) -> None:
         stmt = delete(Ingredient).where(Ingredient.id == ingredient_id)
         await self.db.execute(stmt)
-        await self.db.commit()
+        await self.db.flush()

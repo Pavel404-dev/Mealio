@@ -89,3 +89,5 @@ Only disposable `localhost:5432/mealio_test` was authorized for local F3
 verification. This runbook does not authorize modifications to `mealio`, staging
 or production. Metadata-created test schemas and genuine parent-revision Alembic
 tests are separate evidence; coverage alone cannot prove migration correctness.
+
+See [W9 numeric writes, rounding, and atomic transaction/lock order](nutrition-storage-consistency.md) for gram-based calculations.

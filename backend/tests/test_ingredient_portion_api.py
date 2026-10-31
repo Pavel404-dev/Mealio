@@ -1,6 +1,6 @@
 """F3 HTTP and fresh-session witnesses, without depending on future fix code."""
 
-from decimal import Decimal
+from decimal import Context, Decimal, ROUND_HALF_UP, localcontext
 from uuid import UUID
 
 import pytest
@@ -231,11 +231,14 @@ async def test_valid_post_patch_round_trip_and_calculations(
     summary = await client.get(f"{PANTRY}/summary", headers=headers)
     assert reloaded.status_code == summary.status_code == 200
     for nutrient, amount in NUTRIENTS.items():
-        total = Decimal(amount) * (Decimal("0.01") / expected)
-        assert Decimal(summary.json()[f"total_{nutrient}"]) == total
-        assert Decimal(reloaded.json()[f"total_{nutrient}"]) == total.quantize(
-            Decimal("0.01")
-        )
+        # W9 Pantry keeps a 51-significant-digit sum for one row; recipes
+        # persist only the final HALF_UP two-place total.
+        with localcontext(Context(prec=51, rounding=ROUND_HALF_UP)):
+            total = Decimal(amount) * Decimal("0.01") / expected
+            assert Decimal(summary.json()[f"total_{nutrient}"]) == total
+            assert Decimal(reloaded.json()[f"total_{nutrient}"]) == total.quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
 
 
 @pytest.mark.parametrize("explicit_null", [False, True])

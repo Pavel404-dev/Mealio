@@ -76,6 +76,17 @@ class ShoppingListService:
                 if self._to_decimal(item.get("missing_quantity_g")) > Decimal("0")
             ]
 
+            # The owner lock stabilizes stock. SQL demand is an exact sum of
+            # stored quantities; validate the resulting stock before any upsert.
+            if any(
+                item["required_quantity_g"] > Decimal("99999999.99")
+                for item in items_to_add
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Pantry quantity exceeds storage bounds",
+                )
+
             skipped_items_count = len(shopping_list_items) - len(items_to_add)
 
             updated_pantry_items = await self.repository.add_missing_items_to_pantry(
