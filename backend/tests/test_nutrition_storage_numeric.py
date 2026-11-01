@@ -208,6 +208,7 @@ def test_repeating_ratios_around_and_exactly_at_half_ties(count, portion, expect
         "total_carbs_g",
         "total_fat_g",
         "nutrition_value",
+        "per_100g",
     ],
 )
 @pytest.mark.parametrize("level", ["root", "ingredient"])
@@ -226,7 +227,7 @@ def test_ai_boundaries_reject_nutrient_injection(field, level, boundary):
         schema = AIRecipeSavePreviewRequest
         payload["ingredients"][0]["ingredient_id"] = uuid4()
     target = payload if level == "root" else payload["ingredients"][0]
-    target[field] = "42"
+    target[field] = {"calories": "42.00"} if field == "per_100g" else "42"
     with pytest.raises(ValidationError):
         schema.model_validate(payload)
 
