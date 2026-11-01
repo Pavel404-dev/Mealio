@@ -1,8 +1,10 @@
 # Gram-based nutrition writes and transaction ownership (W9 foundation)
 
-Nutrients still describe the stored `portion_g` (default 100 g). No schema,
-provider, per-100g representation, historical repair, or missing-data change is
-introduced. The F3 portion contract and omitted/null nutrition semantics remain
+Nutrients still describe the stored `portion_g` (default 100 g). No persistent
+schema, provider, historical repair, or missing-data change is introduced.
+The additive [per-100g read projection](nutrition-per100g-read.md) uses the same
+exact scaling and final rounding helpers; aggregates never consume it.
+The F3 portion contract and omitted/null nutrition semantics remain
 in [the portion contract](ingredient-portion-storage.md). Omitted macros remain
 zero. Decimal responses remain JSON strings.
 

@@ -2,10 +2,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from app.schemas.ingredient_text import trim_ingredient_name
 from app.schemas.storage_decimal import NutrientWrite
+from app.services.gram_nutrition import NUTRIENTS, nutrient_per_100g
 
 
 class NutritionValueBase(BaseModel):
@@ -43,11 +44,35 @@ class NutritionValueCreate(NutritionValueBase):
     fat_g: NutrientWrite = Decimal("0")
 
 
+class NutritionPer100gRead(BaseModel):
+    """Rounded presentation values, independent of source storage limits."""
+
+    calories: Decimal = Field(description="Kilocalories per 100 g, rounded HALF_UP.")
+    protein_g: Decimal = Field(
+        description="Grams of protein per 100 g, rounded HALF_UP."
+    )
+    carbs_g: Decimal = Field(description="Grams of carbs per 100 g, rounded HALF_UP.")
+    fat_g: Decimal = Field(description="Grams of fat per 100 g, rounded HALF_UP.")
+
+
 class NutritionValueRead(NutritionValueBase):
     id: uuid.UUID
     ingredient_id: uuid.UUID
 
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field(
+        description="Computed from the returned nutrients and portion_g; two decimal "
+        "places. Rounded zeros do not imply exact zero or complete nutrition data."
+    )
+    @property
+    def per_100g(self) -> NutritionPer100gRead:
+        return NutritionPer100gRead(
+            **{
+                field: nutrient_per_100g(getattr(self, field), self.portion_g)
+                for field in NUTRIENTS
+            }
+        )
 
 
 class IngredientBase(BaseModel):

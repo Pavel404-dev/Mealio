@@ -49,6 +49,64 @@ void main() {
     expect(item.ingredient.nutritionValue?.portionG, 100);
   });
 
+  test('per_100g preserves legacy source values, portions, and identity', () {
+    for (final example in const [
+      (calories: '100.00', portion: '50.00', projected: '200.00'),
+      (calories: '1.00', portion: '200.01', projected: '0.50'),
+      (calories: '0.01', portion: '999999.99', projected: '0.00'),
+      (calories: '999999.99', portion: '0.01', projected: '9999999900.00'),
+    ]) {
+      final json = itemJson();
+      final ingredient = json['ingredient']! as Map<String, dynamic>;
+      final nutrition = ingredient['nutrition_value']! as Map<String, dynamic>;
+      nutrition.addAll({
+        'calories': example.calories,
+        'protein_g': '0.00',
+        'carbs_g': '0.00',
+        'fat_g': '0.00',
+        'portion_g': example.portion,
+      });
+      final legacy = PantryItem.fromJson(json);
+      nutrition['per_100g'] = {
+        'calories': example.projected,
+        'protein_g': '0.00',
+        'carbs_g': '0.00',
+        'fat_g': '0.00',
+      };
+
+      final projected = PantryItem.fromJson(json);
+      expect(projected, legacy);
+      expect(projected.hashCode, legacy.hashCode);
+      expect(Ingredient.fromJson(ingredient), legacy.ingredient);
+      expect(
+        projected.ingredient.nutritionValue?.calories,
+        double.parse(example.calories),
+      );
+      expect(
+        projected.ingredient.nutritionValue?.portionG,
+        double.parse(example.portion),
+      );
+      expect(projected.ingredient.nutritionValue?.proteinG, 0);
+    }
+  });
+
+  test('per_100g does not replace missing or malformed source fields', () {
+    final json = itemJson();
+    final nutrition =
+        (json['ingredient']! as Map<String, dynamic>)['nutrition_value']!
+            as Map<String, dynamic>;
+    nutrition['per_100g'] = {
+      'calories': '200.00',
+      'protein_g': '0.00',
+      'carbs_g': '0.00',
+      'fat_g': '0.00',
+    };
+    nutrition.remove('calories');
+    expect(() => PantryItem.fromJson(json), throwsFormatException);
+    nutrition['calories'] = 100;
+    expect(() => PantryItem.fromJson(json), throwsFormatException);
+  });
+
   test('accepts nullable expiry, category, and nutrition', () {
     final json = itemJson();
     json['expires_at'] = null;

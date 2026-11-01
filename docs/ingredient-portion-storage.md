@@ -91,3 +91,5 @@ or production. Metadata-created test schemas and genuine parent-revision Alembic
 tests are separate evidence; coverage alone cannot prove migration correctness.
 
 See [W9 numeric writes, rounding, and atomic transaction/lock order](nutrition-storage-consistency.md) for gram-based calculations.
+See [the per-100g read contract](nutrition-per100g-read.md) for the computed
+`nutrition_value.per_100g` response field, which does not change this storage basis.

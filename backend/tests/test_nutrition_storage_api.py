@@ -6,6 +6,8 @@ from uuid import UUID
 import pytest
 from sqlalchemy import func, select
 
+from app.api.deps import get_recipe_generation_provider
+from app.main import app
 from app.models.ingredient import NutritionValue, UserIngredient
 from app.models.recipe import Recipe
 from tests.test_ai_recipe_save_api import (
@@ -113,16 +115,23 @@ async def test_invalid_writes_do_not_mutate_and_exact_forms_reload(
         "total_protein_g",
         "total_carbs_g",
         "total_fat_g",
+        "per_100g",
     ],
 )
 async def test_ai_save_http_rejects_injected_nutrients(
-    client, async_session_maker, level, field
+    client, async_session_maker, monkeypatch, level, field
 ):
+    def no_provider():
+        raise AssertionError("AI save must not resolve the provider")
+
+    monkeypatch.setitem(
+        app.dependency_overrides, get_recipe_generation_provider, no_provider
+    )
     _, headers = await create_authenticated_user(client)
     ingredient = await create_ingredient(client, headers=headers)
     payload = save_payload(ingredient)
     target = payload if level == "root" else payload["ingredients"][0]
-    target[field] = "999"
+    target[field] = {"calories": "999.00"} if field == "per_100g" else "999"
     response = await client.post(AI_RECIPE_SAVE_URL, headers=headers, json=payload)
     assert response.status_code == 422
     async with async_session_maker() as db:
