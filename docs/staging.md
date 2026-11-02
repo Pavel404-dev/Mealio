@@ -4,6 +4,15 @@ This is the preparation and future operator runbook for Issue #165. No Railway
 project, service, database, domain, variables, or deployment was created by this
 change. The dashboard and CLI steps below are for the user to perform later.
 
+That preparation statement describes #165. For last observed delivery, see the
+dated [project status snapshot](project-status.md); this runbook is not live state.
+Use the [delivery record rules](development-workflow.md#deployment-decisions-and-qa)
+to record Done / Pending / Deferred / N/A, the target, backend SHA, observation
+date, deployment ID and sanitized evidence in the linked PR. The owner records
+post-merge results there; the final handoff links to them. Record scoped QA
+separately, including checks not run or blocked. Retain old observation dates
+when runtime is unavailable; a merge or green CI does not establish deployment.
+
 Use one Railway project with a persistent `staging` environment containing two
 separate services: `backend` and `Postgres`. PostgreSQL owns its own persistent
 volume; the backend has no volume. Use only disposable synthetic accounts and
