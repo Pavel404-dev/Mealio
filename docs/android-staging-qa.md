@@ -7,6 +7,15 @@ origin. The URL is public configuration; it is the only `dart-define`. Never
 put credentials, tokens, SMTP settings, or OpenAI keys in build defines.
 Use disposable synthetic QA accounts and data.
 
+See the dated [project status snapshot](project-status.md) and
+[delivery record rules](development-workflow.md#deployment-decisions-and-qa).
+The owner records post-merge build and QA evidence in the linked PR; the final
+handoff links to it. Record build run/source SHA/date separately from each QA
+outcome (PASS / FAIL / NOT_RUN / BLOCKED / N/A), scenario and evidence. An APK
+build without installation leaves device QA NOT_RUN. Record the backend's own
+observed SHA/as-of independently; do not infer it from the APK or merge SHA.
+Explain skipped, blocked or inapplicable checks and the next action.
+
 ## Build contract
 
 The workflow runs automatically when a push to `main` changes `frontend/**`,

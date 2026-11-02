@@ -16,6 +16,11 @@ GoRouter, Dio, and flutter_secure_storage.
 - Use `main` only as an explicitly selected comparison base, and verify the
   relevant refs before relying on it.
 - Historical chats and project checkpoints are supporting context only.
+- At task start, read [project status](docs/project-status.md) and check the
+  observation dates, scopes, SHAs, and linked evidence against current refs and
+  instructions. It is a dated delivery snapshot, not live state or renewed
+  permission. Resolve discrepancies from fresh sources; mark unavailable facts
+  unknown or blocked instead of inferring them from an old checkpoint.
 - Before changing code, inspect the relevant implementation, tests, Git history,
   and documentation. Do not assume an earlier architecture still exists.
 - Preserve unrelated and user-authored changes in a dirty worktree.
@@ -170,3 +175,20 @@ Before handoff, always run `git diff --check`, inspect the complete diff and
 status, report every check actually run, and state clearly what could not be
 verified. Do not treat a task as complete while relevant CI or review findings
 remain unresolved.
+
+## Task handoff
+
+End each task with a short, evidence-based handoff following the
+[development workflow](docs/development-workflow.md#task-handoff): branch/HEAD,
+worktree/index state, result, checks actually run or reused with their source
+SHA/date, and checks not run with reasons. Separate CI, owner/human/automated
+review, deployment decision, APK build, and scoped QA outcomes. Include accepted
+decisions and limitations, evidence links, resources or local artifacts left
+behind, and the next owner action. Every task needs a deployment decision
+(Done, Pending with next action, Deferred with reason, or N/A with reason).
+
+Keep accepted knowledge in existing topic docs or linked rationale; link to it
+instead of copying the transcript, credentials, or private data. The user records
+post-merge evidence in the linked PR; refresh the repository snapshot in a normal
+agreed branch when appropriate, without status-only commit loops or dirty `main`.
+An old handoff never renews database, role, cleanup, or deployment permissions.

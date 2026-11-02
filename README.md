@@ -23,6 +23,13 @@ The project is currently under active development.
 
 ## Project Status
 
+For dated delivery observations, verified feature/artifact SHAs and scoped QA,
+see the [project status snapshot](docs/project-status.md). It is not a live
+dashboard. The [development workflow](docs/development-workflow.md) defines
+authoritative sources, human-owned delivery actions and task handoffs.
+Railway staging has recorded delivery evidence in that snapshot; operational
+instructions are in the [staging runbook](docs/staging.md).
+
 ### Implemented
 
 The backend currently includes:
@@ -70,7 +77,7 @@ The following functionality is planned for future development:
 * AI recipe classification;
 * personalized nutrition recommendations;
 * Flutter mobile application integration;
-* production or staging deployment.
+* production deployment.
 
 ## Architecture
 
@@ -568,7 +575,9 @@ The workflow includes:
 
 ## Git Workflow
 
-Development is organized with issues, branches, pull requests, and squash merges.
+Development follows the human-owned [development workflow](docs/development-workflow.md)
+with issues, branches, pull requests, required checks and review. The commands
+below are for the owner; agent restrictions are in [AGENTS.md](AGENTS.md).
 
 Typical workflow:
 

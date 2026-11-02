@@ -28,8 +28,9 @@ perform the prohibited Git or GitHub mutations listed in [AGENTS.md](../AGENTS.m
 4. Run the smallest relevant local check first, then the full affected suite.
    Follow the commands and database-safety rules in `AGENTS.md`. Report only
    checks that actually ran.
-5. Open a small PR linked to the issue and complete the PR template. Keep its
-   title and commits focused on the same outcome.
+5. Open a small PR linked to the issue and complete the PR template, including
+   the deployment decision and scoped QA outcomes. Keep its title and commits
+   focused on the same outcome.
 6. The author reviews the complete diff. When available, an independent human
    reviewer checks the behavior examples, compatibility, concrete risks, tests,
    and security or migration implications. If no independent reviewer is
@@ -38,6 +39,8 @@ perform the prohibited Git or GitHub mutations listed in [AGENTS.md](../AGENTS.m
    establish review when Copilot could not complete it.
 7. Merge only after required reviews and GitHub Actions pass. `main` is not an
    integration branch for unreviewed work.
+8. After merge, the owner records post-merge CI, deployment, APK and actual QA
+   evidence in that PR; the final handoff links to it.
 
 The current Actions workflows run backend quality checks, migrations, backend
 tests, a backend image build, and Flutter format, analysis, and tests for PRs
@@ -46,6 +49,94 @@ QA APK after frontend changes reach `main`. These checks complement relevant
 local verification and review.
 For the complete local Flutter checks from the repository root, run
 `bash scripts/check-frontend.sh`.
+
+## Sources and freshness
+
+| Source | Role |
+| --- | --- |
+| Current Git `HEAD`, worktree, migrations/tests and topic docs | Implementation, contracts and accepted semantics; follow the source hierarchy in `AGENTS.md`. |
+| PR, Actions runs and sanitized receipts | Observed review, CI, artifact, deployment and scoped QA evidence, tied to a SHA and date. |
+| Notion | Roadmap and progress; not runtime or implementation evidence. |
+| [Project status](project-status.md) | Compact dated index of the last verified delivery, open decisions and next action. |
+| Portable checkpoint/handoff | Short index linking the above sources, not a chat transcript or new authority. |
+
+At task start, read the status snapshot, current instructions and relevant topic
+docs; check branch/HEAD, worktree/index and relevant refs. Inspect each reused
+observation's date, source SHA, scope and evidence. An old snapshot need not
+match today's HEAD. Resolve discrepancies by checking fresh authoritative
+sources, not by changing documents from memory. If evidence or runtime access
+is unavailable, preserve the last observation's date/source and mark the current
+fact unknown or the dependent check BLOCKED. Do not run new runtime checks solely
+to refresh a documentation snapshot.
+
+Record substantial accepted decisions and constraints in existing topic docs or
+linked rationale alongside the implementation. A checkpoint links to that
+knowledge instead of copying it. No ADR is required for every change; avoid new
+archive trees, transcripts and large command journals. Keep raw/private evidence
+outside Git and publish only sanitized references.
+
+## Deployment decisions and QA
+
+Every task needs an explicit deployment decision; every merge does not need a
+deployment. Record the target, relevant source/artifact SHA, date and evidence:
+
+| Decision | Required record |
+| --- | --- |
+| Done | Actual delivery to the named target, verified SHA, observation date and evidence; limit the claim to the checks performed. |
+| Pending | Delivery still needed, reason and concrete next action/owner. |
+| Deferred | Reason for postponement and the follow-up or condition for reconsidering it. |
+| N/A | Reason deployment does not apply, for example documentation-only changes. |
+
+Record QA separately as **PASS / FAIL / NOT_RUN / BLOCKED / N/A**, with the
+scenario/scope, environment/device when applicable, source/artifact SHA, date and
+evidence. Explain FAIL, skipped, blocked or inapplicable checks and the next step.
+Record APK build/run evidence independently of installation/device results and
+the backend's own deployed SHA/as-of date. Health/OpenAPI checks do not establish
+business-flow E2E. Automated review and green CI are not human approval.
+
+The repository status is a snapshot, not a live dashboard. Its SHA identifies a
+verified feature/artifact, not the containing documentation commit. Never invent
+a future SHA. The owner keeps post-merge evidence in the linked PR; refresh the
+snapshot in an ordinary agreed task branch when appropriate. Do not require a
+new commit after every CI transition, merge or deploy, or leave dirty `main` after
+handoff. A docs-only commit retains the last verified backend SHA.
+
+The existing Backend/Frontend workflows run on PRs to `main` and pushes to `main`
+without path filters, including docs-only changes; they remain delivery gates.
+The Android workflow has its own path filters. Docs-only changes do not match
+those filters and need no manual APK build or deployment. Relevant local checks for
+docs-only work are complete-diff review, `git diff --check`, changed Markdown
+links/anchors and rendered-document review; no local DB/Flutter suites are needed
+solely for Markdown edits.
+
+Use these cases when reviewing the delivery record:
+
+| Case | Honest record and next step |
+| --- | --- |
+| Feature merged, CI green, staging still on an older SHA | Deployment Pending with next owner action, or Deferred with reason; retain the backend's observed SHA/date. |
+| APK build passed, no installation | Record build/run SHA; device QA NOT_RUN. Record backend SHA/as-of independently before dependent flow checks. |
+| Docs-only PR | Deployment N/A with reason; keep the backend SHA. Owner records later CI in the PR, without self-reference commits. |
+| Old snapshot, runtime unavailable | Retain dated evidence; validate current refs/instructions, mark current state unknown or QA BLOCKED, and identify the missing access/evidence. Old permissions do not resume. |
+
+## Task handoff
+
+End each task with a short record, linking evidence instead of copying history:
+
+- Branch/HEAD and worktree/index state; task result and remaining delivery work.
+- Checks run, reused and not run, with results, source SHA/date and reasons or
+  limitations. Reused evidence must not read as a new execution.
+- CI and review status, separating owner, independent human and automated review;
+  deployment decision; APK build and scoped QA outcomes with evidence links.
+- Accepted decisions/constraints and links to topic docs or rationale; unresolved
+  decisions and limits on what the evidence proves.
+- Resources left running, local artifact paths, and concrete next action/owner.
+
+Do not include transcripts, credentials or private data. Old checkpoints do not
+renew database, role, cleanup or deployment permissions; check current authority
+for the specific target/action. Git/GitHub mutations remain human-owned under
+`AGENTS.md`. The final post-merge handoff links to the PR's delivery evidence;
+an implementation handoff must label commit/push/PR, final-SHA CI and review as
+outstanding when they have not happened.
 
 ## Local development and Codex Cloud
 
