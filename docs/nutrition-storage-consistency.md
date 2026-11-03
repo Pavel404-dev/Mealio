@@ -1,7 +1,9 @@
 # Gram-based nutrition writes and transaction ownership (W9 foundation)
 
-Nutrients still describe the stored `portion_g` (default 100 g). No persistent
-schema, provider, historical repair, or missing-data change is introduced.
+Nutrients still describe the stored `portion_g` (default 100 g). The #207
+foundation introduced no persistent schema, provider, historical repair or
+missing-data change. Subsequent [declared provenance](nutrition-provenance.md)
+adds nullable metadata to the same row and transaction without changing arithmetic.
 The additive [per-100g read projection](nutrition-per100g-read.md) uses the same
 exact scaling and final rounding helpers; aggregates never consume it.
 The F3 portion contract and omitted/null nutrition semantics remain
@@ -97,8 +99,10 @@ owners, without exposing those recipes through a user endpoint.
 Previously accepted lossy numeric writes now receive 422. Existing exact writes,
 portion storage, auth, identity, ownership and response fields remain compatible.
 Pantry repeating decimals can carry more digits; Flutter must continue decoding
-Decimal JSON strings. No persistent schema change or migration is needed.
-Reverting the application patch preserves data and references but reopens stale
+Decimal JSON strings. The #207 foundation itself needed no migration.
+Reverting #207 preserves data and references but reopens stale
 recipe totals and numeric coercion risks; it does not restore historical inputs.
+After #213 provenance use, every nutrition writer and application rollback target
+must also be metadata-aware; see the [cutover runbook](nutrition-provenance.md#owner-delivery-runbook-supported-writers-and-rollback).
 DB verification requires fresh target-specific approval under AGENTS.md and
 issue #207. CI, review and owner delivery remain separate gates.

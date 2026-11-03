@@ -292,6 +292,16 @@ Railway activates a deployment only after HTTP 200; an unsuccessful check leaves
 it failed. This is a deployment gate, not continuous database monitoring. See
 [Railway health checks](https://docs.railway.com/deployments/healthchecks).
 
+## Nutrition provenance writer cutover
+
+For #213, follow the [declared provenance delivery runbook](nutrition-provenance.md#owner-delivery-runbook-supported-writers-and-rollback)
+before migration/cutover or any application rollback. Nullable columns do not make
+legacy nutrient writers safe once metadata is used. Record the exact metadata-aware
+deployment SHA, all active writers/scripts and persisted response/read-back before
+enabling provenance use. Use a metadata-aware rollback artifact; if none exists,
+fix forward or keep nutrition mutations unavailable until compatible code returns.
+This is operational policy, not an application switch or approval to stop services.
+
 ## Rollback
 
 1. Select the same project, `staging` environment, and `backend` service. Disable

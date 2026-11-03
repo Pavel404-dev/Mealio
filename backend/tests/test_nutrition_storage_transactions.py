@@ -39,6 +39,8 @@ async def setup(maker):
                         "calories": "100.000",
                         "protein_g": "1.2300",
                         "portion_g": "50",
+                        "source_name": "Synthetic source A",
+                        "source_reference": "record:A",
                     },
                 )
             )
@@ -68,6 +70,10 @@ async def snapshot(maker):
                     NutritionValue.calories,
                     NutritionValue.protein_g,
                     NutritionValue.portion_g,
+                    NutritionValue.carbs_g,
+                    NutritionValue.fat_g,
+                    NutritionValue.source_name,
+                    NutritionValue.source_reference,
                 )
                 .join(NutritionValue)
                 .order_by(Ingredient.id)
@@ -119,6 +125,11 @@ async def test_stored_values_and_unaffected_counterexample(async_session_maker):
         r for r in after[1] if r[0] == recipes[2]
     )
     assert before[2] == after[2]
+    changed = next(r for r in after[0] if r[0] == ids[0])
+    assert changed[-2:] == (None, None)
+    assert next(r for r in before[0] if r[0] == ids[2]) == next(
+        r for r in after[0] if r[0] == ids[2]
+    )
 
 
 @pytest.mark.parametrize(
@@ -175,6 +186,8 @@ async def test_patch_rolls_back_every_field_and_all_recipes(
             nutrition_value={
                 "calories": "999999.99" if failure == "overflow" else "200",
                 "portion_g": "0.01" if failure == "overflow" else "50",
+                "source_name": "Synthetic source B",
+                "source_reference": "record:B",
             },
         )
         with pytest.raises(
@@ -216,6 +229,7 @@ async def test_recipe_overflow_rolls_back_composition(async_session_maker, opera
         "nutrient_then_create",
         "replace_then_nutrient",
         "nutrient_then_replace",
+        "source_then_category",
     ],
 )
 async def test_concurrent_writers_refresh_after_wait(
@@ -248,7 +262,14 @@ async def test_concurrent_writers_refresh_after_wait(
     async def update_nutrient(db, ingredient_id, calories):
         await IngredientsService(db).update_ingredient(
             ingredient_id,
-            IngredientUpdate(nutrition_value={"calories": calories, "portion_g": "50"}),
+            IngredientUpdate(
+                nutrition_value={
+                    "calories": calories,
+                    "portion_g": "50",
+                    "source_name": "Synthetic source B",
+                    "source_reference": "record:B",
+                }
+            ),
         )
 
     async def create(db):
@@ -278,7 +299,17 @@ async def test_concurrent_writers_refresh_after_wait(
                 )
                 for i in ids:
                     retained.append(await IngredientsRepository(db).get_by_id(i))
-            if pair == "two_nutrients":
+            if pair == "source_then_category":
+                if name == "first":
+                    await update_nutrient(db, ids[0], "200")
+                else:
+                    updated = await IngredientsService(db).update_ingredient(
+                        ids[0], IngredientUpdate(category="after wait")
+                    )
+                    assert updated.nutrition_value.source_name == "Synthetic source B"
+                    assert updated.nutrition_value.source_reference == "record:B"
+                    assert updated.nutrition_value.calories == 200
+            elif pair == "two_nutrients":
                 await update_nutrient(
                     db,
                     ids[0] if name == "first" else ids[1],
@@ -319,11 +350,20 @@ async def test_concurrent_writers_refresh_after_wait(
                 task.cancel()
         await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 5)
     async with async_session_maker() as db:
+        source = await db.scalar(
+            select(NutritionValue).where(NutritionValue.ingredient_id == ids[0])
+        )
+        assert (
+            source.source_name == "Synthetic source B"
+            and source.source_reference == "record:B"
+        )
         values = dict(
             (await db.execute(select(Recipe.id, Recipe.total_calories))).all()
         )
         if pair == "two_nutrients":
             assert values[recipes[0]] == Decimal("1250.00")
+        elif pair == "source_then_category":
+            assert values[recipes[0]] == Decimal("750.00")
         elif "replace" in pair:
             assert values[recipes[0]] == Decimal("300.00")
             members = (

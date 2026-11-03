@@ -81,6 +81,10 @@ class NutritionValue(Base):
             "portion_g BETWEEN 0.01 AND 999999.99",
             name="ck_nutrition_values_portion_g_bounds",
         ),
+        CheckConstraint(
+            "source_reference IS NULL OR source_name IS NOT NULL",
+            name="ck_nutrition_values_source_pair",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -128,6 +132,9 @@ class NutritionValue(Base):
         default=Decimal("100"),
         server_default="100",
     )
+
+    source_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_reference: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     ingredient = relationship(
         "Ingredient",

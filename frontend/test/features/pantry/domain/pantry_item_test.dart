@@ -90,6 +90,50 @@ void main() {
     }
   });
 
+  test(
+    'declared provenance preserves original numeric parsing and identity',
+    () {
+      final json = itemJson();
+      final ingredient = json['ingredient']! as Map<String, dynamic>;
+      final nutrition = ingredient['nutrition_value']! as Map<String, dynamic>;
+      nutrition.addAll({
+        'calories': '100.00',
+        'protein_g': '10.00',
+        'carbs_g': '20.00',
+        'fat_g': '5.00',
+        'portion_g': '50.00',
+        'per_100g': {'calories': '200.00'},
+      });
+      final absent = PantryItem.fromJson(json);
+      for (final metadata in [
+        {'source_name': null, 'source_reference': null},
+        {
+          'source_name': 'Synthetic label v1',
+          'source_reference': 'qa-pack:rev-1',
+        },
+      ]) {
+        nutrition.addAll(metadata);
+        final parsed = PantryItem.fromJson(json);
+        expect(parsed, absent);
+        expect(parsed.hashCode, absent.hashCode);
+        expect(Ingredient.fromJson(ingredient), absent.ingredient);
+        expect(
+          NutritionValue.fromJson(nutrition),
+          absent.ingredient.nutritionValue,
+        );
+        expect(parsed.ingredient.nutritionValue?.calories, 100);
+        expect(parsed.ingredient.nutritionValue?.proteinG, 10);
+        expect(parsed.ingredient.nutritionValue?.carbsG, 20);
+        expect(parsed.ingredient.nutritionValue?.fatG, 5);
+        expect(parsed.ingredient.nutritionValue?.portionG, 50);
+      }
+      nutrition.remove('calories');
+      expect(() => PantryItem.fromJson(json), throwsFormatException);
+      nutrition['calories'] = 100;
+      expect(() => PantryItem.fromJson(json), throwsFormatException);
+    },
+  );
+
   test('per_100g does not replace missing or malformed source fields', () {
     final json = itemJson();
     final nutrition =

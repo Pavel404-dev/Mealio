@@ -12,6 +12,8 @@ fractional digits, rounded once at the presentation boundary with `ROUND_HALF_UP
   "carbs_g": "3.00",
   "fat_g": "0.00",
   "portion_g": "50.00",
+  "source_name": null,
+  "source_reference": null,
   "per_100g": {
     "calories": "200.00",
     "protein_g": "4.00",
@@ -22,6 +24,8 @@ fractional digits, rounded once at the presentation boundary with `ROUND_HALF_UP
 ```
 
 The example omits the unchanged `id` and `ingredient_id` fields for brevity.
+[Declared provenance](nutrition-provenance.md) is optional, unverified metadata
+on the nutrition record, outside `per_100g`; it never enters this calculation.
 Original nutrient fields still describe the saved `portion_g`. No values, UUIDs,
 portions, or saved recipe totals are rewritten to produce a read response.
 
@@ -46,7 +50,7 @@ Existing nested-write semantics remain:
 | Input | Create | PATCH |
 | --- | --- | --- |
 | Omitted or null `nutrition_value` | No nutrition row | Preserve current nutrition |
-| Nutrition object | Create the supplied nutrient set | Replace the entire nutrient set |
+| Nutrition object | Create the supplied nutrient set and declaration | Replace the entire nutrient set and declaration; omitted source becomes null |
 | Omitted macros inside an object | Default each to zero | Default each to zero |
 | Omitted `portion_g` inside an object | Default to 100 g | Default to 100 g |
 
