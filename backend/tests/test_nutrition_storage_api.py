@@ -26,7 +26,13 @@ async def test_invalid_writes_do_not_mutate_and_exact_forms_reload(
 ):
     _, headers = await create_authenticated_user(client)
     ingredient = await create_ingredient(
-        client, headers=headers, name="W9 API original", calories="100", portion_g="50"
+        client,
+        headers=headers,
+        name="W9 API original",
+        calories="100",
+        portion_g="50",
+        source_name="Synthetic source A",
+        source_reference="record:A",
     )
     for value in ["1.234", "1000000", True, "NaN", "1e-99"]:
         response = await client.patch(
@@ -35,7 +41,11 @@ async def test_invalid_writes_do_not_mutate_and_exact_forms_reload(
             json={
                 "name": "should not persist",
                 "category": "changed",
-                "nutrition_value": {"calories": value},
+                "nutrition_value": {
+                    "calories": value,
+                    "source_name": "Synthetic source B",
+                    "source_reference": "record:B",
+                },
             },
         )
         assert response.status_code == 422
@@ -94,7 +104,12 @@ async def test_invalid_writes_do_not_mutate_and_exact_forms_reload(
         json={
             "name": "overflow name",
             "category": "overflow",
-            "nutrition_value": {"calories": "999999.99", "portion_g": "0.01"},
+            "nutrition_value": {
+                "calories": "999999.99",
+                "portion_g": "0.01",
+                "source_name": "Synthetic source B",
+                "source_reference": "record:B",
+            },
         },
     )
     assert response.status_code == 422
@@ -116,6 +131,8 @@ async def test_invalid_writes_do_not_mutate_and_exact_forms_reload(
         "total_carbs_g",
         "total_fat_g",
         "per_100g",
+        "source_name",
+        "source_reference",
     ],
 )
 async def test_ai_save_http_rejects_injected_nutrients(

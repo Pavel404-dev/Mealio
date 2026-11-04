@@ -12,6 +12,7 @@ from app.schemas.ingredient import (
     IngredientCreate,
     IngredientRead,
     IngredientUpdate,
+    NutritionValueCreate,
     NutritionValueRead,
 )
 from app.schemas.pantry import PantryItemRead
@@ -128,6 +129,8 @@ def test_writes_ignore_projection_and_keep_existing_extra_policy(schema, injecte
         "carbs_g": Decimal("0"),
         "fat_g": Decimal("0"),
         "portion_g": Decimal("100"),
+        "source_name": None,
+        "source_reference": None,
     }
 
 
@@ -200,6 +203,21 @@ def test_openapi_uses_read_projection_only():
     assert read["properties"]["per_100g"]["readOnly"] is True
     assert "per_100g" in read["required"]
     assert "per_100g" not in components["NutritionValueCreate"]["properties"]
+    for field, limit in [("source_name", 255), ("source_reference", 1000)]:
+        write = components["NutritionValueCreate"]["properties"][field]
+        assert (
+            NutritionValueCreate.model_json_schema()["properties"][field]["default"]
+            is None
+        )
+        assert write["anyOf"] == [
+            {"type": "string", "maxLength": limit, "minLength": 1},
+            {"type": "null"},
+        ]
+        assert field not in components["NutritionValueCreate"]["required"]
+        assert read["properties"][field]["anyOf"] == [
+            {"type": "string"},
+            {"type": "null"},
+        ]
     assert "per_100g" not in NutritionValueRead.model_json_schema()["properties"]
     for field in NUTRIENTS:
         assert (

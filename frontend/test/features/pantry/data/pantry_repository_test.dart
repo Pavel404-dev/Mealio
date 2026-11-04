@@ -93,78 +93,90 @@ void main() {
   });
 
   for (final includeProjection in [false, true]) {
-    test(
-      'read responses preserve stored portions (per_100g=$includeProjection)',
-      () async {
-        final ingredient = Map<String, dynamic>.from(
-          firstItemJson['ingredient']! as Map,
-        );
-        ingredient['nutrition_value'] = {
-          'id': 'nutrition-1',
-          'ingredient_id': 'ingredient-1',
-          'calories': '100.00',
-          'protein_g': '2.00',
-          'carbs_g': '3.00',
-          'fat_g': '0.00',
-          'portion_g': '50.00',
-          if (includeProjection)
-            'per_100g': {
-              'calories': '200.00',
-              'protein_g': '4.00',
-              'carbs_g': '6.00',
-              'fat_g': '0.00',
+    for (final sourceState in ['absent', 'null', 'present']) {
+      test(
+        'read responses preserve stored portions (per_100g=$includeProjection, source=$sourceState)',
+        () async {
+          final ingredient = Map<String, dynamic>.from(
+            firstItemJson['ingredient']! as Map,
+          );
+          ingredient['nutrition_value'] = {
+            'id': 'nutrition-1',
+            'ingredient_id': 'ingredient-1',
+            'calories': '100.00',
+            'protein_g': '2.00',
+            'carbs_g': '3.00',
+            'fat_g': '0.00',
+            'portion_g': '50.00',
+            if (sourceState != 'absent') ...{
+              'source_name': sourceState == 'present'
+                  ? 'Synthetic label v1'
+                  : null,
+              'source_reference': sourceState == 'present'
+                  ? 'qa-pack:rev-1'
+                  : null,
             },
-        };
-        final response = {...firstItemJson, 'ingredient': ingredient};
-        adapter.enqueue(
-          FakeHttpResponse(statusCode: 200, body: [response, secondItemJson]),
-        );
-        adapter.enqueue(FakeHttpResponse(statusCode: 200, body: [ingredient]));
-        adapter.enqueue(FakeHttpResponse(statusCode: 201, body: response));
-        adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
+            if (includeProjection)
+              'per_100g': {
+                'calories': '200.00',
+                'protein_g': '4.00',
+                'carbs_g': '6.00',
+                'fat_g': '0.00',
+              },
+          };
+          final response = {...firstItemJson, 'ingredient': ingredient};
+          adapter.enqueue(
+            FakeHttpResponse(statusCode: 200, body: [response, secondItemJson]),
+          );
+          adapter.enqueue(
+            FakeHttpResponse(statusCode: 200, body: [ingredient]),
+          );
+          adapter.enqueue(FakeHttpResponse(statusCode: 201, body: response));
+          adapter.enqueue(FakeHttpResponse(statusCode: 200, body: response));
 
-        final listed = await repository.getPantry();
-        final searched = await repository.searchIngredients(search: 'Oats');
-        final added = await repository.addPantryItem(
-          ingredientId: 'ingredient-1',
-          quantityG: '125',
-        );
-        final updated = await repository.updatePantryItem(
-          pantryItemId: 'pantry-1',
-          quantityG: '125',
-        );
-        for (final item in [
-          listed.first.ingredient,
-          searched.single,
-          added.ingredient,
-          updated.ingredient,
-        ]) {
-          expect(item.id, 'ingredient-1');
-          expect(item.nutritionValue?.id, 'nutrition-1');
-          expect(item.nutritionValue?.calories, 100);
-          expect(item.nutritionValue?.proteinG, 2);
-          expect(item.nutritionValue?.carbsG, 3);
-          expect(item.nutritionValue?.fatG, 0);
-          expect(item.nutritionValue?.portionG, 50);
-        }
-        expect(listed.last.ingredient.nutritionValue, isNull);
-        expect(adapter.requests.map((request) => request.path), [
-          '/pantry',
-          '/ingredients',
-          '/pantry',
-          '/pantry/pantry-1',
-        ]);
-        expect(adapter.requests[2].data, {
-          'ingredient_id': 'ingredient-1',
-          'quantity_g': '125',
-          'expires_at': null,
-        });
-        expect(adapter.requests[3].data, {
-          'quantity_g': '125',
-          'expires_at': null,
-        });
-      },
-    );
+          final listed = await repository.getPantry();
+          final searched = await repository.searchIngredients(search: 'Oats');
+          final added = await repository.addPantryItem(
+            ingredientId: 'ingredient-1',
+            quantityG: '125',
+          );
+          final updated = await repository.updatePantryItem(
+            pantryItemId: 'pantry-1',
+            quantityG: '125',
+          );
+          for (final item in [
+            listed.first.ingredient,
+            searched.single,
+            added.ingredient,
+            updated.ingredient,
+          ]) {
+            expect(item.id, 'ingredient-1');
+            expect(item.nutritionValue?.id, 'nutrition-1');
+            expect(item.nutritionValue?.calories, 100);
+            expect(item.nutritionValue?.proteinG, 2);
+            expect(item.nutritionValue?.carbsG, 3);
+            expect(item.nutritionValue?.fatG, 0);
+            expect(item.nutritionValue?.portionG, 50);
+          }
+          expect(listed.last.ingredient.nutritionValue, isNull);
+          expect(adapter.requests.map((request) => request.path), [
+            '/pantry',
+            '/ingredients',
+            '/pantry',
+            '/pantry/pantry-1',
+          ]);
+          expect(adapter.requests[2].data, {
+            'ingredient_id': 'ingredient-1',
+            'quantity_g': '125',
+            'expires_at': null,
+          });
+          expect(adapter.requests[3].data, {
+            'quantity_g': '125',
+            'expires_at': null,
+          });
+        },
+      );
+    }
   }
 
   test('maps a non-list root to unexpected', () async {

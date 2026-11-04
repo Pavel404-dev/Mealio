@@ -126,6 +126,8 @@ class IngredientsRepository:
                 carbs_g=data.nutrition_value.carbs_g,
                 fat_g=data.nutrition_value.fat_g,
                 portion_g=data.nutrition_value.portion_g,
+                source_name=data.nutrition_value.source_name,
+                source_reference=data.nutrition_value.source_reference,
             )
 
         self.db.add(ingredient)
@@ -168,6 +170,8 @@ class IngredientsRepository:
                     carbs_g=data.nutrition_value.carbs_g,
                     fat_g=data.nutrition_value.fat_g,
                     portion_g=data.nutrition_value.portion_g,
+                    source_name=data.nutrition_value.source_name,
+                    source_reference=data.nutrition_value.source_reference,
                 )
             else:
                 ingredient.nutrition_value.calories = data.nutrition_value.calories
@@ -175,6 +179,14 @@ class IngredientsRepository:
                 ingredient.nutrition_value.carbs_g = data.nutrition_value.carbs_g
                 ingredient.nutrition_value.fat_g = data.nutrition_value.fat_g
                 ingredient.nutrition_value.portion_g = data.nutrition_value.portion_g
+                # A supplied object replaces the entire declaration, including
+                # null defaults for clients that omit provenance fields.
+                ingredient.nutrition_value.source_name = (
+                    data.nutrition_value.source_name
+                )
+                ingredient.nutrition_value.source_reference = (
+                    data.nutrition_value.source_reference
+                )
 
         try:
             await self.db.flush()

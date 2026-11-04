@@ -1,15 +1,31 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
-from app.schemas.ingredient_text import trim_ingredient_name
+from app.schemas.ingredient_text import trim_ingredient_name, validate_storage_text
 from app.schemas.storage_decimal import NutrientWrite
 from app.services.gram_nutrition import NUTRIENTS, nutrient_per_100g
 
 
 class NutritionValueBase(BaseModel):
+    source_name: str | None = Field(
+        default=None,
+        description="Public, user-declared, unverified source for this nutrition record.",
+    )
+    source_reference: str | None = Field(
+        default=None,
+        description="Opaque public reference; never fetched or verified by Mealio.",
+    )
     calories: Decimal = Field(..., ge=0)
     protein_g: Decimal = Field(default=Decimal("0"), ge=0)
     carbs_g: Decimal = Field(default=Decimal("0"), ge=0)
@@ -38,10 +54,29 @@ class NutritionValueBase(BaseModel):
 
 
 class NutritionValueCreate(NutritionValueBase):
+    source_name: str | None = Field(
+        default=None, strict=True, min_length=1, max_length=255
+    )
+    source_reference: str | None = Field(
+        default=None, strict=True, min_length=1, max_length=1000
+    )
     calories: NutrientWrite
     protein_g: NutrientWrite = Decimal("0")
     carbs_g: NutrientWrite = Decimal("0")
     fat_g: NutrientWrite = Decimal("0")
+
+    @field_validator("source_name", "source_reference", mode="before")
+    @classmethod
+    def validate_source_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            return validate_storage_text(value).strip()
+        return value
+
+    @model_validator(mode="after")
+    def validate_source_pair(self) -> Self:
+        if self.source_reference is not None and self.source_name is None:
+            raise ValueError("Source reference requires a source name")
+        return self
 
 
 class NutritionPer100gRead(BaseModel):

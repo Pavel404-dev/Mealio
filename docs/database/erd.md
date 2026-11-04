@@ -93,6 +93,8 @@ erDiagram
         decimal carbs_g
         decimal fat_g
         decimal portion_g
+        string source_name
+        string source_reference
     }
 
     user_ingredients {
@@ -274,6 +276,8 @@ This separation keeps ingredient information clean and allows nutrition data to 
 | carbs_g | Numeric(8,2) | Carbohydrate grams for `portion_g` |
 | fat_g | Numeric(8,2) | Fat grams for `portion_g` |
 | portion_g | Numeric(8,2) | Finite portion in grams, 0.01..999999.99 inclusive; default 100 |
+| source_name | VARCHAR(255), nullable | Public user-declared, unverified source for the current nutrition record |
+| source_reference | VARCHAR(1000), nullable | Opaque public reference; requires source_name; never fetched |
 
 ### Constraints
 
@@ -283,12 +287,16 @@ This separation keeps ingredient information clean and allows nutrition data to 
 | Foreign Key | `ingredient_id` references `ingredients.id` |
 | Unique | `ingredient_id` |
 | CHECK | `ck_nutrition_values_portion_g_bounds`: `portion_g BETWEEN 0.01 AND 999999.99` |
+| CHECK | `ck_nutrition_values_source_pair`: `source_reference IS NULL OR source_name IS NOT NULL` |
 
 ### Relationship
 
 - One ingredient has at most one nutrition value record.
 
 See the [portion contract and damaged-data rollout runbook](../ingredient-portion-storage.md).
+See [declared provenance and writer-version delivery policy](../nutrition-provenance.md).
+Migration `c213a7e94b02` follows `b205c8d15a01`; existing rows gain NULL metadata
+without source inference or numeric changes. Downgrade loses only this metadata.
 
 ---
 

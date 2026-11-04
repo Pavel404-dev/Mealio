@@ -209,6 +209,8 @@ def test_repeating_ratios_around_and_exactly_at_half_ties(count, portion, expect
         "total_fat_g",
         "nutrition_value",
         "per_100g",
+        "source_name",
+        "source_reference",
     ],
 )
 @pytest.mark.parametrize("level", ["root", "ingredient"])

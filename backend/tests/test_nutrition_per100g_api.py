@@ -43,6 +43,15 @@ def statements(engine):
 
 
 @pytest.mark.parametrize(
+    "metadata",
+    [
+        {},
+        {"source_name": None, "source_reference": None},
+        {"source_name": "Synthetic label v1"},
+        {"source_name": "Synthetic label v1", "source_reference": "qa-pack:rev-1"},
+    ],
+)
+@pytest.mark.parametrize(
     "values,expected",
     [
         (
@@ -64,7 +73,7 @@ def statements(engine):
     ],
 )
 async def test_all_ingredient_and_pantry_responses_preserve_sources(
-    client, async_session_maker, values, expected
+    client, async_session_maker, values, expected, metadata
 ):
     _, headers = await create_authenticated_user(client)
     created = await client.post(
@@ -73,13 +82,19 @@ async def test_all_ingredient_and_pantry_responses_preserve_sources(
         json={
             "name": "Projection contract",
             "extra_ignored": True,
-            "nutrition_value": {**values, "per_100g": {"calories": "123.45"}},
+            "nutrition_value": {
+                **values,
+                **metadata,
+                "per_100g": {"calories": "123.45"},
+            },
         },
     )
     assert created.status_code == 201
     ingredient = created.json()
     ingredient_id = ingredient["id"]
     expected_nutrition = ingredient["nutrition_value"]
+    for field in ("source_name", "source_reference"):
+        assert expected_nutrition[field] == metadata.get(field)
     assert expected_nutrition["per_100g"] == dict(zip(NUTRIENTS, expected, strict=True))
     for field in (*NUTRIENTS, "portion_g"):
         assert isinstance(expected_nutrition[field], str)
@@ -120,6 +135,8 @@ async def test_all_ingredient_and_pantry_responses_preserve_sources(
             )
         )
         assert str(source.id) == expected_nutrition["id"]
+        assert source.source_name == metadata.get("source_name")
+        assert source.source_reference == metadata.get("source_reference")
         for field in (*NUTRIENTS, "portion_g"):
             assert getattr(source, field) == Decimal(expected_nutrition[field])
 
@@ -173,12 +190,16 @@ async def test_missing_nutrition_and_patch_replacement_defaults(
                 "fat_g": "4",
                 "portion_g": "50",
                 "per_100g": {"calories": "999"},
+                "source_name": "Synthetic added nutrition",
+                "source_reference": "qa-pack:new-row",
             }
         },
     )
     assert response.status_code == 200
     original = response.json()["nutrition_value"]
     assert original["per_100g"]["calories"] == "200.00"
+    assert original["source_reference"] == "qa-pack:new-row"
+    assert (await client.get(url)).json()["nutrition_value"] == original
     for payload in ({"category": "unchanged"}, {"nutrition_value": None}):
         response = await client.patch(url, headers=headers, json=payload)
         assert response.status_code == 200
@@ -195,6 +216,7 @@ async def test_missing_nutrition_and_patch_replacement_defaults(
     )
     assert response.status_code == 200
     replaced = response.json()["nutrition_value"]
+    assert replaced["source_name"] is replaced["source_reference"] is None
     assert replaced["id"] == original["id"]
     assert replaced["per_100g"] == {
         "calories": "7.00",
@@ -215,7 +237,12 @@ async def test_eager_reads_have_constant_queries_and_serialization_never_queries
     user, headers = await create_authenticated_user(client)
     for index in range(count):
         ingredient_id = await create_ingredient(
-            client, headers=headers, name=f"Query count {index}", portion_g="50"
+            client,
+            headers=headers,
+            name=f"Query count {index}",
+            portion_g="50",
+            source_name="Synthetic query label",
+            source_reference=f"record:{index}",
         )
         response = await client.post(
             PANTRY_URL,
@@ -233,6 +260,10 @@ async def test_eager_reads_have_constant_queries_and_serialization_never_queries
         assert len(queries) == 3  # pantry + ingredient batch + nutrition batch
         with statements(test_engine) as queries:
             for row in ingredients:
+                assert row.nutrition_value.source_name == "Synthetic query label"
+                assert IngredientRead.model_validate(
+                    row
+                ).nutrition_value.source_reference.startswith("record:")
                 assert (
                     IngredientRead.model_validate(row).model_dump(mode="json")[
                         "nutrition_value"
@@ -240,6 +271,12 @@ async def test_eager_reads_have_constant_queries_and_serialization_never_queries
                     == "330.00"
                 )
             for row in pantry:
+                assert (
+                    PantryItemRead.model_validate(
+                        row
+                    ).ingredient.nutrition_value.source_name
+                    == "Synthetic query label"
+                )
                 assert (
                     PantryItemRead.model_validate(row).model_dump(mode="json")[
                         "ingredient"
@@ -270,10 +307,12 @@ async def test_eager_reads_have_constant_queries_and_serialization_never_queries
         response = await client.get(INGREDIENTS_URL)
     assert response.status_code == 200 and len(response.json()) == count
     assert len(queries) == 2
+    assert all(query.lstrip().upper().startswith("SELECT") for query in queries)
     with statements(test_engine) as queries:
         response = await client.get(PANTRY_URL, headers=headers)
     assert response.status_code == 200 and len(response.json()) == count
     assert len(queries) == 5  # auth + ensure-user + three batch reads
+    assert all(query.lstrip().upper().startswith("SELECT") for query in queries)
 
 
 @pytest.mark.parametrize(
@@ -299,7 +338,12 @@ async def test_aggregates_ai_save_and_ownership_use_original_values(
     user, headers = await create_authenticated_user(client)
     _, other_headers = await create_authenticated_user(client)
     ingredient_id = await create_ingredient(
-        client, headers=headers, portion_g=portion, **dict.fromkeys(NUTRIENTS, value)
+        client,
+        headers=headers,
+        portion_g=portion,
+        **dict.fromkeys(NUTRIENTS, value),
+        source_name="Synthetic aggregate label",
+        source_reference="qa-pack",
     )
     detail = await client.get(f"{INGREDIENTS_URL}/{ingredient_id}")
     assert detail.json()["nutrition_value"]["per_100g"] == dict.fromkeys(

@@ -61,6 +61,8 @@ async def create_ingredient(
     carbs_g: str = "0",
     fat_g: str = "3.6",
     portion_g: str = "100",
+    source_name: str | None = None,
+    source_reference: str | None = None,
 ) -> str:
     response = await client.post(
         INGREDIENTS_URL,
@@ -74,6 +76,8 @@ async def create_ingredient(
                 "carbs_g": carbs_g,
                 "fat_g": fat_g,
                 "portion_g": portion_g,
+                "source_name": source_name,
+                "source_reference": source_reference,
             },
         },
     )
