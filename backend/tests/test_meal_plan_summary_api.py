@@ -1,8 +1,17 @@
-from typing import Any
-from uuid import uuid4
+from decimal import Decimal
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.recipe import Recipe
+from tests.test_pantry_api import (
+    PANTRY_SUMMARY_URL,
+    add_pantry_item,
+    assert_summary_totals,
+)
+from tests.test_recipe_nutrition_totals_api import RECIPES_URL, create_test_ingredient
 
 
 REGISTER_URL = "/api/v1/auth/register"
@@ -66,59 +75,55 @@ async def create_test_recipe(
     *,
     headers: dict[str, str],
     title: str,
-    total_calories: str | None = "500.00",
-    total_protein_g: str | None = "30.00",
-    total_carbs_g: str | None = "50.00",
-    total_fat_g: str | None = "15.00",
+    total_calories: str = "500.00",
+    total_protein_g: str = "30.00",
+    total_carbs_g: str = "50.00",
+    total_fat_g: str = "15.00",
 ) -> str:
-    payload: dict[str, Any] = {
-        "title": title,
-        "instructions": "Cook and serve.",
-        "diet_type": "balanced",
-    }
-
-    if (
-        total_calories is not None
-        and total_protein_g is not None
-        and total_carbs_g is not None
-        and total_fat_g is not None
-    ):
-        ingredient_response = await client.post(
-            INGREDIENTS_URL,
-            headers=headers,
-            json={
-                "name": f"{title} Ingredient {uuid4()}",
-                "category": "test",
-                "nutrition_value": {
-                    "calories": total_calories,
-                    "protein_g": total_protein_g,
-                    "carbs_g": total_carbs_g,
-                    "fat_g": total_fat_g,
-                    "portion_g": "100",
-                },
-            },
-        )
-
-        assert ingredient_response.status_code == 201
-
-        ingredient_id = ingredient_response.json()["id"]
-
-        payload["ingredients"] = [
-            {
-                "ingredient_id": ingredient_id,
-                "quantity_g": "100",
-            }
-        ]
-
-    response = await client.post(
-        "/api/v1/recipes",
+    ingredient = await create_test_ingredient(
+        client,
+        name=f"{title} Ingredient {uuid4()}",
         headers=headers,
-        json=payload,
+        nutrition_value={
+            "calories": total_calories,
+            "protein_g": total_protein_g,
+            "carbs_g": total_carbs_g,
+            "fat_g": total_fat_g,
+            "portion_g": "100",
+        },
+    )
+    response = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": title,
+            "instructions": "Cook and serve.",
+            "diet_type": "balanced",
+            "ingredients": [{"ingredient_id": ingredient["id"], "quantity_g": "100"}],
+        },
     )
 
     assert response.status_code == 201
 
     return response.json()["id"]
+
+
+async def create_legacy_recipe_with_partial_totals(
+    db_session: AsyncSession,
+    *,
+    user_id: str,
+) -> str:
+    recipe = Recipe(
+        created_by_user_id=UUID(user_id),
+        title="Legacy Recipe With Partial Nutrition",
+        instructions="Cook and serve.",
+        total_protein_g=Decimal("5.00"),
+    )
+    db_session.add(recipe)
+    await db_session.commit()
+    await db_session.refresh(recipe)
+    assert recipe.total_calories is recipe.total_carbs_g is recipe.total_fat_g is None
+    return str(recipe.id)
 
 
 async def create_test_meal_plan(
@@ -262,17 +267,13 @@ async def test_get_meal_plan_nutrition_summary_for_empty_meal_plan(
 @pytest.mark.asyncio
 async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
     client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
-    _, headers = await create_authenticated_user(client)
+    user, headers = await create_authenticated_user(client)
 
-    recipe_with_null_values_id = await create_test_recipe(
-        client,
-        headers=headers,
-        title="Recipe Without Nutrition",
-        total_calories=None,
-        total_protein_g=None,
-        total_carbs_g=None,
-        total_fat_g=None,
+    recipe_with_null_values_id = await create_legacy_recipe_with_partial_totals(
+        db_session,
+        user_id=user["id"],
     )
 
     recipe_with_values_id = await create_test_recipe(
@@ -319,7 +320,7 @@ async def test_get_meal_plan_nutrition_summary_counts_null_values_as_zero(
 
     assert data["items_count"] == 2
     assert data["total_calories"] == "400.00"
-    assert data["total_protein_g"] == "25.00"
+    assert data["total_protein_g"] == "30.00"
     assert data["total_carbs_g"] == "40.00"
     assert data["total_fat_g"] == "10.00"
 
@@ -442,17 +443,13 @@ async def test_get_meal_plan_daily_nutrition_summary_for_empty_meal_plan(
 @pytest.mark.asyncio
 async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
     client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
-    _, headers = await create_authenticated_user(client)
+    user, headers = await create_authenticated_user(client)
 
-    recipe_with_null_values_id = await create_test_recipe(
-        client,
-        headers=headers,
-        title="Recipe Without Nutrition",
-        total_calories=None,
-        total_protein_g=None,
-        total_carbs_g=None,
-        total_fat_g=None,
+    recipe_with_null_values_id = await create_legacy_recipe_with_partial_totals(
+        db_session,
+        user_id=user["id"],
     )
 
     recipe_with_values_id = await create_test_recipe(
@@ -500,7 +497,7 @@ async def test_get_meal_plan_daily_nutrition_summary_counts_null_values_as_zero(
             "date": "2026-05-18",
             "items_count": 2,
             "total_calories": "400.00",
-            "total_protein_g": "25.00",
+            "total_protein_g": "30.00",
             "total_carbs_g": "40.00",
             "total_fat_g": "10.00",
         }
@@ -695,3 +692,113 @@ async def test_meal_plan_summary_reflects_recalculated_recipe_totals_after_ingre
     assert after_data["total_protein_g"] == "25.00"
     assert after_data["total_carbs_g"] == "30.00"
     assert after_data["total_fat_g"] == "8.00"
+
+
+@pytest.mark.asyncio
+async def test_first_nutrition_write_updates_existing_pantry_recipe_and_plan_totals(
+    client: AsyncClient,
+) -> None:
+    _, headers = await create_authenticated_user(client)
+    known = await create_test_ingredient(
+        client,
+        name="Ingredient With Nutrition",
+        headers=headers,
+        nutrition_value={
+            "calories": "100",
+            "protein_g": "10",
+            "carbs_g": "20",
+            "fat_g": "5",
+            "portion_g": "50",
+        },
+    )
+    missing = await create_test_ingredient(
+        client,
+        name="Ingredient Without Nutrition",
+        headers=headers,
+        nutrition_value=None,
+    )
+    assert missing["nutrition_value"] is None
+    ingredient_url = f"{INGREDIENTS_URL}/{missing['id']}"
+    ingredients = [
+        {"ingredient_id": ingredient["id"], "quantity_g": "100"}
+        for ingredient in (known, missing)
+    ]
+    for item in ingredients:
+        await add_pantry_item(client, headers=headers, **item)
+
+    recipe = await client.post(
+        RECIPES_URL,
+        headers=headers,
+        json={
+            "title": "Recipe With Missing Nutrition",
+            "instructions": "Cook and serve.",
+            "ingredients": ingredients,
+        },
+    )
+    assert recipe.status_code == 201
+    recipe_id = recipe.json()["id"]
+    recipe_url = f"{RECIPES_URL}/{recipe_id}"
+    meal_plan = await create_test_meal_plan(client, headers=headers)
+    meal_plan_id = meal_plan["id"]
+    planned_date = "2026-05-18"
+    await add_meal_plan_item(
+        client,
+        headers=headers,
+        meal_plan_id=meal_plan_id,
+        recipe_id=recipe_id,
+        planned_date=planned_date,
+        meal_type="breakfast",
+    )
+
+    async def assert_totals(calories: str) -> None:
+        expected = {
+            "total_calories": calories,
+            "total_protein_g": "20.00",
+            "total_carbs_g": "40.00",
+            "total_fat_g": "10.00",
+        }
+        pantry = await client.get(PANTRY_SUMMARY_URL, headers=headers)
+        assert pantry.status_code == 200
+        assert_summary_totals(pantry.json(), items_count=2, **expected)
+
+        for url in (recipe_url, meal_plan_summary_url(meal_plan_id)):
+            response = await client.get(url, headers=headers)
+            assert response.status_code == 200, url
+            data = response.json()
+            assert {field: data[field] for field in expected} == expected, url
+
+        daily = await client.get(
+            meal_plan_daily_summary_url(meal_plan_id), headers=headers
+        )
+        assert daily.status_code == 200
+        assert daily.json() == [{"date": planned_date, "items_count": 1, **expected}]
+
+    await assert_totals("200.00")
+
+    rejected = await client.patch(
+        ingredient_url,
+        headers=headers,
+        json={"category": "rejected category", "nutrition_value": {"protein_g": "10"}},
+    )
+    assert rejected.status_code == 422
+    detail = rejected.json()["detail"]
+    assert detail[0]["loc"] == ["body", "nutrition_value", "calories"]
+    readback = await client.get(ingredient_url)
+    assert readback.status_code == 200
+    assert readback.json() == missing
+    await assert_totals("200.00")
+
+    updated = await client.patch(
+        ingredient_url,
+        headers=headers,
+        json={"nutrition_value": {"calories": "60"}},
+    )
+    assert updated.status_code == 200
+    readback = await client.get(ingredient_url)
+    assert readback.status_code == 200
+    assert readback.json() == updated.json()
+    stored = readback.json()["nutrition_value"]
+    assert stored["calories"] == "60.00"
+    assert stored["portion_g"] == "100.00"
+    assert stored["protein_g"] == stored["carbs_g"] == stored["fat_g"] == "0.00"
+    await assert_totals("260.00")

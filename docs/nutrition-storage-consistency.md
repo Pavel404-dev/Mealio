@@ -6,9 +6,8 @@ missing-data change. Subsequent [declared provenance](nutrition-provenance.md)
 adds nullable metadata to the same row and transaction without changing arithmetic.
 The additive [per-100g read projection](nutrition-per100g-read.md) uses the same
 exact scaling and final rounding helpers; aggregates never consume it.
-The F3 portion contract and omitted/null nutrition semantics remain
-in [the portion contract](ingredient-portion-storage.md). Omitted macros remain
-zero. Decimal responses remain JSON strings.
+See [the F3 portion contract](ingredient-portion-storage.md) for storage limits
+and precision. Decimal responses remain JSON strings.
 
 ## Write and read boundaries
 
@@ -27,6 +26,28 @@ and total fields remain forbidden at the AI preview/save boundaries. Saving
 requires no provider call. Shopping-list refill validates resulting Pantry stock
 against storage bounds under its existing owner lock before any upsert.
 
+## Missing data and zero values
+
+`nutrition_value: null` means the ingredient has no nutrition record. On
+creation, omitting `nutrition_value` or setting it to null leaves the record
+absent. On PATCH, either input preserves the existing record or its absence.
+A supplied object writes the full set of nutrient values and declared
+provenance. It requires `calories`, defaults omitted macros to zero, and
+defaults `portion_g` to 100 g. Omitting `calories` or explicitly setting a
+numeric field to null inside the object returns 422 before persistence.
+
+An explicit zero and a defaulted macro both produce the same stored numeric
+zero. A positive source value can also display as `"0.00"` in
+[the per-100g projection](nutrition-per100g-read.md) after rounding. A zero
+total leaves the completeness of its inputs unknown.
+
+An ingredient without a nutrition record still belongs to the Pantry or recipe
+and contributes zero to its totals. The first valid write adds a record,
+updates dependent saved recipe totals in the same transaction, and is visible
+on the next Pantry summary read. Overall and daily meal-plan summaries sum the
+saved recipe totals and use zero for each legacy null total. The item count
+includes the scheduled recipe regardless of its nutrient values.
+
 ## Calculation boundaries
 
 Both Pantry and recipes use `aggregate_grams`:
@@ -39,8 +60,7 @@ Products and sums are accumulated as exact rational numbers derived from the
 original Decimals. This prevents intermediate repeating-ratio errors from moving
 an exact half-cent tie across the rounding boundary (three contributions of
 `1 / 600` sum to exactly `0.005`). No rounded per-100g intermediate is used.
-Missing nutrition and nonpositive legacy portions retain their previous zero
-contribution; stored zero nutrients remain zero.
+Legacy records with nonpositive portions contribute zero.
 
 Decimal conversion uses an explicit Context: `ROUND_HALF_UP`, Emin=-999999,
 Emax=999999, clamp=0, capitals=1, cleared flags, and only InvalidOperation,
@@ -58,8 +78,7 @@ rounding boundary; the extra precision preserves which side of a half-cent the
 sum occupies. Exact half-cent sums terminate. Only after summation do we quantize
 to two places with explicit `ROUND_HALF_UP`. Each resulting total must fit
 `NUMERIC(10,2)`, otherwise the operation returns 422 and rolls back. For example,
-`99999999.995` overflows after rounding. Meal plans continue summing stored recipe
-totals; they do not independently rescale ingredients.
+`99999999.995` overflows after rounding.
 
 ## Transactions and lock order
 
