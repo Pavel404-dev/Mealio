@@ -43,10 +43,13 @@ class MealPlansRepository:
         recipe_id: uuid.UUID,
     ) -> Recipe | None:
         result = await self.db.execute(
-            select(Recipe).where(
+            select(Recipe)
+            .where(
                 Recipe.id == recipe_id,
                 Recipe.created_by_user_id == user_id,
             )
+            .with_for_update(read=True, key_share=True)
+            .execution_options(populate_existing=True)
         )
 
         return result.scalar_one_or_none()
@@ -60,9 +63,16 @@ class MealPlansRepository:
         if not recipe_ids:
             return []
 
-        stmt = select(Recipe).where(
-            Recipe.id.in_(recipe_ids),
-            Recipe.created_by_user_id == user_id,
+        # Lock all targets in UUID order before inserting any plan/items.
+        stmt = (
+            select(Recipe)
+            .where(
+                Recipe.id.in_(recipe_ids),
+                Recipe.created_by_user_id == user_id,
+            )
+            .order_by(Recipe.id)
+            .with_for_update(read=True, key_share=True)
+            .execution_options(populate_existing=True)
         )
         result = await self.db.execute(stmt)
 

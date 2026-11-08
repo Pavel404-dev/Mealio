@@ -109,8 +109,24 @@ the same protocol if they require this consistency guarantee. No automatic repai
 of previously stale totals is performed.
 
 Pantry uses its existing user lock and does not acquire the nutrition gate.
-Meal-plan writers do not acquire it either. Recipe ownership filters are retained;
-global catalog nutrient changes intentionally update dependent recipes across
+Meal-plan writers do not acquire it either. Recipe DELETE acquires the gate,
+then `FOR UPDATE` on the authenticated owner's recipe, then checks meal-plan
+usage in a separate statement. Plan creation with items, item addition and PATCH
+requests with `recipe_id` validate owned target recipes with `FOR KEY SHARE`
+before writing; multiple targets are locked in UUID order. These locks remain
+in the same session until the existing commit/rollback, including rollback on
+dependency close.
+Planners never acquire the nutrition gate after recipe locks. Existing recipe
+metadata/total updates leave the referenced UUID unchanged; their `NO KEY UPDATE`
+locks are compatible with `KEY SHARE`.
+
+This protocol requires READ COMMITTED: the separate usage SELECT sees attachments
+committed during the lock wait and DELETE returns 409; if DELETE commits first,
+the planner's locking SELECT returns no recipe and validation returns 404 before
+any plan/item mutation. The engine inherits the server's isolation setting;
+higher isolation levels need a separate serialization/retry policy. FK actions,
+transaction ownership and genuine slot-conflict 409 responses are unchanged.
+Global catalog nutrient changes intentionally update dependent recipes across
 owners, without exposing those recipes through a user endpoint.
 
 ## Compatibility and rollback
