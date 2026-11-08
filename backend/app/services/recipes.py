@@ -166,10 +166,12 @@ class RecipesService:
         *,
         user_id: uuid.UUID,
         recipe_id: uuid.UUID,
+        for_update: bool = False,
     ):
         recipe = await self.repository.get_by_id(
             recipe_id=recipe_id,
             created_by_user_id=user_id,
+            for_update=for_update,
         )
 
         if recipe is None:
@@ -255,8 +257,11 @@ class RecipesService:
             recipe = await self.get_recipe(
                 user_id=user_id,
                 recipe_id=recipe_id,
+                for_update=True,
             )
 
+            # A separate READ COMMITTED statement sees attachments committed
+            # while the recipe lock was waiting for their KEY SHARE locks.
             if await self.repository.is_used_in_meal_plan_items(recipe.id):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,

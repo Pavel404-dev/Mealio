@@ -173,6 +173,7 @@ class RecipesRepository:
         recipe_id: uuid.UUID,
         *,
         created_by_user_id: uuid.UUID | None = None,
+        for_update: bool = False,
     ) -> Recipe | None:
         stmt = (
             select(Recipe)
@@ -183,6 +184,9 @@ class RecipesRepository:
 
         if created_by_user_id is not None:
             stmt = stmt.where(Recipe.created_by_user_id == created_by_user_id)
+
+        if for_update:
+            stmt = stmt.with_for_update()
 
         result = await self.db.execute(stmt)
 
