@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate
+from app.schemas.recipe import RecipeCreate, RecipeIngredientCreate, RecipeServings
 from app.schemas.ingredient_text import trim_ingredient_name
 from app.schemas.user_nutrition_profile import NutritionGoal
 
@@ -158,6 +158,7 @@ class AIRecipeSavePreviewRequest(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     diet_type: str | None = Field(default=None, max_length=100)
     instructions: list[str] = Field(..., min_length=1, max_length=30)
+    servings: RecipeServings = 1
     ingredients: list[AIRecipeSaveIngredient] = Field(
         ...,
         min_length=1,
@@ -210,6 +211,7 @@ class AIRecipeSavePreviewRequest(BaseModel):
             description=self.description,
             diet_type=self.diet_type,
             instructions=format_recipe_instruction_steps(self.instructions),
+            servings=self.servings,
             ingredients=[
                 RecipeIngredientCreate(
                     ingredient_id=item.ingredient_id,

@@ -3,8 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -19,6 +21,10 @@ from app.db.base import Base
 
 class Recipe(Base):
     __tablename__ = "recipes"
+
+    __table_args__ = (
+        CheckConstraint("servings BETWEEN 1 AND 12", name="ck_recipes_servings_range"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -44,6 +50,13 @@ class Recipe(Base):
 
     instructions: Mapped[str] = mapped_column(
         Text,
+        nullable=False,
+    )
+
+    servings: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default="1",
         nullable=False,
     )
 

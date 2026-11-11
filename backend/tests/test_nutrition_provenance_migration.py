@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
-from alembic.script import ScriptDirectory
 from sqlalchemy.exc import DBAPIError
 
 from tests import test_ingredient_portion_migration as portion_migration
@@ -44,7 +43,6 @@ async def test_previous_head_additive_roundtrip_and_current_model_parity(
     identity = await identity_schema(db)
     assert not any(r[1] in FIELDS for r in before["columns"])
     await db.migrate("upgrade", REVISION)
-    assert ScriptDirectory.from_config(db.config).get_heads() == [REVISION]
     after = await db.state()
     assert after["revision"] == [REVISION]
     assert await identity_schema(db) == identity
@@ -75,7 +73,10 @@ async def test_previous_head_additive_roundtrip_and_current_model_parity(
         ("source_reference", 1000, "YES", None),
     ]
     await db.engine.dispose()
+    # Current metadata includes later migrations; check parity only at head.
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
+    await db.migrate("downgrade", REVISION)
     if populated:
         await db.execute(
             "UPDATE nutrition_values SET source_name='Synthetic label', source_reference='qa-pack:rev-1'"
@@ -103,7 +104,9 @@ async def test_previous_head_additive_roundtrip_and_current_model_parity(
     assert await identity_schema(db) == identity
     await db.migrate("upgrade", REVISION)
     assert await db.state() == after
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
+    await db.migrate("downgrade", REVISION)
 
 
 @pytest.mark.parametrize(

@@ -9,6 +9,11 @@ exact scaling and final rounding helpers; aggregates never consume it.
 See [the F3 portion contract](ingredient-portion-storage.md) for storage limits
 and precision. Decimal responses remain JSON strings.
 
+Recipe `servings` is a saved count under the [W10 contract](database/erd.md#servings-contract-w10).
+Gram quantities and nutrition totals describe the whole recipe. A servings-only
+PATCH preserves these values; planner summaries and shopping lists continue to
+account for the whole recipe per slot without scaling.
+
 ## Write and read boundaries
 
 Ingredient POST/PATCH nutrients must be finite decimals in `0..999999.99`, exactly
