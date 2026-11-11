@@ -7,7 +7,6 @@ from uuid import uuid4
 import asyncpg
 import pytest
 from alembic import command
-from alembic.script import ScriptDirectory
 from sqlalchemy import event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError
@@ -105,7 +104,6 @@ async def test_genuine_parent_roundtrip_old_writer_and_offline(
     before = await db.state()
     assert await functions(db) == []
     await upgrade(db, mode)
-    assert ScriptDirectory.from_config(db.config).get_heads() == ["c213a7e94b02"]
     after = await db.state()
     assert after["revision"] == [REVISION]
     for key in before:

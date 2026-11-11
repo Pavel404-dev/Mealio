@@ -225,6 +225,7 @@ class RecipesRepository:
             title=data.title.strip(),
             description=data.description.strip() if data.description else None,
             instructions=data.instructions.strip(),
+            servings=data.servings,
             diet_type=data.diet_type.strip() if data.diet_type else None,
             total_calories=nutrition_totals.total_calories,
             total_protein_g=nutrition_totals.total_protein_g,
@@ -270,6 +271,9 @@ class RecipesRepository:
 
         if "instructions" in update_data and data.instructions is not None:
             recipe.instructions = data.instructions.strip()
+
+        if "servings" in update_data and data.servings is not None:
+            recipe.servings = data.servings
 
         if "diet_type" in update_data:
             recipe.diet_type = data.diet_type.strip() if data.diet_type else None

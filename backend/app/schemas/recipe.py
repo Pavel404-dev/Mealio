@@ -2,10 +2,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.storage_decimal import QuantityWrite
+
+RecipeServings = Annotated[int, Field(strict=True, ge=1, le=12)]
 
 
 @dataclass(frozen=True)
@@ -36,6 +39,7 @@ class RecipeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     instructions: str = Field(..., min_length=1)
+    servings: RecipeServings = 1
     diet_type: str | None = Field(default=None, max_length=100)
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -81,6 +85,7 @@ class RecipeUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     instructions: str | None = Field(default=None, min_length=1)
+    servings: RecipeServings | None = None
     diet_type: str | None = Field(default=None, max_length=100)
     ingredients: list[RecipeIngredientCreate] | None = None
 
@@ -97,6 +102,9 @@ class RecipeUpdate(BaseModel):
 
         if "instructions" in data and data["instructions"] is None:
             raise ValueError("Recipe instructions cannot be null")
+
+        if "servings" in data and data["servings"] is None:
+            raise ValueError("Recipe servings cannot be null")
 
         return data
 
