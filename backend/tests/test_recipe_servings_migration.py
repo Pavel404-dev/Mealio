@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
-from alembic.script import ScriptDirectory
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError
@@ -51,7 +50,6 @@ async def test_servings_upgrade_preserves_legacy_data_and_roundtrips(
         await db.execute("UPDATE recipe_ingredients SET quantity_g=123.45")
     before = await db.state()
     await db.migrate("upgrade", REVISION)
-    assert ScriptDirectory.from_config(db.config).get_heads() == [REVISION]
     after = await db.state()
     assert after["revision"] == [REVISION]
     for key in before:
@@ -76,7 +74,10 @@ async def test_servings_upgrade_preserves_legacy_data_and_roundtrips(
             "WHERE table_schema='public' AND table_name='recipes' AND column_name='servings'"
         )
     ).one() == ("integer", "NO", "1")
+    # Current metadata includes later recipe metadata; parity is head-only.
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
+    await db.migrate("downgrade", REVISION)
     # Downgrade loses only servings; all legacy fields and related rows survive.
     if populated:
         await db.execute("UPDATE recipes SET servings=12")
@@ -84,6 +85,7 @@ async def test_servings_upgrade_preserves_legacy_data_and_roundtrips(
     assert await db.state() == before
     await db.migrate("upgrade", REVISION)
     assert await db.state() == after
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
 
 

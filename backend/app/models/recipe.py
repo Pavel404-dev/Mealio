@@ -60,6 +60,11 @@ class Recipe(Base):
         nullable=False,
     )
 
+    meal_type: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
     diet_type: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
