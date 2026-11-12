@@ -4,11 +4,31 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
+from app.schemas.ingredient_text import validate_storage_text
 from app.schemas.storage_decimal import QuantityWrite
 
 RecipeServings = Annotated[int, Field(strict=True, ge=1, le=12)]
+
+
+def normalize_recipe_meal_type(value: object) -> object:
+    if isinstance(value, str):
+        return validate_storage_text(value).strip().lower() or None
+    return value
+
+
+RecipeMealType = Annotated[
+    Annotated[str, Field(strict=True, min_length=1, max_length=100)] | None,
+    BeforeValidator(normalize_recipe_meal_type),
+]
 
 
 @dataclass(frozen=True)
@@ -40,6 +60,7 @@ class RecipeBase(BaseModel):
     description: str | None = None
     instructions: str = Field(..., min_length=1)
     servings: RecipeServings = 1
+    meal_type: RecipeMealType = None
     diet_type: str | None = Field(default=None, max_length=100)
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -86,6 +107,7 @@ class RecipeUpdate(BaseModel):
     description: str | None = None
     instructions: str | None = Field(default=None, min_length=1)
     servings: RecipeServings | None = None
+    meal_type: RecipeMealType = None
     diet_type: str | None = Field(default=None, max_length=100)
     ingredients: list[RecipeIngredientCreate] | None = None
 
