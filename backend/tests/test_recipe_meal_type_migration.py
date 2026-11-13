@@ -18,7 +18,7 @@ PARENT = "d124b6e83a01"
 REVISION = "e235c7f94b02"
 
 
-def test_meal_type_offline_upgrade_and_single_head():
+def test_meal_type_offline_upgrade_and_parent():
     def refuse_connection(*args):
         pytest.fail("Offline migration must not connect to a database")
 
@@ -35,7 +35,6 @@ def test_meal_type_offline_upgrade_and_single_head():
         "script_location", str(portion_migration.BACKEND / "alembic")
     )
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [REVISION]
     assert script.get_revision(REVISION).down_revision == PARENT
 
 
@@ -77,13 +76,17 @@ async def test_meal_type_upgrade_preserves_legacy_fields_and_roundtrips(
             "AND table_name='recipes' AND column_name='meal_type'"
         )
     ).one() == ("character varying", 100, "YES", None)
+    # Model parity includes later recipe metadata and is checked only at head.
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
+    await db.migrate("downgrade", REVISION)
     if populated:
         await db.execute("UPDATE recipes SET meal_type='dinner'")
     await db.migrate("downgrade", PARENT)
     assert await db.state() == before
     await db.migrate("upgrade", REVISION)
     assert await db.state() == after
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
 
 
