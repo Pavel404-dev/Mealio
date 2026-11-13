@@ -17,6 +17,7 @@ from app.schemas.ingredient_text import validate_storage_text
 from app.schemas.storage_decimal import QuantityWrite
 
 RecipeServings = Annotated[int, Field(strict=True, ge=1, le=12)]
+RecipePrepTimeMinutes = Annotated[int, Field(strict=True, ge=1, le=480)]
 
 
 def normalize_recipe_meal_type(value: object) -> object:
@@ -61,6 +62,7 @@ class RecipeBase(BaseModel):
     instructions: str = Field(..., min_length=1)
     servings: RecipeServings = 1
     meal_type: RecipeMealType = None
+    prep_time_minutes: RecipePrepTimeMinutes | None = None
     diet_type: str | None = Field(default=None, max_length=100)
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -108,6 +110,7 @@ class RecipeUpdate(BaseModel):
     instructions: str | None = Field(default=None, min_length=1)
     servings: RecipeServings | None = None
     meal_type: RecipeMealType = None
+    prep_time_minutes: RecipePrepTimeMinutes | None = None
     diet_type: str | None = Field(default=None, max_length=100)
     ingredients: list[RecipeIngredientCreate] | None = None
 

@@ -227,6 +227,7 @@ class RecipesRepository:
             instructions=data.instructions.strip(),
             servings=data.servings,
             meal_type=data.meal_type,
+            prep_time_minutes=data.prep_time_minutes,
             diet_type=data.diet_type.strip() if data.diet_type else None,
             total_calories=nutrition_totals.total_calories,
             total_protein_g=nutrition_totals.total_protein_g,
@@ -278,6 +279,9 @@ class RecipesRepository:
 
         if "meal_type" in update_data:
             recipe.meal_type = data.meal_type
+
+        if "prep_time_minutes" in update_data:
+            recipe.prep_time_minutes = data.prep_time_minutes
 
         if "diet_type" in update_data:
             recipe.diet_type = data.diet_type.strip() if data.diet_type else None

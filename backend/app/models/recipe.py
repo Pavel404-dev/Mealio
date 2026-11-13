@@ -24,6 +24,10 @@ class Recipe(Base):
 
     __table_args__ = (
         CheckConstraint("servings BETWEEN 1 AND 12", name="ck_recipes_servings_range"),
+        CheckConstraint(
+            "prep_time_minutes BETWEEN 1 AND 480",
+            name="ck_recipes_prep_time_minutes_range",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -62,6 +66,11 @@ class Recipe(Base):
 
     meal_type: Mapped[str | None] = mapped_column(
         String(100),
+        nullable=True,
+    )
+
+    prep_time_minutes: Mapped[int | None] = mapped_column(
+        Integer,
         nullable=True,
     )
 

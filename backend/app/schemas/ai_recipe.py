@@ -8,6 +8,7 @@ from app.schemas.recipe import (
     RecipeCreate,
     RecipeIngredientCreate,
     RecipeMealType,
+    RecipePrepTimeMinutes,
     RecipeServings,
 )
 from app.schemas.ingredient_text import trim_ingredient_name
@@ -165,6 +166,7 @@ class AIRecipeSavePreviewRequest(BaseModel):
     instructions: list[str] = Field(..., min_length=1, max_length=30)
     servings: RecipeServings = 1
     meal_type: RecipeMealType = None
+    prep_time_minutes: RecipePrepTimeMinutes | None = None
     ingredients: list[AIRecipeSaveIngredient] = Field(
         ...,
         min_length=1,
@@ -219,6 +221,7 @@ class AIRecipeSavePreviewRequest(BaseModel):
             instructions=format_recipe_instruction_steps(self.instructions),
             servings=self.servings,
             meal_type=self.meal_type,
+            prep_time_minutes=self.prep_time_minutes,
             ingredients=[
                 RecipeIngredientCreate(
                     ingredient_id=item.ingredient_id,
