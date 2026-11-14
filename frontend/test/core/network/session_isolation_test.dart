@@ -78,6 +78,44 @@ class Harness {
 
 void main() {
   test(
+    'cancelled ApiClient GET does not replay after a same-session refresh',
+    () async {
+      final h = Harness();
+      final started = barrier();
+      final release = barrier();
+      h.app.enqueue(rejected);
+      h.refresh.responseHandler = (_) async {
+        started.complete();
+        await release.future;
+        return rotatedA;
+      };
+      final cancelToken = CancelToken();
+      final pending = outcome(
+        h.api.get<Object?>('/recipes/recipe-1', cancelToken: cancelToken),
+      );
+      await started.future;
+      // Observe the same shared refresh; cancelling one view must not cancel it.
+      final refresh = h.coordinator.refreshTokens();
+      cancelToken.cancel();
+      release.complete();
+      await refresh;
+      expect(
+        await pending,
+        isA<DioException>().having(
+          (error) => error.type,
+          'type',
+          DioExceptionType.cancel,
+        ),
+      );
+      expect(h.app.requests, hasLength(1));
+      expect(h.refresh.requests, hasLength(1));
+      expect(h.storage.accessToken, 'rotated-A');
+      expect(h.storage.sessionLifetime, 0);
+      expect(h.invalidations, 0);
+    },
+  );
+
+  test(
     'ApiClient captures lifetime before the first interceptor microtask',
     () async {
       final h = Harness();

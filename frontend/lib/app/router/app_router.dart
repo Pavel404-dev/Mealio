@@ -15,6 +15,8 @@ import '../../features/pantry/domain/pantry_item.dart';
 import '../../features/pantry/presentation/add_pantry_item_screen.dart';
 import '../../features/pantry/presentation/edit_pantry_item_screen.dart';
 import '../../features/pantry/presentation/pantry_screen.dart';
+import '../../features/recipes/presentation/recipes_screen.dart';
+import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -119,6 +121,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/recipes',
+        builder: (context, state) => const RecipesScreen(),
+      ),
+      GoRoute(
+        path: '/recipes/:recipeId',
+        builder: (context, state) =>
+            RecipeDetailScreen(recipeId: state.pathParameters['recipeId']!),
+      ),
       GoRoute(
         path: '/nutrition/setup',
         builder: (context, state) => const NutritionSetupScreen(),

@@ -31,11 +31,13 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     int? sessionLifetime,
+    CancelToken? cancelToken,
   }) {
     return _dio.get<T>(
       path,
       queryParameters: queryParameters,
       options: _options(sessionLifetime),
+      cancelToken: cancelToken,
     );
   }
 

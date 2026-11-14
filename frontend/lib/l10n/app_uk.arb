@@ -1038,5 +1038,122 @@
         "type": "String"
       }
     }
+  },
+  "recipes": "Рецепти",
+  "@recipes": {
+    "description": "recipes"
+  },
+  "recipesDescription": "Переглядайте збережені рецепти.",
+  "@recipesDescription": {
+    "description": "recipesDescription"
+  },
+  "recipesLoading": "Завантаження рецептів…",
+  "@recipesLoading": {
+    "description": "recipesLoading"
+  },
+  "recipesEmpty": "Збережених рецептів поки немає",
+  "@recipesEmpty": {
+    "description": "recipesEmpty"
+  },
+  "recipesEmptyDescription": "Тут з’являться ваші збережені рецепти.",
+  "@recipesEmptyDescription": {
+    "description": "recipesEmptyDescription"
+  },
+  "recipesLoadError": "Не вдалося завантажити рецепти. Спробуйте ще раз.",
+  "@recipesLoadError": {
+    "description": "recipesLoadError"
+  },
+  "recipesAuthentication": "Увійдіть знову, щоб відкрити свої рецепти.",
+  "@recipesAuthentication": {
+    "description": "recipesAuthentication"
+  },
+  "recipesLoadMore": "Завантажити ще",
+  "@recipesLoadMore": {
+    "description": "recipesLoadMore"
+  },
+  "recipeWholeNutrition": "Харчова цінність усього рецепта",
+  "@recipeWholeNutrition": {
+    "description": "recipeWholeNutrition"
+  },
+  "recipeServings": "{count, plural, one {{count} порція} few {{count} порції} many {{count} порцій} other {{count} порції}}",
+  "@recipeServings": {
+    "description": "recipeServings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeCalories": "Калорії (ккал): {value}",
+  "@recipeCalories": {
+    "description": "recipeCalories",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeProtein": "Білки (г): {value}",
+  "@recipeProtein": {
+    "description": "recipeProtein",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeCarbs": "Вуглеводи (г): {value}",
+  "@recipeCarbs": {
+    "description": "recipeCarbs",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeFat": "Жири (г): {value}",
+  "@recipeFat": {
+    "description": "recipeFat",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeNoNutrition": "Немає даних",
+  "@recipeNoNutrition": {
+    "description": "recipeNoNutrition"
+  },
+  "recipeDetails": "Рецепт",
+  "@recipeDetails": {
+    "description": "recipeDetails"
+  },
+  "recipeDetailLoading": "Завантаження рецепта…",
+  "@recipeDetailLoading": {
+    "description": "recipeDetailLoading"
+  },
+  "recipeDetailLoadError": "Не вдалося завантажити рецепт. Спробуйте ще раз.",
+  "@recipeDetailLoadError": {
+    "description": "recipeDetailLoadError"
+  },
+  "recipeUnavailable": "Цей рецепт більше недоступний.",
+  "@recipeUnavailable": {
+    "description": "recipeUnavailable"
+  },
+  "recipeIngredientUnavailable": "Інгредієнт недоступний. Спробуйте завантажити рецепт ще раз.",
+  "@recipeIngredientUnavailable": {
+    "description": "recipeIngredientUnavailable"
+  },
+  "recipeIngredients": "Інгредієнти",
+  "@recipeIngredients": {
+    "description": "recipeIngredients"
+  },
+  "recipeNoIngredients": "Інгредієнти не вказані.",
+  "@recipeNoIngredients": {
+    "description": "recipeNoIngredients"
+  },
+  "recipeInstructions": "Інструкції",
+  "@recipeInstructions": {
+    "description": "recipeInstructions"
   }
 }

@@ -1038,5 +1038,122 @@
         "type": "String"
       }
     }
+  },
+  "recipes": "Recepty",
+  "@recipes": {
+    "description": "recipes"
+  },
+  "recipesDescription": "Prezerajte si uložené recepty.",
+  "@recipesDescription": {
+    "description": "recipesDescription"
+  },
+  "recipesLoading": "Načítavajú sa recepty…",
+  "@recipesLoading": {
+    "description": "recipesLoading"
+  },
+  "recipesEmpty": "Zatiaľ nemáte uložené recepty",
+  "@recipesEmpty": {
+    "description": "recipesEmpty"
+  },
+  "recipesEmptyDescription": "Tu sa zobrazia vaše uložené recepty.",
+  "@recipesEmptyDescription": {
+    "description": "recipesEmptyDescription"
+  },
+  "recipesLoadError": "Recepty sa nepodarilo načítať. Skúste to znova.",
+  "@recipesLoadError": {
+    "description": "recipesLoadError"
+  },
+  "recipesAuthentication": "Prihláste sa znova, aby ste mali prístup k svojim receptom.",
+  "@recipesAuthentication": {
+    "description": "recipesAuthentication"
+  },
+  "recipesLoadMore": "Načítať ďalšie",
+  "@recipesLoadMore": {
+    "description": "recipesLoadMore"
+  },
+  "recipeWholeNutrition": "Výživové hodnoty celého receptu",
+  "@recipeWholeNutrition": {
+    "description": "recipeWholeNutrition"
+  },
+  "recipeServings": "{count, plural, one {1 porcia} few {{count} porcie} many {{count} porcie} other {{count} porcií}}",
+  "@recipeServings": {
+    "description": "recipeServings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeCalories": "Kalórie (kcal): {value}",
+  "@recipeCalories": {
+    "description": "recipeCalories",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeProtein": "Bielkoviny (g): {value}",
+  "@recipeProtein": {
+    "description": "recipeProtein",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeCarbs": "Sacharidy (g): {value}",
+  "@recipeCarbs": {
+    "description": "recipeCarbs",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeFat": "Tuky (g): {value}",
+  "@recipeFat": {
+    "description": "recipeFat",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeNoNutrition": "Žiadne údaje",
+  "@recipeNoNutrition": {
+    "description": "recipeNoNutrition"
+  },
+  "recipeDetails": "Recept",
+  "@recipeDetails": {
+    "description": "recipeDetails"
+  },
+  "recipeDetailLoading": "Načítava sa recept…",
+  "@recipeDetailLoading": {
+    "description": "recipeDetailLoading"
+  },
+  "recipeDetailLoadError": "Tento recept sa nepodarilo načítať. Skúste to znova.",
+  "@recipeDetailLoadError": {
+    "description": "recipeDetailLoadError"
+  },
+  "recipeUnavailable": "Tento recept už nie je dostupný.",
+  "@recipeUnavailable": {
+    "description": "recipeUnavailable"
+  },
+  "recipeIngredientUnavailable": "Prísada nie je dostupná. Skúste recept načítať znova.",
+  "@recipeIngredientUnavailable": {
+    "description": "recipeIngredientUnavailable"
+  },
+  "recipeIngredients": "Prísady",
+  "@recipeIngredients": {
+    "description": "recipeIngredients"
+  },
+  "recipeNoIngredients": "Nie sú uvedené žiadne prísady.",
+  "@recipeNoIngredients": {
+    "description": "recipeNoIngredients"
+  },
+  "recipeInstructions": "Postup",
+  "@recipeInstructions": {
+    "description": "recipeInstructions"
   }
 }
