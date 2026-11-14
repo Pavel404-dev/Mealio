@@ -121,6 +121,15 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             _FeatureCard(
+              key: const Key('recipes-card'),
+              title: context.l10n.recipes,
+              description: context.l10n.recipesDescription,
+              icon: Icons.menu_book_outlined,
+              accentColor: AppColors.peach,
+              onTap: () => context.push('/recipes'),
+            ),
+            const SizedBox(height: 14),
+            _FeatureCard(
               key: const Key('ai-recipe-card'),
               title: context.l10n.aiRecipe,
               description: context.l10n.aiRecipeDescription,

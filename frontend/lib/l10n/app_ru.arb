@@ -1038,5 +1038,122 @@
         "type": "String"
       }
     }
+  },
+  "recipes": "Рецепты",
+  "@recipes": {
+    "description": "recipes"
+  },
+  "recipesDescription": "Просматривайте сохранённые рецепты.",
+  "@recipesDescription": {
+    "description": "recipesDescription"
+  },
+  "recipesLoading": "Загрузка рецептов…",
+  "@recipesLoading": {
+    "description": "recipesLoading"
+  },
+  "recipesEmpty": "Сохранённых рецептов пока нет",
+  "@recipesEmpty": {
+    "description": "recipesEmpty"
+  },
+  "recipesEmptyDescription": "Здесь появятся ваши сохранённые рецепты.",
+  "@recipesEmptyDescription": {
+    "description": "recipesEmptyDescription"
+  },
+  "recipesLoadError": "Не удалось загрузить рецепты. Попробуйте ещё раз.",
+  "@recipesLoadError": {
+    "description": "recipesLoadError"
+  },
+  "recipesAuthentication": "Войдите снова, чтобы открыть свои рецепты.",
+  "@recipesAuthentication": {
+    "description": "recipesAuthentication"
+  },
+  "recipesLoadMore": "Загрузить ещё",
+  "@recipesLoadMore": {
+    "description": "recipesLoadMore"
+  },
+  "recipeWholeNutrition": "Пищевая ценность всего рецепта",
+  "@recipeWholeNutrition": {
+    "description": "recipeWholeNutrition"
+  },
+  "recipeServings": "{count, plural, one {{count} порция} few {{count} порции} many {{count} порций} other {{count} порции}}",
+  "@recipeServings": {
+    "description": "recipeServings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeCalories": "Калории (ккал): {value}",
+  "@recipeCalories": {
+    "description": "recipeCalories",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeProtein": "Белки (г): {value}",
+  "@recipeProtein": {
+    "description": "recipeProtein",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeCarbs": "Углеводы (г): {value}",
+  "@recipeCarbs": {
+    "description": "recipeCarbs",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeFat": "Жиры (г): {value}",
+  "@recipeFat": {
+    "description": "recipeFat",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeNoNutrition": "Нет данных",
+  "@recipeNoNutrition": {
+    "description": "recipeNoNutrition"
+  },
+  "recipeDetails": "Рецепт",
+  "@recipeDetails": {
+    "description": "recipeDetails"
+  },
+  "recipeDetailLoading": "Загрузка рецепта…",
+  "@recipeDetailLoading": {
+    "description": "recipeDetailLoading"
+  },
+  "recipeDetailLoadError": "Не удалось загрузить рецепт. Попробуйте ещё раз.",
+  "@recipeDetailLoadError": {
+    "description": "recipeDetailLoadError"
+  },
+  "recipeUnavailable": "Этот рецепт больше недоступен.",
+  "@recipeUnavailable": {
+    "description": "recipeUnavailable"
+  },
+  "recipeIngredientUnavailable": "Ингредиент недоступен. Попробуйте загрузить рецепт ещё раз.",
+  "@recipeIngredientUnavailable": {
+    "description": "recipeIngredientUnavailable"
+  },
+  "recipeIngredients": "Ингредиенты",
+  "@recipeIngredients": {
+    "description": "recipeIngredients"
+  },
+  "recipeNoIngredients": "Ингредиенты не указаны.",
+  "@recipeNoIngredients": {
+    "description": "recipeNoIngredients"
+  },
+  "recipeInstructions": "Инструкции",
+  "@recipeInstructions": {
+    "description": "recipeInstructions"
   }
 }

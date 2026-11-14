@@ -1038,5 +1038,122 @@
         "type": "String"
       }
     }
+  },
+  "recipes": "Recipes",
+  "@recipes": {
+    "description": "recipes"
+  },
+  "recipesDescription": "Browse your saved recipes.",
+  "@recipesDescription": {
+    "description": "recipesDescription"
+  },
+  "recipesLoading": "Loading recipes…",
+  "@recipesLoading": {
+    "description": "recipesLoading"
+  },
+  "recipesEmpty": "No saved recipes yet",
+  "@recipesEmpty": {
+    "description": "recipesEmpty"
+  },
+  "recipesEmptyDescription": "Your saved recipes will appear here.",
+  "@recipesEmptyDescription": {
+    "description": "recipesEmptyDescription"
+  },
+  "recipesLoadError": "Unable to load recipes. Please try again.",
+  "@recipesLoadError": {
+    "description": "recipesLoadError"
+  },
+  "recipesAuthentication": "Sign in again to access your recipes.",
+  "@recipesAuthentication": {
+    "description": "recipesAuthentication"
+  },
+  "recipesLoadMore": "Load more",
+  "@recipesLoadMore": {
+    "description": "recipesLoadMore"
+  },
+  "recipeWholeNutrition": "Nutrition for the whole recipe",
+  "@recipeWholeNutrition": {
+    "description": "recipeWholeNutrition"
+  },
+  "recipeServings": "{count, plural, one {1 serving} other {{count} servings}}",
+  "@recipeServings": {
+    "description": "recipeServings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeCalories": "Calories (kcal): {value}",
+  "@recipeCalories": {
+    "description": "recipeCalories",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeProtein": "Protein (g): {value}",
+  "@recipeProtein": {
+    "description": "recipeProtein",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeCarbs": "Carbs (g): {value}",
+  "@recipeCarbs": {
+    "description": "recipeCarbs",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeFat": "Fat (g): {value}",
+  "@recipeFat": {
+    "description": "recipeFat",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeNoNutrition": "No data",
+  "@recipeNoNutrition": {
+    "description": "recipeNoNutrition"
+  },
+  "recipeDetails": "Recipe",
+  "@recipeDetails": {
+    "description": "recipeDetails"
+  },
+  "recipeDetailLoading": "Loading recipe…",
+  "@recipeDetailLoading": {
+    "description": "recipeDetailLoading"
+  },
+  "recipeDetailLoadError": "Unable to load this recipe. Please try again.",
+  "@recipeDetailLoadError": {
+    "description": "recipeDetailLoadError"
+  },
+  "recipeUnavailable": "This recipe is no longer available.",
+  "@recipeUnavailable": {
+    "description": "recipeUnavailable"
+  },
+  "recipeIngredientUnavailable": "An ingredient is unavailable. Try loading the recipe again.",
+  "@recipeIngredientUnavailable": {
+    "description": "recipeIngredientUnavailable"
+  },
+  "recipeIngredients": "Ingredients",
+  "@recipeIngredients": {
+    "description": "recipeIngredients"
+  },
+  "recipeNoIngredients": "No ingredients listed.",
+  "@recipeNoIngredients": {
+    "description": "recipeNoIngredients"
+  },
+  "recipeInstructions": "Instructions",
+  "@recipeInstructions": {
+    "description": "recipeInstructions"
   }
 }
