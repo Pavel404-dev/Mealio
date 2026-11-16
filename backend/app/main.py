@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.router import api_router
+from app.api.v2.router import api_router as api_v2_router
 from app.core.config import get_settings
 from app.db.session import check_database_connection, close_database_connection
 
@@ -27,6 +28,7 @@ app = FastAPI(
 )
 
 app.include_router(api_router)
+app.include_router(api_v2_router)
 
 
 @app.exception_handler(RequestValidationError)
