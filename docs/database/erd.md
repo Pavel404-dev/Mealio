@@ -549,9 +549,7 @@ The `meal_plan_items` table stores recipes assigned to specific days and meal sl
 | meal_plan_id | UUID | Foreign key to `meal_plans.id` |
 | recipe_id | UUID | Foreign key to `recipes.id` |
 | planned_date | Date | Planned meal date |
-| meal_slot | String | Meal slot |
-| created_at | DateTime | Record creation date |
-| updated_at | DateTime | Last update date |
+| meal_type | String(50) | Meal slot; canonical writes opt in through API v2 |
 
 ### Example Meal Slots
 
@@ -562,6 +560,10 @@ dinner
 snack
 ```
 
+The [W12 slot contract](../meal-plan-slots.md) defines canonical v2 writes and
+preserves v1/custom labels without a data migration. `planned_date` represents the
+day. Item timestamps are not stored by the current model.
+
 ### Constraints
 
 | Constraint | Description |
@@ -569,6 +571,7 @@ snack
 | Primary Key | `id` |
 | Foreign Key | `meal_plan_id` references `meal_plans.id` |
 | Foreign Key | `recipe_id` references `recipes.id` |
+| Unique | `(meal_plan_id, planned_date, meal_type)`; writes normalize case and whitespace |
 
 ### Relationships
 
