@@ -96,7 +96,7 @@ def test_v1_custom_requests_and_legacy_reads_remain_valid():
     )
 
 
-def test_openapi_exposes_separate_write_contracts_with_shared_legacy_safe_responses():
+def test_openapi_exposes_versioned_writes_and_additive_portion_responses():
     spec = app.openapi()
     paths = [
         ("/meal-plans", "post", "MealPlan"),
@@ -111,7 +111,12 @@ def test_openapi_exposes_separate_write_contracts_with_shared_legacy_safe_respon
             assert operation["requestBody"]["content"]["application/json"][
                 "schema"
             ] == {"$ref": f"#/components/schemas/{schema}{version}{suffix}"}
-        assert v2["responses"] == v1["responses"]
+        success = "200" if method == "patch" else "201"
+        for operation, version in [(v1, ""), (v2, "V2")]:
+            assert operation["responses"][success]["content"]["application/json"][
+                "schema"
+            ] == {"$ref": f"#/components/schemas/{schema}{version}Read"}
+        assert v2["responses"]["422"] == v1["responses"]["422"]
         assert v2["security"] == v1["security"]
     schemas = spec["components"]["schemas"]
     canonical = ["breakfast", "lunch", "dinner", "snack"]

@@ -11,6 +11,7 @@ from app.models.ingredient import Ingredient, UserIngredient
 from app.models.meal_plan import MealPlan, MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.models.user import User
+from app.repositories.meal_plan_quantities import planned_quantity_sum
 from app.schemas.meal_plan import (
     MealPlanCreate,
     MealPlanItemCreate,
@@ -177,22 +178,16 @@ class MealPlansRepository:
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> list[dict]:
-        total_calories = func.coalesce(
-            func.sum(func.coalesce(Recipe.total_calories, Decimal("0"))),
-            Decimal("0"),
-        ).label("total_calories")
-        total_protein_g = func.coalesce(
-            func.sum(func.coalesce(Recipe.total_protein_g, Decimal("0"))),
-            Decimal("0"),
-        ).label("total_protein_g")
-        total_carbs_g = func.coalesce(
-            func.sum(func.coalesce(Recipe.total_carbs_g, Decimal("0"))),
-            Decimal("0"),
-        ).label("total_carbs_g")
-        total_fat_g = func.coalesce(
-            func.sum(func.coalesce(Recipe.total_fat_g, Decimal("0"))),
-            Decimal("0"),
-        ).label("total_fat_g")
+        total_calories = planned_quantity_sum(Recipe.total_calories).label(
+            "total_calories"
+        )
+        total_protein_g = planned_quantity_sum(Recipe.total_protein_g).label(
+            "total_protein_g"
+        )
+        total_carbs_g = planned_quantity_sum(Recipe.total_carbs_g).label(
+            "total_carbs_g"
+        )
+        total_fat_g = planned_quantity_sum(Recipe.total_fat_g).label("total_fat_g")
 
         stmt = (
             select(
@@ -235,10 +230,9 @@ class MealPlansRepository:
         meal_type: str | None = None,
         subtract_pantry: bool = False,
     ) -> list[dict]:
-        required_quantity = func.coalesce(
-            func.sum(RecipeIngredient.quantity_g),
-            Decimal("0"),
-        ).label("required_quantity_g")
+        required_quantity = planned_quantity_sum(RecipeIngredient.quantity_g).label(
+            "required_quantity_g"
+        )
 
         required_stmt = (
             select(
@@ -353,6 +347,7 @@ class MealPlansRepository:
                 recipe_id=item.recipe_id,
                 planned_date=item.planned_date,
                 meal_type=normalize_meal_type(item.meal_type),
+                planned_servings=getattr(item, "planned_servings", None),
             )
             for item in data.items
         ]
@@ -457,6 +452,7 @@ class MealPlansRepository:
             recipe_id=data.recipe_id,
             planned_date=data.planned_date,
             meal_type=normalize_meal_type(data.meal_type),
+            planned_servings=getattr(data, "planned_servings", None),
         )
 
         self.db.add(item)
@@ -487,6 +483,9 @@ class MealPlansRepository:
 
         if "meal_type" in update_data and data.meal_type is not None:
             item.meal_type = normalize_meal_type(data.meal_type)
+
+        if "planned_servings" in update_data:
+            item.planned_servings = update_data["planned_servings"]
 
         try:
             await self.db.commit()

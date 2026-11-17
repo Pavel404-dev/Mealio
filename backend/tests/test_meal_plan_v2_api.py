@@ -53,10 +53,22 @@ async def test_v2_plan_create_roundtrips_all_slots_through_existing_reads(client
     assert response.status_code == 201
     plan = response.json()
     assert sorted(item["meal_type"] for item in plan["items"]) == sorted(canonical)
-    assert await read_plan(client, headers, plan["id"]) == plan
+    assert all(item["planned_servings"] is None for item in plan["items"])
+    v1_plan = {
+        **plan,
+        "items": [
+            {key: value for key, value in item.items() if key != "planned_servings"}
+            for item in plan["items"]
+        ],
+    }
+    assert await read_plan(client, headers, plan["id"]) == v1_plan
     response = await client.get(MEAL_PLANS_URL, headers=headers)
     assert response.status_code == 200
-    assert response.json() == [plan]
+    assert response.json() == [v1_plan]
+    response = await client.get(f"{V2_URL}/{plan['id']}", headers=headers)
+    assert response.status_code == 200 and response.json() == plan
+    response = await client.get(V2_URL, headers=headers)
+    assert response.status_code == 200 and response.json() == [plan]
     response = await client.get(
         "/api/v1/meal-plan-items",
         headers=headers,

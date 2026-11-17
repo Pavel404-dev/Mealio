@@ -38,7 +38,8 @@ def test_duration_offline_upgrade_and_single_head():
         "script_location", str(portion_migration.BACKEND / "alembic")
     )
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [REVISION]
+    assert len(script.get_heads()) == 1
+    assert REVISION in {r.revision for r in script.walk_revisions()}
     assert script.get_revision(REVISION).down_revision == PARENT
 
 
@@ -80,13 +81,16 @@ async def test_duration_additive_upgrade_and_lossy_roundtrip(migration_db, popul
             "WHERE table_schema='public' AND table_name='recipes' AND column_name='prep_time_minutes'"
         )
     ).one() == ("integer", "YES", None)
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
+    await db.migrate("downgrade", REVISION)
     if populated:
         await db.execute("UPDATE recipes SET prep_time_minutes=480")
     await db.migrate("downgrade", PARENT)
     assert await db.state() == before
     await db.migrate("upgrade", REVISION)
     assert await db.state() == after
+    await db.migrate("upgrade", "head")
     await asyncio.to_thread(command.check, db.config)
 
 

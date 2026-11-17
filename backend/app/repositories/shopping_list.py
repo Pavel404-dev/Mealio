@@ -10,6 +10,7 @@ from app.models.ingredient import Ingredient, UserIngredient
 from app.models.meal_plan import MealPlan, MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.repositories.meal_plans import normalize_meal_type
+from app.repositories.meal_plan_quantities import planned_quantity_sum
 
 
 class ShoppingListRepository:
@@ -25,10 +26,9 @@ class ShoppingListRepository:
         meal_type: str | None = None,
         subtract_pantry: bool = False,
     ) -> list[dict]:
-        required_quantity = func.coalesce(
-            func.sum(RecipeIngredient.quantity_g),
-            Decimal("0"),
-        ).label("required_quantity_g")
+        required_quantity = planned_quantity_sum(RecipeIngredient.quantity_g).label(
+            "required_quantity_g"
+        )
 
         required_stmt = (
             select(
