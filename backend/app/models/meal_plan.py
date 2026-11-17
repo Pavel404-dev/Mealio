@@ -1,7 +1,17 @@
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -73,6 +83,11 @@ class MealPlanItem(Base):
             "meal_type",
             name="uq_meal_plan_item_slot",
         ),
+        CheckConstraint(
+            "planned_servings BETWEEN 0.01 AND 12 "
+            "AND planned_servings = trunc(planned_servings, 2)",
+            name="ck_meal_plan_items_planned_servings",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -102,6 +117,9 @@ class MealPlanItem(Base):
         String(50),
         nullable=False,
     )
+
+    # NULL preserves the historical whole-recipe assignment.
+    planned_servings: Mapped[Decimal | None] = mapped_column(Numeric(), nullable=True)
 
     meal_plan = relationship(
         "MealPlan",

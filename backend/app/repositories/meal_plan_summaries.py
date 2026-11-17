@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meal_plan import MealPlanItem
 from app.models.recipe import Recipe
+from app.repositories.meal_plan_quantities import planned_quantity_sum
 
 
 ZERO = Decimal("0.00")
@@ -23,22 +24,10 @@ class MealPlanSummariesRepository:
         stmt = (
             select(
                 func.count(MealPlanItem.id).label("items_count"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_calories, ZERO)),
-                    ZERO,
-                ).label("total_calories"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_protein_g, ZERO)),
-                    ZERO,
-                ).label("total_protein_g"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_carbs_g, ZERO)),
-                    ZERO,
-                ).label("total_carbs_g"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_fat_g, ZERO)),
-                    ZERO,
-                ).label("total_fat_g"),
+                planned_quantity_sum(Recipe.total_calories).label("total_calories"),
+                planned_quantity_sum(Recipe.total_protein_g).label("total_protein_g"),
+                planned_quantity_sum(Recipe.total_carbs_g).label("total_carbs_g"),
+                planned_quantity_sum(Recipe.total_fat_g).label("total_fat_g"),
             )
             .select_from(MealPlanItem)
             .join(Recipe, Recipe.id == MealPlanItem.recipe_id)
@@ -66,22 +55,10 @@ class MealPlanSummariesRepository:
             select(
                 MealPlanItem.planned_date.label("date"),
                 func.count(MealPlanItem.id).label("items_count"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_calories, ZERO)),
-                    ZERO,
-                ).label("total_calories"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_protein_g, ZERO)),
-                    ZERO,
-                ).label("total_protein_g"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_carbs_g, ZERO)),
-                    ZERO,
-                ).label("total_carbs_g"),
-                func.coalesce(
-                    func.sum(func.coalesce(Recipe.total_fat_g, ZERO)),
-                    ZERO,
-                ).label("total_fat_g"),
+                planned_quantity_sum(Recipe.total_calories).label("total_calories"),
+                planned_quantity_sum(Recipe.total_protein_g).label("total_protein_g"),
+                planned_quantity_sum(Recipe.total_carbs_g).label("total_carbs_g"),
+                planned_quantity_sum(Recipe.total_fat_g).label("total_fat_g"),
             )
             .select_from(MealPlanItem)
             .join(Recipe, Recipe.id == MealPlanItem.recipe_id)

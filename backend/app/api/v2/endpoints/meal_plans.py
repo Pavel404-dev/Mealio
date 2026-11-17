@@ -1,31 +1,64 @@
-"""Opt-in canonical writes; reads and other plan operations remain available in v1."""
+"""Canonical slot writes and reads that expose optional planned portions."""
 
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.meal_plan import MealPlanItemRead, MealPlanRead
 from app.schemas.meal_plan_v2 import (
     MealPlanItemV2Create,
+    MealPlanItemV2Read,
     MealPlanItemV2Update,
     MealPlanV2Create,
+    MealPlanV2Read,
 )
 from app.services.meal_plans import MealPlansService
 
 router = APIRouter(prefix="/meal-plans", tags=["Meal Plans V2"])
 
 
-@router.post("", response_model=MealPlanRead, status_code=status.HTTP_201_CREATED)
+@router.get("", response_model=list[MealPlanV2Read])
+async def list_current_user_meal_plans(
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await MealPlansService(db).list_user_meal_plans(
+        user_id=current_user.id,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/{meal_plan_id}", response_model=MealPlanV2Read)
+async def get_meal_plan(
+    meal_plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await MealPlansService(db).get_meal_plan(
+        user_id=current_user.id, meal_plan_id=meal_plan_id
+    )
+
+
+@router.post("", response_model=MealPlanV2Read, status_code=status.HTTP_201_CREATED)
 async def create_meal_plan(
     payload: MealPlanV2Create,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create canonical slots; read the resulting plan through /api/v1/meal-plans."""
+    """Create canonical slots, optionally selecting portions of each recipe."""
     return await MealPlansService(db).create_meal_plan(
         user_id=current_user.id,
         data=payload,
@@ -34,7 +67,7 @@ async def create_meal_plan(
 
 @router.post(
     "/{meal_plan_id}/items",
-    response_model=MealPlanItemRead,
+    response_model=MealPlanItemV2Read,
     status_code=status.HTTP_201_CREATED,
 )
 async def add_meal_plan_item(
@@ -53,7 +86,7 @@ async def add_meal_plan_item(
 
 @router.patch(
     "/{meal_plan_id}/items/{item_id}",
-    response_model=MealPlanItemRead,
+    response_model=MealPlanItemV2Read,
 )
 async def update_meal_plan_item(
     meal_plan_id: uuid.UUID,
