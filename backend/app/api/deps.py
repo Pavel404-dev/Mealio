@@ -15,6 +15,8 @@ from app.integrations.email_verification_otp_mailer import (
     EmailVerificationOtpMailer,
 )
 from app.integrations.mailtrap_api_mailer import MailtrapApiMailer
+from app.integrations.meal_plan_generation import MealPlanGenerationProvider
+from app.integrations.openai_meal_plan_generation import OpenAIMealPlanProvider
 from app.integrations.openai_recipe_generation import OpenAIRecipeGenerationProvider
 from app.integrations.password_reset_mailer import PasswordResetMailer
 from app.integrations.password_reset_otp_mailer import PasswordResetOtpMailer
@@ -153,6 +155,20 @@ def get_recipe_generation_provider() -> RecipeGenerationProvider:
         )
 
     return OpenAIRecipeGenerationProvider(
+        api_key=api_key,
+        model=model,
+        timeout_seconds=settings.ai_request_timeout_seconds,
+    )
+
+
+def get_meal_plan_generation_provider() -> MealPlanGenerationProvider:
+    settings = get_settings()
+    key = settings.openai_api_key
+    api_key = key.get_secret_value().strip() if key else ""
+    model = (settings.openai_meal_plan_model or "").strip()
+    if not api_key or not model:
+        raise HTTPException(503, "AI meal plan preview is not configured")
+    return OpenAIMealPlanProvider(
         api_key=api_key,
         model=model,
         timeout_seconds=settings.ai_request_timeout_seconds,

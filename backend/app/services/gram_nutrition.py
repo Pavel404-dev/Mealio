@@ -56,11 +56,11 @@ def _decimal_from_fraction(
 
 def nutrient_per_100g(value: Decimal, portion_g: Decimal) -> Decimal:
     """Read projection only: exact scaling, final rounding, no storage bound."""
-    return _decimal_from_fraction(
-        _scale_grams(value, Decimal("100"), portion_g),
-        precision=50,
-        round_to_hundredths=True,
-    )
+    return round_nutrition_hundredths(_scale_grams(value, Decimal("100"), portion_g))
+
+
+def round_nutrition_hundredths(total: Fraction) -> Decimal:
+    return _decimal_from_fraction(total, precision=50, round_to_hundredths=True)
 
 
 def aggregate_grams(

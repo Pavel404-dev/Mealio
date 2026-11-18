@@ -21,8 +21,9 @@ def normalize_canonical_meal_type(value: object) -> object:
     return value
 
 
+MealSlot = Literal["breakfast", "lunch", "dinner", "snack"]
 CanonicalMealType = Annotated[
-    Literal["breakfast", "lunch", "dinner", "snack"],
+    MealSlot,
     BeforeValidator(normalize_canonical_meal_type),
 ]
 
