@@ -37,6 +37,9 @@ export default defineRailway((ctx) => {
       SMTP_FROM_EMAIL: ctx.shared.SMTP_FROM_EMAIL,
       EMAIL_VERIFICATION_URL_BASE:
         ctx.shared.EMAIL_VERIFICATION_URL_BASE,
+      OPENAI_MEAL_PLAN_API_KEY: ctx.shared.OPENAI_API_KEY,
+      OPENAI_MEAL_PLAN_MODEL: "gpt-6-luna",
+      OPENAI_MEAL_PLAN_REASONING_EFFORT: "low",
     },
   });
 

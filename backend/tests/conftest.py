@@ -39,6 +39,7 @@ os.environ.setdefault(
     "test_auth_abuse_pepper_with_more_than_32_chars",
 )
 os.environ.pop("OPENAI_API_KEY", None)
+os.environ.pop("OPENAI_MEAL_PLAN_API_KEY", None)
 
 # Tests must never load a developer .env, even when all required values are set.
 from app.core.config import Settings
