@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Protocol
 
 
@@ -19,6 +20,7 @@ class MealPlanProviderResult:
     selection: object
     input_tokens: int | None = None
     output_tokens: int | None = None
+    estimated_cost_usd: Decimal | None = None
 
 
 class MealPlanGenerationProvider(Protocol):

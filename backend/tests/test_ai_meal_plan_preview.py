@@ -107,13 +107,19 @@ class FakeProvider:
         self.calls = []
         self.result = {"items": [selection("dinner", 2, 50), selection()]}
         self.failure = None
+        self.estimated_cost_usd = None
 
     async def select_meals(self, *, context_json):
         assert self.db.released
         self.calls.append(json.loads(context_json))
         if self.failure:
             raise self.failure
-        return MealPlanProviderResult(self.result, input_tokens=120, output_tokens=32)
+        return MealPlanProviderResult(
+            self.result,
+            input_tokens=410,
+            output_tokens=34,
+            estimated_cost_usd=self.estimated_cost_usd,
+        )
 
 
 @pytest.fixture
@@ -134,10 +140,15 @@ async def preview(monkeypatch):
         yield client, db, provider
 
 
+@pytest.mark.parametrize(
+    ("estimated_cost", "logged_cost"),
+    [(Decimal("0.000058"), "0.000058"), (None, "unknown"), (Decimal("0"), "0")],
+)
 async def test_preview_validates_owner_snapshot_and_recalculates_in_request_order(
-    preview, caplog
+    preview, caplog, estimated_cost, logged_cost
 ):
     client, db, provider = preview
+    provider.estimated_cost_usd = estimated_cost
     db.recipes.extend(
         [
             recipe(name="Exclude me"),
@@ -183,7 +194,7 @@ async def test_preview_validates_owner_snapshot_and_recalculates_in_request_orde
         assert private not in json.dumps(context) and private not in caplog.text
     assert (
         "outcome=success" in caplog.text
-        and "input_tokens=120 output_tokens=32" in caplog.text
+        and f"input_tokens=410 output_tokens=34 cost_usd={logged_cost}\n" in caplog.text
     )
 
 
@@ -265,13 +276,16 @@ async def test_missing_eligible_slot_stops_before_provider(preview):
     ],
 )
 async def test_provider_errors_are_generic_and_preview_reads_only(
-    preview, error, detail
+    preview, caplog, error, detail
 ):
     client, db, provider = preview
     provider.failure = error("private provider response")
-    response = await client.post(URL, json=REQUEST)
+    with caplog.at_level(logging.INFO, logger="uvicorn.error.mealio.ai_meal_plan"):
+        response = await client.post(URL, json=REQUEST)
     assert response.status_code == 503 and response.json() == {"detail": detail}
     assert db.released and len(db.reads) == 2
+    assert "input_tokens=None output_tokens=None cost_usd=unknown" in caplog.text
+    assert "private provider response" not in caplog.text
 
 
 async def test_authentication_precedes_provider_configuration():
