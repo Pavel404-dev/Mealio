@@ -6,9 +6,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_meal_plan_generation_provider
 from app.db.session import get_db
+from app.integrations.meal_plan_generation import MealPlanGenerationProvider
 from app.models.user import User
+from app.schemas.ai_meal_plan import AIMealPlanPreview, AIMealPlanPreviewRequest
 from app.schemas.meal_plan_v2 import (
     MealPlanItemV2Create,
     MealPlanItemV2Read,
@@ -16,9 +18,23 @@ from app.schemas.meal_plan_v2 import (
     MealPlanV2Create,
     MealPlanV2Read,
 )
+from app.services.ai_meal_plan_preview import AIMealPlanPreviewService
 from app.services.meal_plans import MealPlansService
 
 router = APIRouter(prefix="/meal-plans", tags=["Meal Plans V2"])
+
+
+@router.post("/ai/generate-preview", response_model=AIMealPlanPreview)
+async def generate_meal_plan_preview(
+    payload: AIMealPlanPreviewRequest,
+    current_user: User = Depends(get_current_user),
+    provider: MealPlanGenerationProvider = Depends(get_meal_plan_generation_provider),
+    db: AsyncSession = Depends(get_db),
+):
+    """Suggest one day of assignments from the authenticated user's saved recipes."""
+    return await AIMealPlanPreviewService(db, provider).generate(
+        user_id=current_user.id, request=payload
+    )
 
 
 @router.get("", response_model=list[MealPlanV2Read])

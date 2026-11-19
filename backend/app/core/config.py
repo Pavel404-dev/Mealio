@@ -61,6 +61,7 @@ class Settings(BaseSettings):
         max_length=100,
     )
     ai_request_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    openai_meal_plan_model: str | None = Field(default=None, max_length=100)
 
     @field_validator("mailtrap_sandbox_id", mode="before")
     @classmethod

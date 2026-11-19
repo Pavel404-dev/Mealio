@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.ingredient import Ingredient, UserIngredient
 from app.models.meal_plan import MealPlan, MealPlanItem
@@ -77,6 +77,29 @@ class RecipesRepository:
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def list_for_plan_preview(
+        self, *, user_id: uuid.UUID, limit: int
+    ) -> list[Recipe]:
+        # A single read snapshot pairs stored recipe totals with their composition.
+        stmt = (
+            select(Recipe)
+            .options(
+                joinedload(Recipe.recipe_ingredients)
+                .joinedload(RecipeIngredient.ingredient)
+                .joinedload(Ingredient.nutrition_value)
+            )
+            .where(
+                Recipe.created_by_user_id == user_id,
+                Recipe.total_calories.is_not(None),
+                Recipe.total_protein_g.is_not(None),
+                Recipe.total_carbs_g.is_not(None),
+                Recipe.total_fat_g.is_not(None),
+            )
+            .order_by(Recipe.created_at.desc(), Recipe.id.asc())
+            .limit(limit)
+        )
+        return list((await self.db.execute(stmt)).unique().scalars().all())
 
     async def list_for_pantry_suggestions(
         self,
