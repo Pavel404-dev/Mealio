@@ -27,7 +27,16 @@ REQUEST = {
 }
 
 
-def recipe(*, meal_type=None, name="Rice", servings=4, calories="330", complete=True):
+def recipe(
+    *,
+    meal_type=None,
+    name="Rice",
+    servings=4,
+    calories="330",
+    macros=("62", "0", "7.20"),
+    diet_type="balanced",
+    complete=True,
+):
     value = SimpleNamespace(
         portion_g=Decimal("100"),
         calories=Decimal("165"),
@@ -40,11 +49,11 @@ def recipe(*, meal_type=None, name="Rice", servings=4, calories="330", complete=
         title="private recipe name",
         servings=servings,
         meal_type=meal_type,
-        diet_type="balanced",
+        diet_type=diet_type,
         total_calories=Decimal(calories),
-        total_protein_g=Decimal("62"),
-        total_carbs_g=Decimal("0"),
-        total_fat_g=Decimal("7.20"),
+        total_protein_g=Decimal(macros[0]),
+        total_carbs_g=Decimal(macros[1]),
+        total_fat_g=Decimal(macros[2]),
         recipe_ingredients=[
             SimpleNamespace(
                 quantity_g=Decimal("200"),
@@ -207,6 +216,181 @@ async def test_preview_rounds_once_for_the_entire_day(preview):
     assert response.json()["nutrition"]["total_calories"] == "0.67"
 
 
+async def test_full_day_preview_fits_the_recorded_staging_targets(preview):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=1800,
+        daily_protein_target_g=105,
+        daily_carbs_target_g=210,
+        daily_fat_target_g=60,
+        liked_ingredients=["Favorite lunch"],
+        disliked_ingredients=["Exclude me"],
+    )
+    db.recipes = [
+        recipe(
+            meal_type="breakfast",
+            servings=2,
+            calories="792",
+            macros=("40", "104", "24"),
+        ),
+        recipe(
+            meal_type="breakfast",
+            servings=2,
+            calories="904.20",
+            macros=("77.40", "88.40", "25.44"),
+        ),
+        recipe(
+            meal_type="lunch",
+            name="Favorite lunch",
+            calories="2900",
+            macros=("180", "320", "100"),
+        ),
+        recipe(meal_type="lunch", calories="2512", macros=("136", "312", "80")),
+        recipe(
+            meal_type="dinner", servings=3, calories="1740", macros=("105", "195", "60")
+        ),
+        recipe(
+            meal_type="dinner",
+            servings=3,
+            calories="1788",
+            macros=("158.40", "156", "56.64"),
+        ),
+        recipe(
+            meal_type="lunch",
+            name="Exclude me",
+            calories="2900",
+            macros=("180", "320", "100"),
+        ),
+    ]
+    # The recorded model chose the alternative breakfast and lunch at one serving each.
+    provider.result = {
+        "items": [
+            selection("dinner", 5),
+            selection("lunch", 4),
+            selection("breakfast", 2),
+        ]
+    }
+    response = await client.post(
+        URL, json={**REQUEST, "meal_types": ["breakfast", "lunch", "dinner"]}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [
+        (item["meal_type"], item["recipe_id"], Decimal(item["planned_servings"]))
+        for item in body["items"]
+    ] == [
+        ("breakfast", str(db.recipes[0].id), Decimal("1.25")),
+        ("lunch", str(db.recipes[2].id), Decimal("1")),
+        ("dinner", str(db.recipes[4].id), Decimal("1")),
+    ]
+    assert body["nutrition"] == {
+        "total_calories": "1800.00",
+        "total_protein_g": "105.00",
+        "total_carbs_g": "210.00",
+        "total_fat_g": "60.00",
+    }
+    [context] = provider.calls
+    assert len(context["candidates"]) == 6
+
+
+@pytest.mark.parametrize("preferred_meals", [3, None])
+async def test_lunch_preview_preserves_provider_portion_for_a_partial_day(
+    preview, preferred_meals
+):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=1800, preferred_meals_per_day=preferred_meals
+    )
+    db.recipes = [
+        recipe(meal_type="lunch", servings=1, calories="500"),
+        recipe(meal_type="lunch", servings=1, calories="1800"),
+    ]
+    provider.result = {"items": [selection(hundredths=113)]}
+    response = await client.post(URL, json={**REQUEST, "meal_types": ["lunch"]})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    [lunch] = body["items"]
+    assert lunch["recipe_id"] == str(db.recipes[0].id)
+    assert Decimal(lunch["planned_servings"]) == Decimal("1.13")
+    assert body["nutrition"]["total_calories"] == "565.00"
+    assert len(provider.calls) == 1
+
+
+async def test_unreachable_carb_target_does_not_prevent_closer_calories(preview):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=250, daily_carbs_target_g=10, preferred_meals_per_day=2
+    )
+    db.recipes = [
+        recipe(meal_type=slot, servings=1, calories="100")
+        for slot in REQUEST["meal_types"]
+    ]
+    provider.result = {"items": [selection("lunch"), selection("dinner", 2)]}
+    response = await client.post(URL, json=REQUEST)
+    assert response.status_code == 200, response.text
+    assert response.json()["nutrition"] == {
+        "total_calories": "250.00",
+        "total_protein_g": "155.00",
+        "total_carbs_g": "0.00",
+        "total_fat_g": "18.00",
+    }
+    assert len(provider.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("alternative_diet", "expected_lunch"), [(" VEGAN ", 2), ("balanced", 0)]
+)
+async def test_equal_nutrition_favors_liked_recipe_with_preferred_diet(
+    preview, alternative_diet, expected_lunch
+):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=200,
+        preferred_meals_per_day=2,
+        diet_type="vegan",
+        liked_ingredients=["Favorite"],
+    )
+    db.recipes = [
+        recipe(meal_type="lunch", calories="400", diet_type="vegan"),
+        recipe(meal_type="dinner", calories="400", diet_type="vegan"),
+        recipe(
+            meal_type="lunch",
+            name="Favorite",
+            calories="400",
+            diet_type=alternative_diet,
+        ),
+    ]
+    provider.result = {"items": [selection("lunch"), selection("dinner", 2)]}
+    response = await client.post(URL, json=REQUEST)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["items"][0]["recipe_id"] == str(db.recipes[expected_lunch].id)
+    assert body["nutrition"]["total_calories"] == "200.00"
+
+
+@pytest.mark.parametrize("calories_target", [180, None])
+async def test_keeps_provider_portions_when_plan_fits_or_targets_are_absent(
+    preview, calories_target
+):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=calories_target, preferred_meals_per_day=2
+    )
+    db.recipes = [
+        recipe(meal_type=slot, servings=1, calories="100")
+        for slot in REQUEST["meal_types"]
+    ]
+    provider.result = {
+        "items": [selection("lunch", hundredths=113), selection("dinner", 2, 67)]
+    }
+    response = await client.post(URL, json=REQUEST)
+    assert response.status_code == 200, response.text
+    assert [Decimal(item["planned_servings"]) for item in response.json()["items"]] == [
+        Decimal("1.13"),
+        Decimal("0.67"),
+    ]
+
+
 @pytest.mark.parametrize(
     "items",
     [
@@ -225,6 +409,7 @@ async def test_preview_rounds_once_for_the_entire_day(preview):
 )
 async def test_invalid_model_output_is_rejected_whole(preview, items):
     client, db, provider = preview
+    db.profile.preferred_meals_per_day = len(REQUEST["meal_types"])
     provider.result = {"items": items}
     response = await client.post(URL, json=REQUEST)
     assert response.status_code == 502
