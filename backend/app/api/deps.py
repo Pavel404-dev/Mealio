@@ -163,7 +163,9 @@ def get_recipe_generation_provider() -> RecipeGenerationProvider:
 
 def get_meal_plan_generation_provider() -> MealPlanGenerationProvider:
     settings = get_settings()
-    key = settings.openai_api_key
+    key = settings.openai_meal_plan_api_key
+    if key is None:
+        key = settings.openai_api_key
     api_key = key.get_secret_value().strip() if key else ""
     model = (settings.openai_meal_plan_model or "").strip()
     if not api_key or not model:
@@ -172,6 +174,7 @@ def get_meal_plan_generation_provider() -> MealPlanGenerationProvider:
         api_key=api_key,
         model=model,
         timeout_seconds=settings.ai_request_timeout_seconds,
+        reasoning_effort=settings.openai_meal_plan_reasoning_effort,
     )
 
 

@@ -292,6 +292,7 @@ async def test_recipe_model_setting_alone_does_not_enable_plan_generation(monkey
         lambda: SimpleNamespace(
             openai_api_key=SecretStr("test-key"),
             openai_model="recipe-model",
+            openai_meal_plan_api_key=None,
             openai_meal_plan_model=None,
         ),
     )

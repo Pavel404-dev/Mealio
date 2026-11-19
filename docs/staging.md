@@ -111,6 +111,7 @@ resolved variables into logs, issues, screenshots, or chat.
 | `MAILTRAP_SANDBOX_ID` | Numeric ID of the controlled Mailtrap sandbox |
 | `SMTP_FROM_EMAIL` | Sender address used by both Mailtrap API and SMTP delivery |
 | `EMAIL_VERIFICATION_URL_BASE` | Controlled staging-client destination for verification links |
+| `OPENAI_API_KEY` | Project key for the meal-plan preview. The IaC exposes it as `OPENAI_MEAL_PLAN_API_KEY` on the backend. |
 | `PORT` | Supplied at runtime by Railway; consumed by the Dockerfile command |
 
 Generate `JWT_SECRET_KEY`, `EMAIL_OTP_PEPPER`, and `AUTH_ABUSE_PEPPER` independently:
@@ -158,6 +159,11 @@ variables omitted from the desired state. No optional credentials are included.
 | `PASSWORD_RESET_URL_BASE` | Password-reset link delivery is unavailable without this destination URL. Password-reset OTP delivery does not require it. Configure only a destination handled by a controlled staging client. |
 | `OPENAI_API_KEY` | AI recipe preview generation is unavailable and returns the existing HTTP 503 configuration response. Other backend features and health checks remain available. |
 | `OPENAI_MODEL`, `AI_REQUEST_TIMEOUT_SECONDS` | The defaults in `app/core/config.py` apply when omitted; these variables only tune the optional AI integration. |
+
+The meal-plan preview uses `gpt-6-luna` with `low` reasoning on staging. The
+recipe generator reads its own backend variable `OPENAI_API_KEY` and remains
+disabled with the meal-plan binding alone. See the
+[meal-plan preview contract](ai-meal-plan-preview.md).
 
 Railway currently permits outbound SMTP only on Pro and above. Free, Trial,
 and Hobby block it, so staging uses the Mailtrap Sandbox HTTPS API configured by
@@ -224,8 +230,9 @@ as part of this repository change**:
    `production` environment by default; leave it unused. Do not duplicate an
    environment containing real data or secrets. See
    [environment creation](https://docs.railway.com/environments#create-an-environment).
-3. Create the three independent security secrets and the Mailtrap delivery
-   shared values described above. Keep SMTP credentials and OpenAI unconfigured.
+3. Create the three independent security secrets, the Mailtrap delivery values,
+   and the meal-plan project key in Shared Variables as described above. Leave
+   SMTP credentials unset.
    Give Railway's GitHub integration access to `Pavel404-dev/Mealio`. The
    reviewed change must reach `main` through the
    human-owned delivery workflow before the first backend deployment; the IaC

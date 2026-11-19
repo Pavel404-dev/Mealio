@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Self
 
+from openai.types.shared import ReasoningEffort
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -61,7 +62,9 @@ class Settings(BaseSettings):
         max_length=100,
     )
     ai_request_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    openai_meal_plan_api_key: SecretStr | None = None
     openai_meal_plan_model: str | None = Field(default=None, max_length=100)
+    openai_meal_plan_reasoning_effort: ReasoningEffort = None
 
     @field_validator("mailtrap_sandbox_id", mode="before")
     @classmethod

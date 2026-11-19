@@ -42,8 +42,13 @@ from 1 to 1200 in the model contract and decimals from 0.01 to 12 in the API.
 Nutrition is summed as exact fractions and rounded half up once for the day,
 using the same policy as saved plans.
 
-Configuration requires both `OPENAI_API_KEY` and `OPENAI_MEAL_PLAN_MODEL`.
-The preview is disabled by default. The provider uses Structured Outputs,
+The preview is disabled by default. Configure `OPENAI_MEAL_PLAN_MODEL` and
+provide `OPENAI_MEAL_PLAN_API_KEY`. If the dedicated key is omitted, the
+provider uses `OPENAI_API_KEY`. Set `OPENAI_MEAL_PLAN_REASONING_EFFORT` only to
+a value supported by the configured model. Staging uses `gpt-6-luna` with
+`low`.
+
+The provider uses Structured Outputs,
 `store=false`, a 1000-token output cap and the existing
 `AI_REQUEST_TIMEOUT_SECONDS` as a deadline. Unavailable providers return 503
 and rejected output returns 502. Logs record the configured model, elapsed time,

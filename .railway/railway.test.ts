@@ -71,6 +71,12 @@ test("staging evaluates offline to the intended project graph", async () => {
             type: "sharedReference",
             name: "EMAIL_VERIFICATION_URL_BASE",
           },
+          OPENAI_MEAL_PLAN_API_KEY: {
+            type: "sharedReference",
+            name: "OPENAI_API_KEY",
+          },
+          OPENAI_MEAL_PLAN_MODEL: { type: "literal", value: "gpt-6-luna" },
+          OPENAI_MEAL_PLAN_REASONING_EFFORT: { type: "literal", value: "low" },
         },
       },
     ],
