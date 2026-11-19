@@ -52,6 +52,17 @@ The provider uses Structured Outputs,
 `store=false`, a 1000-token output cap and the existing
 `AI_REQUEST_TIMEOUT_SECONDS` as a deadline. Unavailable providers return 503
 and rejected output returns 502. Logs record the configured model, elapsed time,
-outcome and usage when returned. Price is recorded as unknown until verified
-model rates are configured. Prompts, profiles and raw provider outputs are
+outcome and usage when returned. Prompts, profiles and raw provider outputs are
 excluded from these logs.
+
+The `cost_usd` log field estimates the cost of a GPT-6 Luna Standard request
+from the reported usage. It uses uncached input, cache reads, default 30-minute
+cache writes and total output tokens, including reasoning. An omitted service
+tier uses Standard rates for the estimate. For example, 410 uncached input and
+34 output tokens give `cost_usd=0.000058`.
+[GPT-6 Luna pricing](https://developers.openai.com/api/docs/models/gpt-6-luna)
+
+The field is `unknown` when token counts or required cache details are missing
+or inconsistent, or the request falls outside the supported model, service tier
+or prompt length. A prompt below the minimum cacheable length can be priced
+using its input and output totals.

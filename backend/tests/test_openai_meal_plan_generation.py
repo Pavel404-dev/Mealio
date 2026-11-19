@@ -1,10 +1,13 @@
 import asyncio
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
 from openai import omit
+from openai.types.responses import ResponseUsage
+from openai.types.responses.response_usage import InputTokensDetails
 
 from app.api.deps import (
     get_meal_plan_generation_provider,
@@ -51,6 +54,7 @@ async def test_model_schema_usage_and_retention_options(
     parse.return_value = SimpleNamespace(
         status=status,
         output_parsed=output,
+        service_tier="default",
         usage=SimpleNamespace(input_tokens=15, output_tokens=10),
     )
     settings = Settings(
@@ -66,6 +70,7 @@ async def test_model_schema_usage_and_retention_options(
     result = await provider.select_meals(context_json='{"locale": "uk"}')
     assert result.selection == (output if status == "completed" else None)
     assert (result.input_tokens, result.output_tokens) == (15, 10)
+    assert result.estimated_cost_usd is None
     assert options == {"api_key": "test-key", "timeout": 1, "max_retries": 0}
     call = parse.call_args.kwargs
     assert call["model"] == "test-model" and call["reasoning"] is omit
@@ -80,7 +85,7 @@ async def test_luna_uses_plan_key_and_low_reasoning(
 ):
     parse, options = openai_client
     parse.return_value = SimpleNamespace(
-        status="completed", output_parsed=None, usage=None
+        status="completed", output_parsed=None, service_tier="default", usage=None
     )
     monkeypatch.setenv("OPENAI_MEAL_PLAN_API_KEY", "test-plan-key")
     monkeypatch.setenv("OPENAI_MEAL_PLAN_MODEL", "gpt-6-luna")
@@ -88,7 +93,8 @@ async def test_luna_uses_plan_key_and_low_reasoning(
     settings = Settings(_env_file=None, openai_api_key=common_key)
     monkeypatch.setattr("app.api.deps.get_settings", lambda: settings)
 
-    await get_meal_plan_generation_provider().select_meals(context_json="{}")
+    result = await get_meal_plan_generation_provider().select_meals(context_json="{}")
+    assert result.estimated_cost_usd is None
     assert options["api_key"] == "test-plan-key"
     assert parse.call_args.kwargs["model"] == "gpt-6-luna"
     assert parse.call_args.kwargs["reasoning"] == {"effort": "low"}
@@ -96,6 +102,81 @@ async def test_luna_uses_plan_key_and_low_reasoning(
         with pytest.raises(HTTPException) as error:
             get_recipe_generation_provider()
         assert error.value.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("usage", "service_tier", "expected_cost"),
+    [
+        pytest.param(
+            ResponseUsage.model_construct(input_tokens=410, output_tokens=34),
+            None,
+            Decimal("0.000058"),
+            id="observed-staging-usage",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(
+                input_tokens=1600,
+                output_tokens=34,
+                input_tokens_details=InputTokensDetails(
+                    cached_tokens=1100, cache_write_tokens=100
+                ),
+            ),
+            "default",
+            Decimal("0.0000805"),
+            id="cache-reads-and-writes",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(input_tokens=410),
+            "default",
+            None,
+            id="missing-output-count",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(input_tokens=1600, output_tokens=34),
+            "default",
+            None,
+            id="missing-cache-breakdown",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(
+                input_tokens=1600,
+                output_tokens=34,
+                input_tokens_details=InputTokensDetails(
+                    cached_tokens=1500, cache_write_tokens=200
+                ),
+            ),
+            "default",
+            None,
+            id="inconsistent-cache-counts",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(input_tokens=410, output_tokens=34),
+            "flex",
+            None,
+            id="non-standard-tier",
+        ),
+        pytest.param(
+            ResponseUsage.model_construct(input_tokens=272_001, output_tokens=34),
+            "default",
+            None,
+            id="long-context-pricing",
+        ),
+    ],
+)
+async def test_luna_estimates_cost_from_returned_usage(
+    openai_client, usage, service_tier, expected_cost
+):
+    parse, _ = openai_client
+    parse.return_value = SimpleNamespace(
+        status="completed", output_parsed=None, service_tier=service_tier, usage=usage
+    )
+    provider = OpenAIMealPlanProvider(
+        api_key="test-key", model="gpt-6-luna", timeout_seconds=1
+    )
+
+    result = await provider.select_meals(context_json="{}")
+
+    assert result.estimated_cost_usd == expected_cost
 
 
 async def test_provider_deadline_cancels_stuck_request(openai_client):

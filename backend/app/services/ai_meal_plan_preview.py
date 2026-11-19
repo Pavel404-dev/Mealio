@@ -140,13 +140,18 @@ class AIMealPlanPreviewService:
                 503, "AI meal plan preview is temporarily unavailable"
             ) from exc
         finally:
+            estimated_cost = usage.estimated_cost_usd if usage else None
             logger.info(
-                "ai_meal_plan_preview model=%r outcome=%s latency_ms=%d input_tokens=%s output_tokens=%s cost_usd=unknown",
+                "ai_meal_plan_preview model=%r outcome=%s latency_ms=%d "
+                "input_tokens=%s output_tokens=%s cost_usd=%s",
                 self.provider.model,
                 outcome,
                 round((monotonic() - started) * 1000),
                 usage.input_tokens if usage else None,
                 usage.output_tokens if usage else None,
+                format(estimated_cost, "f")
+                if estimated_cost is not None
+                else "unknown",
             )
 
     def _build_candidates(
