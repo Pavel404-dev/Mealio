@@ -39,6 +39,19 @@ stay on the server. Any declared allergy stops the request before generation.
 The server accepts only one selection per requested slot and looks up each
 candidate number in the same snapshot. Portion counts are integer hundredths
 from 1 to 1200 in the model contract and decimals from 0.01 to 12 in the API.
+
+When the request covers the preferred number of daily meals and has at least
+one nutrition target, the server compares the valid model plan with a bounded
+set of alternatives from the same snapshot. Per slot it tries the model's recipe
+and up to one alternative, using 0.75, 1, 1.25 or 1.5 servings. It also includes
+the model's original portion for its recipe. Alternatives follow any specific
+diet label in the profile and are shortlisted by liked ingredient count, then
+recency. The server minimizes the largest relative difference from the provided
+targets, then the sum of those differences. For equally close plans it prefers
+more liked ingredients, then keeps the model plan if it ties. Partial requests,
+requests with no preferred meal count, and profiles with no targets use the
+validated model selection. The comparison uses the same model response.
+
 Nutrition is summed as exact fractions and rounded half up once for the day,
 using the same policy as saved plans.
 
