@@ -1,5 +1,6 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
@@ -17,6 +18,9 @@ from app.integrations.meal_plan_generation import (
     MealPlanProviderUnavailable,
 )
 from app.main import app
+from app.repositories.ai_meal_plan_preview_limits import (
+    AIMealPlanPreviewLimitsRepository,
+)
 from app.schemas.user_nutrition_profile import UserNutritionProfileRead
 
 URL = "/api/v2/meal-plans/ai/generate-preview"
@@ -74,7 +78,7 @@ def selection(slot="lunch", candidate=1, hundredths=100, **extra):
     }
 
 
-class ReadOnlySession:
+class PreviewSession:
     def __init__(self, user_id):
         self.user_id = user_id
         self.profile = UserNutritionProfileRead(
@@ -85,6 +89,8 @@ class ReadOnlySession:
         )
         self.recipes = [recipe(meal_type="lunch"), recipe(meal_type="dinner")]
         self.reads = []
+        self.reservations = []
+        self.retry_after = None
         self.released = False
 
     async def execute(self, stmt):
@@ -106,6 +112,15 @@ class ReadOnlySession:
 
     async def rollback(self):
         self.released = True
+
+    @asynccontextmanager
+    async def begin(self):
+        assert self.released
+        self.released = False
+        try:
+            yield
+        finally:
+            self.released = True
 
 
 class FakeProvider:
@@ -134,8 +149,16 @@ class FakeProvider:
 @pytest.fixture
 async def preview(monkeypatch):
     user_id = uuid4()
-    db = ReadOnlySession(user_id)
+    db = PreviewSession(user_id)
     provider = FakeProvider(db)
+
+    async def reserve(repository, *, user_id, limit, window_seconds):
+        assert repository.db is db and not db.released
+        assert user_id == db.user_id
+        db.reservations.append(user_id)
+        return db.retry_after
+
+    monkeypatch.setattr(AIMealPlanPreviewLimitsRepository, "reserve", reserve)
     monkeypatch.setitem(
         app.dependency_overrides, get_current_user, lambda: SimpleNamespace(id=user_id)
     )
@@ -651,6 +674,7 @@ async def test_declared_allergies_stop_before_candidates_or_provider(preview):
     response = await client.post(URL, json=REQUEST)
     assert response.status_code == 422 and "allergies" in response.json()["detail"]
     assert len(db.reads) == 1 and not provider.calls
+    assert not db.reservations
 
 
 async def test_missing_eligible_slot_stops_before_provider(preview):
@@ -659,6 +683,7 @@ async def test_missing_eligible_slot_stops_before_provider(preview):
     response = await client.post(URL, json=REQUEST)
     assert response.status_code == 422
     assert not provider.calls
+    assert not db.reservations
 
 
 @pytest.mark.parametrize("dinner_diet", ["vegetarian", None])
@@ -677,6 +702,20 @@ async def test_missing_diet_match_for_slot_stops_before_provider(preview, dinner
         "detail": "Not enough eligible saved recipes for the requested meal slots"
     }
     assert not provider.calls
+    assert not db.reservations
+
+
+async def test_rate_limit_returns_retry_after_before_provider(preview):
+    client, db, provider = preview
+    db.retry_after = 17
+
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == 429
+    assert response.json() == {"detail": "AI meal plan preview rate limit exceeded"}
+    assert response.headers["Retry-After"] == "17"
+    assert db.reservations == [db.user_id]
+    assert db.released and not provider.calls
 
 
 @pytest.mark.parametrize(
@@ -689,7 +728,7 @@ async def test_missing_diet_match_for_slot_stops_before_provider(preview, dinner
         ),
     ],
 )
-async def test_provider_errors_are_generic_and_preview_reads_only(
+async def test_provider_errors_are_generic_and_count_as_preview_attempts(
     preview, caplog, error, detail
 ):
     client, db, provider = preview
@@ -698,6 +737,7 @@ async def test_provider_errors_are_generic_and_preview_reads_only(
         response = await client.post(URL, json=REQUEST)
     assert response.status_code == 503 and response.json() == {"detail": detail}
     assert db.released and len(db.reads) == 2
+    assert db.reservations == [db.user_id]
     assert "input_tokens=None output_tokens=None cost_usd=unknown" in caplog.text
     assert "private provider response" not in caplog.text
 

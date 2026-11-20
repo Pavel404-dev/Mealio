@@ -55,7 +55,10 @@ def test_portions_offline_ddl_and_single_head():
         < down.index("DROP COLUMN")
     )
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [REVISION]
+    assert len(script.get_heads()) == 1
+    assert REVISION in {
+        revision.revision for revision in script.iterate_revisions("head", "base")
+    }
     assert script.get_revision(REVISION).down_revision == PARENT
 
 
@@ -123,11 +126,13 @@ async def test_portions_additive_upgrade_preserves_data_and_null_roundtrip(
             "AND table_name='meal_plan_items' AND column_name='planned_servings'"
         )
     ).one() == (None, None, "YES", None)
-    await asyncio.to_thread(command.check, db.config)
     await db.migrate("downgrade", PARENT)
     assert await state(db) == before
     await db.migrate("upgrade", REVISION)
     assert await state(db) == after
+    # Alembic compares the head schema with the current model metadata.
+    await db.migrate("upgrade", "head")
+    await asyncio.to_thread(command.check, db.config)
 
 
 async def test_sql_precision_old_writer_and_lossy_downgrade_rejection(migration_db):

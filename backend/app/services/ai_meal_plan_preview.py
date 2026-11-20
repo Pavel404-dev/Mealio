@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from app.core.config import get_settings
 from app.integrations.meal_plan_generation import (
     MealPlanGenerationProvider,
     MealPlanProviderInvalidOutput,
@@ -21,6 +22,9 @@ from app.integrations.meal_plan_generation import (
     MealPlanProviderUnavailable,
 )
 from app.models.recipe import Recipe
+from app.repositories.ai_meal_plan_preview_limits import (
+    AIMealPlanPreviewLimitsRepository,
+)
 from app.repositories.recipes import RecipesRepository
 from app.repositories.user_nutrition_profiles import UserNutritionProfilesRepository
 from app.schemas.ai_meal_plan import (
@@ -80,6 +84,7 @@ class AIMealPlanPreviewService:
         self.provider = provider
         self.recipes = RecipesRepository(db)
         self.profiles = UserNutritionProfilesRepository(db)
+        self.rate_limits = AIMealPlanPreviewLimitsRepository(db)
         self.personalization = RecipeSuggestionPersonalization()
 
     async def generate(
@@ -110,7 +115,7 @@ class AIMealPlanPreviewService:
                 422, "Not enough eligible saved recipes for the requested meal slots"
             )
 
-        # Release this read-only transaction before an external network call.
+        # Release the read snapshot before reserving a model attempt.
         await self.db.rollback()
         daily_targets = {
             "total_calories": profile.daily_calories_target,
@@ -136,6 +141,20 @@ class AIMealPlanPreviewService:
             default=str,
             ensure_ascii=False,
         )
+        settings = get_settings()
+        async with self.db.begin():
+            retry_after = await self.rate_limits.reserve(
+                user_id=user_id,
+                limit=settings.ai_meal_plan_preview_rate_limit,
+                window_seconds=settings.ai_meal_plan_preview_rate_window_seconds,
+            )
+        if retry_after is not None:
+            raise HTTPException(
+                429,
+                "AI meal plan preview rate limit exceeded",
+                headers={"Retry-After": str(retry_after)},
+            )
+
         started = monotonic()
         usage = None
         outcome = "error"
