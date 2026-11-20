@@ -24,7 +24,21 @@ from app.services.meal_plans import MealPlansService
 router = APIRouter(prefix="/meal-plans", tags=["Meal Plans V2"])
 
 
-@router.post("/ai/generate-preview", response_model=AIMealPlanPreview)
+@router.post(
+    "/ai/generate-preview",
+    response_model=AIMealPlanPreview,
+    responses={
+        429: {
+            "description": "AI meal plan preview rate limit exceeded",
+            "headers": {
+                "Retry-After": {
+                    "description": "Seconds until the account can make another attempt",
+                    "schema": {"type": "integer", "minimum": 1},
+                }
+            },
+        }
+    },
+)
 async def generate_meal_plan_preview(
     payload: AIMealPlanPreviewRequest,
     current_user: User = Depends(get_current_user),

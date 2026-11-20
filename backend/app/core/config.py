@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     openai_meal_plan_api_key: SecretStr | None = None
     openai_meal_plan_model: str | None = Field(default=None, max_length=100)
     openai_meal_plan_reasoning_effort: ReasoningEffort = None
+    ai_meal_plan_preview_rate_limit: int = Field(default=5, ge=1, le=1000)
+    ai_meal_plan_preview_rate_window_seconds: int = Field(default=60, ge=1, le=86400)
 
     @field_validator("mailtrap_sandbox_id", mode="before")
     @classmethod

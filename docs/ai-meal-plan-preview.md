@@ -116,3 +116,16 @@ The field is `unknown` when token counts or required cache details are missing
 or inconsistent, or the request falls outside the supported model, service tier
 or prompt length. A prompt below the minimum cacheable length can be priced
 using its input and output totals.
+
+## Preview rate limit
+
+Each account gets five model attempts in a 60-second window by default.
+Configure the count with `AI_MEAL_PLAN_PREVIEW_RATE_LIMIT` and the window in
+seconds with `AI_MEAL_PLAN_PREVIEW_RATE_WINDOW_SECONDS`. The first eligible
+request starts the window.
+
+The backend reserves an attempt in PostgreSQL after input and recipe eligibility
+checks and commits the reservation before calling the model. All replicas use
+the same account counter. Provider failures and timeouts count as attempts.
+When the account reaches its limit, the API returns HTTP 429 before contacting
+the model. The `Retry-After` header gives the remaining seconds rounded up.
