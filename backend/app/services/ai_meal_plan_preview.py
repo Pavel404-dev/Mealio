@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -19,6 +20,7 @@ from app.integrations.meal_plan_generation import (
     MealPlanGenerationProvider,
     MealPlanProviderInvalidOutput,
     MealPlanProviderTimeout,
+    MealPlanProviderTransientError,
     MealPlanProviderUnavailable,
 )
 from app.models.recipe import Recipe
@@ -142,57 +144,69 @@ class AIMealPlanPreviewService:
             ensure_ascii=False,
         )
         settings = get_settings()
-        async with self.db.begin():
-            retry_after = await self.rate_limits.reserve(
-                user_id=user_id,
-                limit=settings.ai_meal_plan_preview_rate_limit,
-                window_seconds=settings.ai_meal_plan_preview_rate_window_seconds,
-            )
-        if retry_after is not None:
-            raise HTTPException(
-                429,
-                "AI meal plan preview rate limit exceeded",
-                headers={"Retry-After": str(retry_after)},
-            )
-
-        started = monotonic()
-        usage = None
-        outcome = "error"
-        try:
-            usage = await self.provider.select_meals(context_json=context_json)
-            selection = GeneratedMealPlanSelection.model_validate(usage.selection)
-            preview = await self._build_preview(
-                request, selection, candidates, profile, daily_targets
-            )
-            outcome = "success"
-            return preview
-        except (ValidationError, MealPlanProviderInvalidOutput) as exc:
-            outcome = "invalid_output"
-            raise HTTPException(
-                502, "AI provider returned an invalid meal plan"
-            ) from exc
-        except MealPlanProviderTimeout as exc:
-            outcome = "timeout"
-            raise HTTPException(503, "AI meal plan preview timed out") from exc
-        except MealPlanProviderUnavailable as exc:
-            outcome = "unavailable"
-            raise HTTPException(
-                503, "AI meal plan preview is temporarily unavailable"
-            ) from exc
-        finally:
-            estimated_cost = usage.estimated_cost_usd if usage else None
-            logger.info(
-                "ai_meal_plan_preview model=%r outcome=%s latency_ms=%d "
-                "input_tokens=%s output_tokens=%s cost_usd=%s",
-                self.provider.model,
-                outcome,
-                round((monotonic() - started) * 1000),
-                usage.input_tokens if usage else None,
-                usage.output_tokens if usage else None,
-                format(estimated_cost, "f")
-                if estimated_cost is not None
-                else "unknown",
-            )
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + settings.ai_request_timeout_seconds
+        can_retry = True
+        while True:
+            started = None
+            usage = None
+            outcome = "error"
+            try:
+                if loop.time() >= deadline:
+                    raise TimeoutError
+                async with asyncio.timeout_at(deadline):
+                    async with self.db.begin():
+                        retry_after = await self.rate_limits.reserve(
+                            user_id=user_id,
+                            limit=settings.ai_meal_plan_preview_rate_limit,
+                            window_seconds=settings.ai_meal_plan_preview_rate_window_seconds,
+                        )
+                    if retry_after is not None:
+                        raise HTTPException(
+                            429,
+                            "AI meal plan preview rate limit exceeded",
+                            headers={"Retry-After": str(retry_after)},
+                        )
+                    if loop.time() >= deadline:
+                        raise TimeoutError
+                    started = monotonic()
+                    usage = await self.provider.select_meals(context_json=context_json)
+                selection = GeneratedMealPlanSelection.model_validate(usage.selection)
+                preview = await self._build_preview(
+                    request, selection, candidates, profile, daily_targets
+                )
+                outcome = "success"
+                return preview
+            except (ValidationError, MealPlanProviderInvalidOutput) as exc:
+                outcome = "invalid_output"
+                raise HTTPException(
+                    502, "AI provider returned an invalid meal plan"
+                ) from exc
+            except (TimeoutError, MealPlanProviderTimeout) as exc:
+                outcome = "timeout"
+                raise HTTPException(503, "AI meal plan preview timed out") from exc
+            except MealPlanProviderUnavailable as exc:
+                outcome = "unavailable"
+                if not can_retry or not isinstance(exc, MealPlanProviderTransientError):
+                    raise HTTPException(
+                        503, "AI meal plan preview is temporarily unavailable"
+                    ) from exc
+                can_retry = False
+            finally:
+                if started is not None:
+                    estimated_cost = usage.estimated_cost_usd if usage else None
+                    logger.info(
+                        "ai_meal_plan_preview model=%r outcome=%s latency_ms=%d "
+                        "input_tokens=%s output_tokens=%s cost_usd=%s",
+                        self.provider.model,
+                        outcome,
+                        round((monotonic() - started) * 1000),
+                        usage.input_tokens if usage else None,
+                        usage.output_tokens if usage else None,
+                        format(estimated_cost, "f")
+                        if estimated_cost is not None
+                        else "unknown",
+                    )
 
     def _build_candidates(
         self,

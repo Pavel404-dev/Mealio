@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
-from openai import omit
+from httpx import Request, Response
+from openai import APIConnectionError, APIStatusError, APITimeoutError, omit
 from openai.types.responses import ResponseUsage
 from openai.types.responses.response_usage import InputTokensDetails
 
@@ -14,7 +15,11 @@ from app.api.deps import (
     get_recipe_generation_provider,
 )
 from app.core.config import Settings
-from app.integrations.meal_plan_generation import MealPlanProviderTimeout
+from app.integrations.meal_plan_generation import (
+    MealPlanProviderTimeout,
+    MealPlanProviderTransientError,
+    MealPlanProviderUnavailable,
+)
 from app.integrations.openai_meal_plan_generation import OpenAIMealPlanProvider
 from app.schemas.ai_meal_plan import GeneratedMealPlanSelection
 
@@ -191,3 +196,39 @@ async def test_provider_deadline_cancels_stuck_request(openai_client):
     )
     with pytest.raises(MealPlanProviderTimeout):
         await provider.select_meals(context_json="{}")
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_error"),
+    [
+        ("connection", MealPlanProviderTransientError),
+        (503, MealPlanProviderTransientError),
+        (401, MealPlanProviderUnavailable),
+        (429, MealPlanProviderUnavailable),
+        ("timeout", MealPlanProviderTimeout),
+    ],
+)
+async def test_provider_classifies_failures_without_retrying(
+    openai_client, failure, expected_error
+):
+    parse, _ = openai_client
+    request = Request("POST", "https://api.example.test/responses")
+    if failure == "connection":
+        parse.side_effect = APIConnectionError(request=request)
+    elif failure == "timeout":
+        parse.side_effect = APITimeoutError(request)
+    else:
+        parse.side_effect = APIStatusError(
+            "Private upstream message",
+            response=Response(failure, request=request),
+            body=None,
+        )
+    provider = OpenAIMealPlanProvider(
+        api_key="test-key", model="test-model", timeout_seconds=1
+    )
+
+    with pytest.raises(expected_error) as error:
+        await provider.select_meals(context_json="{}")
+
+    assert type(error.value) is expected_error
+    parse.assert_awaited_once()

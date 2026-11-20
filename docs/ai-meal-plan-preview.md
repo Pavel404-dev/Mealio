@@ -98,12 +98,13 @@ provider uses `OPENAI_API_KEY`. Set `OPENAI_MEAL_PLAN_REASONING_EFFORT` only to
 a value supported by the configured model. Staging uses `gpt-6-luna` with
 `low`.
 
-The provider uses Structured Outputs,
-`store=false`, a 1000-token output cap and the existing
-`AI_REQUEST_TIMEOUT_SECONDS` as a deadline. Unavailable providers return 503
-and rejected output returns 502. Logs record the configured model, elapsed time,
-outcome and usage when returned. Prompts, profiles and raw provider outputs are
-excluded from these logs.
+The provider uses Structured Outputs, `store=false` and a 1000-token output
+cap. The preview retries once after a connection error or an upstream HTTP
+5xx response if time and account quota remain. Both attempts and their quota
+reservations share the `AI_REQUEST_TIMEOUT_SECONDS` deadline. Provider timeouts
+and unavailability return 503. Rejected model output returns 502. Each model
+call logs the configured model, elapsed time, outcome and usage when returned.
+Prompts, profiles and raw provider outputs are excluded from these logs.
 
 The `cost_usd` log field estimates the cost of a GPT-6 Luna Standard request
 from the reported usage. It uses uncached input, cache reads, default 30-minute
@@ -125,7 +126,7 @@ seconds with `AI_MEAL_PLAN_PREVIEW_RATE_WINDOW_SECONDS`. The first eligible
 request starts the window.
 
 The backend reserves an attempt in PostgreSQL after input and recipe eligibility
-checks and commits the reservation before calling the model. All replicas use
+checks and commits each reservation before its model call. All replicas use
 the same account counter. Provider failures and timeouts count as attempts.
-When the account reaches its limit, the API returns HTTP 429 before contacting
-the model. The `Retry-After` header gives the remaining seconds rounded up.
+When the quota blocks the first or second reservation, the API returns HTTP 429.
+The `Retry-After` header gives the remaining seconds rounded up.

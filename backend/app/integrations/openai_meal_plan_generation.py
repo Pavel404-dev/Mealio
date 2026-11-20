@@ -18,6 +18,7 @@ from app.integrations.meal_plan_generation import (
     MealPlanProviderInvalidOutput,
     MealPlanProviderResult,
     MealPlanProviderTimeout,
+    MealPlanProviderTransientError,
     MealPlanProviderUnavailable,
 )
 from app.schemas.ai_meal_plan import GeneratedMealPlanSelection
@@ -71,7 +72,11 @@ class OpenAIMealPlanProvider:
                 )
         except (TimeoutError, APITimeoutError) as exc:
             raise MealPlanProviderTimeout from exc
-        except (APIConnectionError, APIStatusError) as exc:
+        except APIConnectionError as exc:
+            raise MealPlanProviderTransientError from exc
+        except APIStatusError as exc:
+            if 500 <= exc.status_code < 600:
+                raise MealPlanProviderTransientError from exc
             raise MealPlanProviderUnavailable from exc
         except (
             ContentFilterFinishReasonError,
