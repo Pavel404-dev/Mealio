@@ -811,6 +811,16 @@ async def test_retry_shares_the_original_deadline(
     assert db.reservations == [db.user_id] * expected_calls
 
 
+@pytest.mark.parametrize("key", ["", "two keys", "two,keys", "x" * 129])
+async def test_invalid_idempotency_key_is_rejected_before_preview(preview, key):
+    client, db, provider = preview
+    response = await client.post(URL, json=REQUEST, headers={"Idempotency-Key": key})
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Invalid Idempotency-Key"}
+    assert not db.reads and not db.reservations and not provider.calls
+
+
 async def test_authentication_precedes_provider_configuration():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

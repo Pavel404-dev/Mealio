@@ -130,3 +130,23 @@ checks and commits each reservation before its model call. All replicas use
 the same account counter. Provider failures and timeouts count as attempts.
 When the quota blocks the first or second reservation, the API returns HTTP 429.
 The `Retry-After` header gives the remaining seconds rounded up.
+
+## Idempotency-Key
+
+Send the optional `Idempotency-Key` header to retry the same preview request.
+Use a fresh key for a new generation. A key contains 1 to 128 ASCII letters,
+digits, periods, underscores, tildes or hyphens. The key is scoped to the
+authenticated account and bound to the normalized request, profile inputs and
+eligible recipe snapshot used for generation.
+
+- One request claims the key and starts generation. A matching request while
+  it is in progress returns HTTP 409 with `Retry-After: 1`.
+- After a successful generation, a matching request returns the same
+  validated preview for five minutes. Replay uses zero model attempts.
+- A key bound to different preview inputs returns HTTP 409. The current
+  allergy and recipe eligibility checks apply before a stored preview is read.
+
+PostgreSQL stores key and input hashes, a reservation and the validated preview.
+A handled generation failure releases the reservation. An interrupted generation
+expires five minutes after it started. Expired records are removed on the
+account's subsequent keyed requests. Account deletion also removes its records.
