@@ -182,8 +182,14 @@ class AIMealPlanPreviewService:
         slots: list[MealSlot],
     ) -> dict[int, Candidate]:
         candidates = {}
+        preferred_diet = (profile.diet_type or "").strip().casefold()
         liked = {name.strip().casefold() for name in profile.liked_ingredients}
         for recipe in recipes:
+            if (
+                preferred_diet not in ("", "balanced")
+                and (recipe.diet_type or "").strip().casefold() != preferred_diet
+            ):
+                continue
             if not _recipe_has_complete_nutrition(recipe):
                 continue
             if self.personalization.should_exclude_recipe(
@@ -235,7 +241,7 @@ class AIMealPlanPreviewService:
         }
         if targets and len(items) == profile.preferred_meals_per_day:
             items = await run_in_threadpool(
-                _fit_daily_targets, items, candidates, targets, profile.diet_type
+                _fit_daily_targets, items, candidates, targets
             )
 
         totals = dict.fromkeys(TOTALS, Fraction(0))
@@ -325,9 +331,7 @@ def _fit_daily_targets(
     items: list[GeneratedMealSlot],
     candidates: dict[int, Candidate],
     targets: dict[str, int],
-    diet_type: str | None,
 ) -> list[GeneratedMealSlot]:
-    preferred_diet = (diet_type or "").strip().casefold()
     relative_per_hundredth = {}
     for number, candidate in candidates.items():
         nutrition = candidate.nutrition_for(1)
@@ -359,7 +363,7 @@ def _fit_daily_targets(
                     for units in units_per_hundredth[option.candidate_number]
                 ),
             )
-            for option in _portion_options(item, candidates, preferred_diet)
+            for option in _portion_options(item, candidates)
         ]
         for item in items
     ]
@@ -382,17 +386,12 @@ def _fit_daily_targets(
 
 
 def _portion_options(
-    item: GeneratedMealSlot, candidates: dict[int, Candidate], preferred_diet: str
+    item: GeneratedMealSlot, candidates: dict[int, Candidate]
 ) -> list[GeneratedMealSlot]:
     alternatives = (
         number
         for number, candidate in candidates.items()
-        if number != item.candidate_number
-        and item.meal_type in candidate.allowed_slots
-        and (
-            preferred_diet in ("", "balanced")
-            or (candidate.diet_type or "").strip().casefold() == preferred_diet
-        )
+        if number != item.candidate_number and item.meal_type in candidate.allowed_slots
     )
     # Try one alternative per slot, preferring liked ingredients and then recency.
     alternative = max(

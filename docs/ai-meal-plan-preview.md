@@ -24,12 +24,14 @@ edits made afterwards can change saved-plan nutrition.
 
 The service considers up to 50 recent owned recipes with stored nutrition,
 ordered by creation time and ID. It excludes recipes with incomplete ingredient
-nutrition or ingredient names matching the user's dislikes. A canonical recipe
-meal type restricts its eligible slot. Unclassified recipes can fill any
-requested slot. If an eligible candidate is missing for any slot, the request
-returns 422 with no provider call. The nutrition profile's recipe labels and
-targets guide selection. The API does not promise that targets or a dietary label
-are clinically verified.
+nutrition or ingredient names matching the user's dislikes. For a specific
+profile `diet_type`, only recipes with a matching label are eligible. Matching
+ignores letter case and surrounding whitespace. A `balanced` or unset
+preference accepts both labeled and unlabeled recipes. A canonical recipe meal
+type restricts its eligible slot. Unclassified recipes can fill any requested
+slot. If an eligible candidate is missing for any slot, the request returns
+422 before the provider call. The nutrition profile's targets guide selection.
+The API does not promise that targets or a dietary label are clinically verified.
 
 The model receives candidate numbers, slot options, serving yields, stored
 nutrition, diet labels and counts of matching liked ingredients. It also receives
@@ -44,13 +46,13 @@ When the request covers the preferred number of daily meals and has at least
 one nutrition target, the server compares the valid model plan with a bounded
 set of alternatives from the same snapshot. Per slot it tries the model's recipe
 and up to one alternative, using 0.75, 1, 1.25 or 1.5 servings. It also includes
-the model's original portion for its recipe. Alternatives follow any specific
-diet label in the profile and are shortlisted by liked ingredient count, then
-recency. The server minimizes the largest relative difference from the provided
-targets, then the sum of those differences. For equally close plans it prefers
-more liked ingredients, then keeps the model plan if it ties. Partial requests,
-requests with no preferred meal count, and profiles with no targets use the
-validated model selection. The comparison uses the same model response.
+the model's original portion for its recipe. The search shortlists eligible
+alternatives by liked ingredient count, then recency. The server minimizes the
+largest relative difference from the provided targets, then the sum of those
+differences. For equally close plans it prefers more liked ingredients, then
+keeps the model plan if it ties. Partial requests, requests with no preferred
+meal count, and profiles with no targets use the validated model selection.
+The comparison uses the same model response.
 
 Nutrition is summed as exact fractions and rounded half up once for the day,
 using the same policy as saved plans.
