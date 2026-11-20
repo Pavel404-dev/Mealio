@@ -216,6 +216,50 @@ async def test_preview_rounds_once_for_the_entire_day(preview):
     assert response.json()["nutrition"]["total_calories"] == "0.67"
 
 
+async def test_partial_day_preview_only_offers_recipes_matching_diet(preview):
+    client, db, provider = preview
+    db.profile.diet_type = "vegan"
+    matching_lunch = recipe(meal_type="lunch", diet_type=" VEGAN ")
+    db.recipes = [
+        recipe(meal_type="lunch", diet_type="vegetarian"),
+        recipe(meal_type="lunch", diet_type=None),
+        matching_lunch,
+    ]
+    provider.result = {"items": [selection()]}
+
+    response = await client.post(URL, json={**REQUEST, "meal_types": ["lunch"]})
+
+    assert response.status_code == 200, response.text
+    assert response.json()["items"][0]["recipe_id"] == str(matching_lunch.id)
+    [context] = provider.calls
+    [candidate] = context["candidates"]
+    assert candidate["diet_type"] == " VEGAN "
+
+
+@pytest.mark.parametrize("diet_type", [None, " ", " BALANCED "])
+async def test_unrestricted_diet_allows_labeled_and_unlabeled_recipes(
+    preview, diet_type
+):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(diet_type=diet_type)
+    db.recipes = [
+        recipe(meal_type="lunch", diet_type="vegan"),
+        recipe(meal_type="dinner", diet_type=None),
+    ]
+
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == 200, response.text
+    assert [item["recipe_id"] for item in response.json()["items"]] == [
+        str(recipe.id) for recipe in db.recipes
+    ]
+    [context] = provider.calls
+    assert [candidate["diet_type"] for candidate in context["candidates"]] == [
+        "vegan",
+        None,
+    ]
+
+
 async def test_full_day_preview_fits_the_recorded_staging_targets(preview):
     client, db, provider = preview
     db.profile = UserNutritionProfileRead(
@@ -402,6 +446,11 @@ async def test_equal_nutrition_favors_liked_recipe_with_preferred_diet(
     body = response.json()
     assert body["items"][0]["recipe_id"] == str(db.recipes[expected_lunch].id)
     assert body["nutrition"]["total_calories"] == "200.00"
+    [context] = provider.calls
+    assert all(
+        candidate["diet_type"].strip().casefold() == "vegan"
+        for candidate in context["candidates"]
+    )
 
 
 @pytest.mark.parametrize("calories_target", [180, None])
@@ -609,6 +658,24 @@ async def test_missing_eligible_slot_stops_before_provider(preview):
     db.recipes = [recipe(meal_type="lunch"), recipe(meal_type="dinner", complete=False)]
     response = await client.post(URL, json=REQUEST)
     assert response.status_code == 422
+    assert not provider.calls
+
+
+@pytest.mark.parametrize("dinner_diet", ["vegetarian", None])
+async def test_missing_diet_match_for_slot_stops_before_provider(preview, dinner_diet):
+    client, db, provider = preview
+    db.profile.diet_type = "vegan"
+    db.recipes = [
+        recipe(meal_type="lunch", diet_type="vegan"),
+        recipe(meal_type="dinner", diet_type=dinner_diet),
+    ]
+
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Not enough eligible saved recipes for the requested meal slots"
+    }
     assert not provider.calls
 
 
