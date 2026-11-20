@@ -11,6 +11,7 @@ from app.core.security import create_access_token
 from app.integrations.meal_plan_generation import (
     MealPlanProviderResult,
     MealPlanProviderTimeout,
+    MealPlanProviderTransientError,
 )
 from app.main import app
 from app.models.ai_meal_plan_preview_limit import AIMealPlanPreviewLimit
@@ -153,3 +154,22 @@ async def test_failed_attempt_counts_and_the_expired_window_resets_per_account(
     assert provider.calls == 3
     bucket = await db_session.get(AIMealPlanPreviewLimit, account)
     assert bucket.attempts == 1 and bucket.expires_at > datetime.now(UTC)
+
+
+@pytest.mark.parametrize(("limit", "status"), [(1, 429), (2, 503)])
+async def test_retry_reserves_a_separate_account_attempt(
+    client, db_session, provider, monkeypatch, limit, status
+):
+    monkeypatch.setattr(get_settings(), "ai_meal_plan_preview_rate_limit", limit)
+    account, headers = await seed_account(db_session, "quota-retry")
+    provider.failure = MealPlanProviderTransientError()
+
+    response = await client.post(URL, json=PAYLOAD, headers=headers)
+
+    assert response.status_code == status
+    if status == 429:
+        assert response.json() == {"detail": "AI meal plan preview rate limit exceeded"}
+        assert 1 <= int(response.headers["Retry-After"]) <= 60
+    assert provider.calls == limit
+    bucket = await db_session.get(AIMealPlanPreviewLimit, account)
+    assert bucket.attempts == limit

@@ -11,6 +11,10 @@ class MealPlanProviderUnavailable(Exception):
     pass
 
 
+class MealPlanProviderTransientError(MealPlanProviderUnavailable):
+    """An upstream failure that permits one more model attempt."""
+
+
 class MealPlanProviderInvalidOutput(Exception):
     pass
 

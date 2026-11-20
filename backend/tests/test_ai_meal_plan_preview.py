@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -11,10 +12,12 @@ from pydantic import SecretStr
 from sqlalchemy.dialects import postgresql
 
 from app.api.deps import get_current_user, get_meal_plan_generation_provider
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.integrations.meal_plan_generation import (
     MealPlanProviderResult,
     MealPlanProviderTimeout,
+    MealPlanProviderTransientError,
     MealPlanProviderUnavailable,
 )
 from app.main import app
@@ -130,14 +133,14 @@ class FakeProvider:
         self.db = db
         self.calls = []
         self.result = {"items": [selection("dinner", 2, 50), selection()]}
-        self.failure = None
+        self.failures = []
         self.estimated_cost_usd = None
 
     async def select_meals(self, *, context_json):
         assert self.db.released
         self.calls.append(json.loads(context_json))
-        if self.failure:
-            raise self.failure
+        if self.failures:
+            raise self.failures.pop(0)
         return MealPlanProviderResult(
             self.result,
             input_tokens=410,
@@ -732,7 +735,7 @@ async def test_provider_errors_are_generic_and_count_as_preview_attempts(
     preview, caplog, error, detail
 ):
     client, db, provider = preview
-    provider.failure = error("private provider response")
+    provider.failures.append(error("private provider response"))
     with caplog.at_level(logging.INFO, logger="uvicorn.error.mealio.ai_meal_plan"):
         response = await client.post(URL, json=REQUEST)
     assert response.status_code == 503 and response.json() == {"detail": detail}
@@ -740,6 +743,72 @@ async def test_provider_errors_are_generic_and_count_as_preview_attempts(
     assert db.reservations == [db.user_id]
     assert "input_tokens=None output_tokens=None cost_usd=unknown" in caplog.text
     assert "private provider response" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("failed_calls", "status", "last_outcome"),
+    [(1, 200, "success"), (2, 503, "unavailable")],
+)
+async def test_transient_provider_failure_retries_once(
+    preview, caplog, failed_calls, status, last_outcome
+):
+    client, db, provider = preview
+    provider.failures = [
+        MealPlanProviderTransientError("private provider response")
+        for _ in range(failed_calls)
+    ]
+
+    with caplog.at_level(logging.INFO, logger="uvicorn.error.mealio.ai_meal_plan"):
+        response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == status
+    if status == 503:
+        assert response.json() == {
+            "detail": "AI meal plan preview is temporarily unavailable"
+        }
+    assert len(provider.calls) == 2 and provider.calls[0] == provider.calls[1]
+    assert db.reservations == [db.user_id, db.user_id]
+    assert db.released and len(db.reads) == 2
+    attempt_logs = [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "uvicorn.error.mealio.ai_meal_plan"
+    ]
+    assert len(attempt_logs) == 2
+    assert "outcome=unavailable" in attempt_logs[0]
+    assert f"outcome={last_outcome}" in attempt_logs[1]
+    assert "private provider response" not in caplog.text
+
+
+@pytest.mark.parametrize(("first_elapsed", "expected_calls"), [(6, 2), (11, 1)])
+async def test_retry_shares_the_original_deadline(
+    preview, monkeypatch, first_elapsed, expected_calls
+):
+    client, db, provider = preview
+    monkeypatch.setattr(get_settings(), "ai_request_timeout_seconds", 10)
+    loop = asyncio.get_running_loop()
+    real_time = loop.time
+    elapsed = 0
+    monkeypatch.setattr(loop, "time", lambda: real_time() + elapsed)
+
+    async def select_meals(*, context_json):
+        nonlocal elapsed
+        assert db.released
+        provider.calls.append(context_json)
+        if len(provider.calls) == 1:
+            elapsed += first_elapsed
+            raise MealPlanProviderTransientError
+        elapsed += 5
+        await asyncio.sleep(0.01)
+        return MealPlanProviderResult(provider.result)
+
+    monkeypatch.setattr(provider, "select_meals", select_meals)
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "AI meal plan preview timed out"}
+    assert len(provider.calls) == expected_calls
+    assert db.reservations == [db.user_id] * expected_calls
 
 
 async def test_authentication_precedes_provider_configuration():
