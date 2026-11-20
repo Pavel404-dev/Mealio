@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -50,6 +51,29 @@ class AIMealPlanPreviewItem(BaseModel):
     planned_servings: PlannedServings
 
 
+class AIMealPlanTargetFitMetric(BaseModel):
+    target: int | None
+    actual: Decimal
+    delta: Decimal | None
+    delta_percent: Decimal | None
+    within_tolerance: bool | None
+
+
+class AIMealPlanTargetFitMetrics(BaseModel):
+    total_calories: AIMealPlanTargetFitMetric
+    total_protein_g: AIMealPlanTargetFitMetric
+    total_carbs_g: AIMealPlanTargetFitMetric
+    total_fat_g: AIMealPlanTargetFitMetric
+
+
+class AIMealPlanTargetFit(BaseModel):
+    status: Literal["within_tolerance", "outside_tolerance", "not_evaluated"]
+    reason: Literal["no_targets", "unknown_meal_count", "partial_day"] | None
+    tolerance_percent: Literal[10] = 10
+    metrics: AIMealPlanTargetFitMetrics
+
+
 class AIMealPlanPreview(BaseModel):
     items: list[AIMealPlanPreviewItem]
     nutrition: RecipeNutritionTotals
+    target_fit: AIMealPlanTargetFit

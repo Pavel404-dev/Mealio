@@ -289,6 +289,19 @@ async def test_full_day_preview_fits_the_recorded_staging_targets(preview):
         "total_carbs_g": "210.00",
         "total_fat_g": "60.00",
     }
+    fit = body["target_fit"]
+    assert fit["status"] == "within_tolerance" and fit["reason"] is None
+    assert fit["tolerance_percent"] == 10
+    assert fit["metrics"] == {
+        field: {
+            "target": target,
+            "actual": body["nutrition"][field],
+            "delta": "0.00",
+            "delta_percent": "0.00",
+            "within_tolerance": True,
+        }
+        for field, target in zip(body["nutrition"], (1800, 105, 210, 60), strict=True)
+    }
     [context] = provider.calls
     assert len(context["candidates"]) == 6
 
@@ -313,6 +326,19 @@ async def test_lunch_preview_preserves_provider_portion_for_a_partial_day(
     assert lunch["recipe_id"] == str(db.recipes[0].id)
     assert Decimal(lunch["planned_servings"]) == Decimal("1.13")
     assert body["nutrition"]["total_calories"] == "565.00"
+    fit = body["target_fit"]
+    assert fit["status"] == "not_evaluated"
+    assert fit["reason"] == (
+        "partial_day" if preferred_meals == 3 else "unknown_meal_count"
+    )
+    assert fit["metrics"]["total_calories"] == {
+        "target": 1800,
+        "actual": "565.00",
+        "delta": "-1235.00",
+        "delta_percent": "-68.61",
+        "within_tolerance": None,
+    }
+    assert all(metric["within_tolerance"] is None for metric in fit["metrics"].values())
     assert len(provider.calls) == 1
 
 
@@ -333,6 +359,16 @@ async def test_unreachable_carb_target_does_not_prevent_closer_calories(preview)
         "total_protein_g": "155.00",
         "total_carbs_g": "0.00",
         "total_fat_g": "18.00",
+    }
+    fit = response.json()["target_fit"]
+    assert fit["status"] == "outside_tolerance" and fit["reason"] is None
+    assert fit["metrics"]["total_calories"]["within_tolerance"] is True
+    assert fit["metrics"]["total_carbs_g"] == {
+        "target": 10,
+        "actual": "0.00",
+        "delta": "-10.00",
+        "delta_percent": "-100.00",
+        "within_tolerance": False,
     }
     assert len(provider.calls) == 1
 
@@ -389,6 +425,132 @@ async def test_keeps_provider_portions_when_plan_fits_or_targets_are_absent(
         Decimal("1.13"),
         Decimal("0.67"),
     ]
+    fit = response.json()["target_fit"]
+    assert fit["status"] == (
+        "within_tolerance" if calories_target is not None else "not_evaluated"
+    )
+    assert fit["reason"] == (None if calories_target is not None else "no_targets")
+    for field in ("total_protein_g", "total_carbs_g", "total_fat_g"):
+        assert fit["metrics"][field] == {
+            "target": None,
+            "actual": response.json()["nutrition"][field],
+            "delta": None,
+            "delta_percent": None,
+            "within_tolerance": None,
+        }
+
+
+@pytest.mark.parametrize(
+    "field", ("total_calories", "total_protein_g", "total_carbs_g", "total_fat_g")
+)
+@pytest.mark.parametrize(
+    ("actual", "delta", "within"),
+    [
+        ("90.00", "-10.00", True),
+        ("110.00", "10.00", True),
+        ("89.99", "-10.01", False),
+        ("110.01", "10.01", False),
+    ],
+)
+async def test_target_fit_includes_tolerance_boundaries_for_every_nutrient(
+    preview, field, actual, delta, within
+):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=100,
+        daily_protein_target_g=100,
+        daily_carbs_target_g=100,
+        daily_fat_target_g=100,
+        preferred_meals_per_day=1,
+    )
+    candidate = recipe(servings=1, calories="100", macros=("100", "100", "100"))
+    setattr(candidate, field, Decimal(actual))
+    db.recipes = [candidate]
+    provider.result = {"items": [selection()]}
+
+    response = await client.post(URL, json={**REQUEST, "meal_types": ["lunch"]})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    fit = body["target_fit"]
+    assert fit["status"] == ("within_tolerance" if within else "outside_tolerance")
+    assert fit["reason"] is None and fit["tolerance_percent"] == 10
+    assert fit["metrics"][field] == {
+        "target": 100,
+        "actual": actual,
+        "delta": delta,
+        "delta_percent": delta,
+        "within_tolerance": within,
+    }
+    assert body["nutrition"][field] == actual
+    assert len(provider.calls) == 1 and len(db.reads) == 2 and db.released
+
+
+async def test_rounded_percentage_does_not_hide_an_outside_target(preview):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_calories_target=1000, preferred_meals_per_day=1
+    )
+    db.recipes = [recipe(servings=1, calories="1100.01")]
+    provider.result = {"items": [selection()]}
+
+    response = await client.post(URL, json={**REQUEST, "meal_types": ["lunch"]})
+
+    assert response.status_code == 200, response.text
+    fit = response.json()["target_fit"]
+    assert fit["status"] == "outside_tolerance"
+    assert fit["metrics"]["total_calories"] == {
+        "target": 1000,
+        "actual": "1100.01",
+        "delta": "100.01",
+        "delta_percent": "10.00",
+        "within_tolerance": False,
+    }
+
+
+async def test_only_configured_target_is_evaluated(preview):
+    client, db, provider = preview
+    db.profile = UserNutritionProfileRead(
+        daily_protein_target_g=62, preferred_meals_per_day=1
+    )
+    db.recipes = [recipe(servings=1)]
+    provider.result = {"items": [selection()]}
+
+    response = await client.post(URL, json={**REQUEST, "meal_types": ["lunch"]})
+
+    assert response.status_code == 200, response.text
+    fit = response.json()["target_fit"]
+    assert fit["status"] == "within_tolerance"
+    assert fit["metrics"]["total_protein_g"]["within_tolerance"] is True
+    for field in ("total_calories", "total_carbs_g", "total_fat_g"):
+        assert fit["metrics"][field] == {
+            "target": None,
+            "actual": response.json()["nutrition"][field],
+            "delta": None,
+            "delta_percent": None,
+            "within_tolerance": None,
+        }
+
+
+async def test_missing_profile_reports_actuals_without_fabricating_targets(preview):
+    client, db, provider = preview
+    db.profile = None
+
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == 200, response.text
+    fit = response.json()["target_fit"]
+    assert fit["status"] == "not_evaluated" and fit["reason"] == "no_targets"
+    assert set(fit["metrics"]) == set(response.json()["nutrition"])
+    for field, metric in fit["metrics"].items():
+        assert metric == {
+            "target": None,
+            "actual": response.json()["nutrition"][field],
+            "delta": None,
+            "delta_percent": None,
+            "within_tolerance": None,
+        }
+    assert len(provider.calls) == 1
 
 
 @pytest.mark.parametrize(
