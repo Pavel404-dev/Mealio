@@ -55,6 +55,41 @@ validated model selection. The comparison uses the same model response.
 Nutrition is summed as exact fractions and rounded half up once for the day,
 using the same policy as saved plans.
 
+## Target fit (W14 first slice)
+
+The response also includes a server-calculated `target_fit`. Its `metrics` use
+the same four `total_*` keys as `nutrition`. Each metric has the profile's daily
+`target` (or `null`), the returned nutrition `actual`, signed `delta`
+(`actual - target`), signed `delta_percent` (`100 * delta / target`), and
+`within_tolerance`. Deltas and percentages are decimal strings rounded half up
+to two places. A missing target gives `null` for both deltas and the metric's
+`within_tolerance`; zero actual nutrition remains a measured zero.
+
+The accepted tolerance for this slice is **±10% inclusive**, reported as
+`tolerance_percent: 10`. The comparison uses the returned nutrition totals and
+the unrounded percentage. This is a product fit indicator, not a clinical
+assessment or a guarantee that the bounded search can reach every goal.
+
+Expected behavior examples:
+
+- A complete three-meal day returning 1,800 kcal, 105 g protein, 210 g carbs and
+  60 g fat against those same targets has `status: within_tolerance`, zero
+  deltas and four true metric flags. Exactly ±10% is also within tolerance.
+- A complete day with a 10 g carb goal and 0 g actual carbs reports `delta:
+  "-10.00"`, `delta_percent: "-100.00"` and `status: outside_tolerance`, even
+  when calories fit. The preview still returns HTTP 200.
+- Lunch alone for a three-meal profile has `status: not_evaluated` and `reason:
+  partial_day`. Daily targets and numerical deltas remain visible without
+  scaling the targets to lunch; all metric flags are `null`.
+
+A day is evaluated only when the requested slot count equals the profile's
+`preferred_meals_per_day` and at least one target is set. Every set target must
+fit for `within_tolerance`; otherwise the overall status is `outside_tolerance`.
+For `not_evaluated`, reasons are `no_targets`, `unknown_meal_count` or
+`partial_day`, in that precedence order. Evaluated responses have `reason: null`.
+An absent profile uses the existing default profile. Target fit adds no model
+calls, writes, migrations or changes to selection and portion fitting.
+
 The preview is disabled by default. Configure `OPENAI_MEAL_PLAN_MODEL` and
 provide `OPENAI_MEAL_PLAN_API_KEY`. If the dedicated key is omitted, the
 provider uses `OPENAI_API_KEY`. Set `OPENAI_MEAL_PLAN_REASONING_EFFORT` only to

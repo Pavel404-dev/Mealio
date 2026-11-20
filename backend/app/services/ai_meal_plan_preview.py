@@ -27,6 +27,9 @@ from app.schemas.ai_meal_plan import (
     AIMealPlanPreview,
     AIMealPlanPreviewItem,
     AIMealPlanPreviewRequest,
+    AIMealPlanTargetFit,
+    AIMealPlanTargetFitMetric,
+    AIMealPlanTargetFitMetrics,
     GeneratedMealPlanSelection,
     GeneratedMealSlot,
     MAX_PLAN_CANDIDATES,
@@ -251,15 +254,65 @@ class AIMealPlanPreviewService:
                     planned_servings=Decimal(f"{item.serving_hundredths}e-2"),
                 )
             )
+        nutrition = RecipeNutritionTotals(
+            **{
+                field: round_nutrition_hundredths(total)
+                for field, total in totals.items()
+            }
+        )
         return AIMealPlanPreview(
             items=assignments,
-            nutrition=RecipeNutritionTotals(
-                **{
-                    field: round_nutrition_hundredths(total)
-                    for field, total in totals.items()
-                }
+            nutrition=nutrition,
+            target_fit=_build_target_fit(
+                nutrition, daily_targets, len(items), profile.preferred_meals_per_day
             ),
         )
+
+
+def _build_target_fit(
+    nutrition: RecipeNutritionTotals,
+    daily_targets: dict[str, int | None],
+    requested_meals: int,
+    preferred_meals: int | None,
+) -> AIMealPlanTargetFit:
+    reason = None
+    if not any(target is not None for target in daily_targets.values()):
+        reason = "no_targets"
+    elif preferred_meals is None:
+        reason = "unknown_meal_count"
+    elif requested_meals != preferred_meals:
+        reason = "partial_day"
+
+    metrics = {}
+    for field in TOTALS:
+        target = daily_targets[field]
+        actual = getattr(nutrition, field)
+        delta = Fraction(actual) - target if target is not None else None
+        percent = delta * 100 / target if target is not None else None
+        metrics[field] = AIMealPlanTargetFitMetric(
+            target=target,
+            actual=actual,
+            delta=round_nutrition_hundredths(delta) if delta is not None else None,
+            delta_percent=round_nutrition_hundredths(percent)
+            if percent is not None
+            else None,
+            within_tolerance=abs(percent) <= 10
+            if reason is None and percent is not None
+            else None,
+        )
+
+    status = "not_evaluated"
+    if reason is None:
+        status = (
+            "outside_tolerance"
+            if any(metric.within_tolerance is False for metric in metrics.values())
+            else "within_tolerance"
+        )
+    return AIMealPlanTargetFit(
+        status=status,
+        reason=reason,
+        metrics=AIMealPlanTargetFitMetrics(**metrics),
+    )
 
 
 @dataclass(frozen=True)
