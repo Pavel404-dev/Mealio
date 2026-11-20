@@ -1,9 +1,10 @@
 """Canonical slot writes and reads that expose optional planned portions."""
 
+import re
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_meal_plan_generation_provider
@@ -22,12 +23,22 @@ from app.services.ai_meal_plan_preview import AIMealPlanPreviewService
 from app.services.meal_plans import MealPlansService
 
 router = APIRouter(prefix="/meal-plans", tags=["Meal Plans V2"])
+IDEMPOTENCY_KEY_PATTERN = r"^[A-Za-z0-9._~-]{1,128}$"
 
 
 @router.post(
     "/ai/generate-preview",
     response_model=AIMealPlanPreview,
     responses={
+        409: {
+            "description": "AI meal plan preview is in progress or the key conflicts",
+            "headers": {
+                "Retry-After": {
+                    "description": "Seconds before checking an in-progress preview again",
+                    "schema": {"type": "integer", "minimum": 1},
+                }
+            },
+        },
         429: {
             "description": "AI meal plan preview rate limit exceeded",
             "headers": {
@@ -36,7 +47,7 @@ router = APIRouter(prefix="/meal-plans", tags=["Meal Plans V2"])
                     "schema": {"type": "integer", "minimum": 1},
                 }
             },
-        }
+        },
     },
 )
 async def generate_meal_plan_preview(
@@ -44,10 +55,22 @@ async def generate_meal_plan_preview(
     current_user: User = Depends(get_current_user),
     provider: MealPlanGenerationProvider = Depends(get_meal_plan_generation_provider),
     db: AsyncSession = Depends(get_db),
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+        description="Client key for retrying the same preview request",
+        json_schema_extra={"pattern": IDEMPOTENCY_KEY_PATTERN},
+    ),
 ):
     """Suggest one day of assignments from the authenticated user's saved recipes."""
+    if idempotency_key is not None and not re.fullmatch(
+        IDEMPOTENCY_KEY_PATTERN, idempotency_key
+    ):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid Idempotency-Key"
+        )
     return await AIMealPlanPreviewService(db, provider).generate(
-        user_id=current_user.id, request=payload
+        user_id=current_user.id, request=payload, idempotency_key=idempotency_key
     )
 
 

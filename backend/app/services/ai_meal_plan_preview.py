@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 from fractions import Fraction
+from hashlib import sha256
 from itertools import product
 from math import lcm
 from time import monotonic
@@ -12,6 +13,7 @@ from typing import get_args
 
 from fastapi import HTTPException
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -24,6 +26,10 @@ from app.integrations.meal_plan_generation import (
     MealPlanProviderUnavailable,
 )
 from app.models.recipe import Recipe
+from app.repositories.ai_meal_plan_preview_idempotency import (
+    AIMealPlanPreviewIdempotencyRepository,
+    PreviewReservation,
+)
 from app.repositories.ai_meal_plan_preview_limits import (
     AIMealPlanPreviewLimitsRepository,
 )
@@ -87,10 +93,15 @@ class AIMealPlanPreviewService:
         self.recipes = RecipesRepository(db)
         self.profiles = UserNutritionProfilesRepository(db)
         self.rate_limits = AIMealPlanPreviewLimitsRepository(db)
+        self.idempotency = AIMealPlanPreviewIdempotencyRepository(db)
         self.personalization = RecipeSuggestionPersonalization()
 
     async def generate(
-        self, *, user_id: uuid.UUID, request: AIMealPlanPreviewRequest
+        self,
+        *,
+        user_id: uuid.UUID,
+        request: AIMealPlanPreviewRequest,
+        idempotency_key: str | None = None,
     ) -> AIMealPlanPreview:
         stored_profile = await self.profiles.get_by_user_id(user_id)
         profile = (
@@ -143,6 +154,72 @@ class AIMealPlanPreviewService:
             default=str,
             ensure_ascii=False,
         )
+
+        reservation = None
+        if idempotency_key is not None:
+            reservation = PreviewReservation(
+                user_id=user_id,
+                key_hash=sha256(idempotency_key.encode()).hexdigest(),
+                id=uuid.uuid4(),
+            )
+            # Candidate numbers can refer to different recipes in later snapshots.
+            snapshot = json.dumps(
+                [
+                    context_json,
+                    [str(candidate.recipe_id) for candidate in candidates.values()],
+                ]
+            )
+            input_hash = sha256(snapshot.encode()).hexdigest()
+            async with self.db.begin():
+                existing = await self.idempotency.claim(reservation, input_hash)
+            if existing is not None:
+                previous_hash, previous_preview = existing
+                if previous_hash != input_hash:
+                    raise HTTPException(
+                        409,
+                        "Idempotency-Key already used with different preview inputs",
+                    )
+                if previous_preview is None:
+                    raise HTTPException(
+                        409,
+                        "AI meal plan preview is already in progress",
+                        headers={"Retry-After": "1"},
+                    )
+                return AIMealPlanPreview.model_validate(previous_preview)
+
+        try:
+            preview = await self._generate_preview(
+                user_id, request, candidates, profile, daily_targets, context_json
+            )
+        except HTTPException:
+            if reservation is not None:
+                try:
+                    async with self.db.begin():
+                        await self.idempotency.release(reservation)
+                except SQLAlchemyError:
+                    logger.warning(
+                        "Could not release failed AI meal plan preview reservation"
+                    )
+            raise
+
+        if reservation is not None:
+            async with self.db.begin():
+                stored = await self.idempotency.complete(
+                    reservation, preview.model_dump(mode="json")
+                )
+            if not stored:
+                raise HTTPException(409, "AI meal plan preview reservation expired")
+        return preview
+
+    async def _generate_preview(
+        self,
+        user_id: uuid.UUID,
+        request: AIMealPlanPreviewRequest,
+        candidates: dict[int, Candidate],
+        profile: UserNutritionProfileRead,
+        daily_targets: dict[str, int | None],
+        context_json: str,
+    ) -> AIMealPlanPreview:
         settings = get_settings()
         loop = asyncio.get_running_loop()
         deadline = loop.time() + settings.ai_request_timeout_seconds

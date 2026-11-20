@@ -1,3 +1,4 @@
+from app.models.ai_meal_plan_preview_idempotency import AIMealPlanPreviewIdempotency
 from app.models.ai_meal_plan_preview_limit import AIMealPlanPreviewLimit
 from app.models.ai_request import RecipeAIRequest
 from app.models.auth_abuse_bucket import AuthAbuseBucket
@@ -12,6 +13,7 @@ from app.models.user import User
 from app.models.user_nutrition_profile import UserNutritionProfile
 
 __all__ = [
+    "AIMealPlanPreviewIdempotency",
     "AIMealPlanPreviewLimit",
     "AuthAbuseBucket",
     "AuthSession",
