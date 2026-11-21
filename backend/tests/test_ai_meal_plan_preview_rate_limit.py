@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import update
@@ -70,7 +71,7 @@ def provider(client, monkeypatch):
     return fake_provider
 
 
-async def seed_account(session, name):
+async def seed_account(session, name, *, meal_type="lunch"):
     account = User(email=f"{name}@example.com")
     session.add(account)
     await session.flush()
@@ -85,7 +86,7 @@ async def seed_account(session, name):
             created_by_user_id=account.id,
             title="Quota test lunch",
             instructions="Synthetic recipe.",
-            meal_type="lunch",
+            meal_type=meal_type,
             **{f"total_{key}": value for key, value in nutrition.items()},
             recipe_ingredients=[
                 RecipeIngredient(
@@ -180,6 +181,47 @@ async def test_retry_reserves_a_separate_account_attempt(
         assert response.json() == {"detail": "AI meal plan preview rate limit exceeded"}
         assert 1 <= int(response.headers["Retry-After"]) <= 60
     assert provider.calls == limit
+    bucket = await db_session.get(AIMealPlanPreviewLimit, account)
+    assert bucket.attempts == limit
+
+
+@pytest.mark.parametrize(("limit", "status"), [(1, 429), (2, 200)])
+async def test_repair_uses_account_quota_and_only_caches_a_complete_preview(
+    client, db_session, provider, monkeypatch, limit, status
+):
+    monkeypatch.setattr(get_settings(), "ai_meal_plan_preview_rate_limit", limit)
+    account, headers = await seed_account(db_session, "preview-repair", meal_type=None)
+    headers["Idempotency-Key"] = IDEMPOTENCY_KEY
+    payload = {**PAYLOAD, "meal_types": ["lunch", "dinner"]}
+    lunch = {"meal_type": "lunch", "candidate_number": 1, "serving_hundredths": 100}
+    select_meals = AsyncMock(
+        side_effect=[
+            MealPlanProviderResult({"items": [lunch]}),
+            MealPlanProviderResult(
+                {"items": [lunch, {**lunch, "meal_type": "dinner"}]}
+            ),
+        ]
+    )
+    monkeypatch.setattr(provider, "select_meals", select_meals)
+
+    response = await client.post(URL, json=payload, headers=headers)
+
+    assert response.status_code == status
+    if status == 429:
+        assert 1 <= int(response.headers["Retry-After"]) <= 60
+        result = await db_session.get(
+            AIMealPlanPreviewIdempotency,
+            (account, sha256(IDEMPOTENCY_KEY.encode()).hexdigest()),
+        )
+        assert result is None
+    else:
+        replay = await client.post(URL, json=payload, headers=headers)
+        assert replay.status_code == 200
+        assert replay.json() == response.json()
+        assert [item["meal_type"] for item in replay.json()["items"]] == payload[
+            "meal_types"
+        ]
+    assert select_meals.await_count == limit
     bucket = await db_session.get(AIMealPlanPreviewLimit, account)
     assert bucket.attempts == limit
 

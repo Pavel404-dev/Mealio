@@ -59,6 +59,12 @@ CANONICAL_SLOTS = get_args(MealSlot)
 TRIAL_SERVING_HUNDREDTHS = (75, 100, 125, 150)
 
 
+class _MissingMealSlots(MealPlanProviderInvalidOutput):
+    def __init__(self, meal_types: list[MealSlot]) -> None:
+        super().__init__("Selection omits requested meal slots")
+        self.meal_types = meal_types
+
+
 @dataclass(frozen=True)
 class Candidate:
     recipe_id: uuid.UUID
@@ -256,6 +262,12 @@ class AIMealPlanPreviewService:
                 return preview
             except (ValidationError, MealPlanProviderInvalidOutput) as exc:
                 outcome = "invalid_output"
+                if can_retry and isinstance(exc, _MissingMealSlots):
+                    context = json.loads(context_json)
+                    context["missing_meal_types"] = exc.meal_types
+                    context_json = json.dumps(context, ensure_ascii=False)
+                    can_retry = False
+                    continue
                 raise HTTPException(
                     502, "AI provider returned an invalid meal plan"
                 ) from exc
@@ -335,16 +347,20 @@ class AIMealPlanPreviewService:
         daily_targets: dict[str, int | None],
     ) -> AIMealPlanPreview:
         by_slot = {item.meal_type: item for item in selection.items}
-        if len(selection.items) != len(by_slot) or set(by_slot) != set(
+        if len(selection.items) != len(by_slot) or not by_slot.keys() <= set(
             request.meal_types
         ):
             raise MealPlanProviderInvalidOutput
 
-        items = [by_slot[slot] for slot in request.meal_types]
-        for item in items:
+        for item in selection.items:
             candidate = candidates.get(item.candidate_number)
             if candidate is None or item.meal_type not in candidate.allowed_slots:
                 raise MealPlanProviderInvalidOutput
+
+        missing_slots = [slot for slot in request.meal_types if slot not in by_slot]
+        if missing_slots:
+            raise _MissingMealSlots(missing_slots)
+        items = [by_slot[slot] for slot in request.meal_types]
 
         targets = {
             field: value for field, value in daily_targets.items() if value is not None
