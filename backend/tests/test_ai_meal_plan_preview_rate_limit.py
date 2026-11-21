@@ -6,7 +6,7 @@ from hashlib import sha256
 from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from app.api.deps import get_meal_plan_generation_provider
 from app.core.config import get_settings
@@ -19,7 +19,11 @@ from app.integrations.meal_plan_generation import (
 from app.main import app
 from app.models.ai_meal_plan_preview_idempotency import AIMealPlanPreviewIdempotency
 from app.models.ai_meal_plan_preview_limit import AIMealPlanPreviewLimit
-from app.models.ingredient import Ingredient, NutritionValue
+from app.models.ingredient import (
+    Ingredient,
+    IngredientAllergenVerification,
+    NutritionValue,
+)
 from app.models.recipe import Recipe, RecipeIngredient
 from app.models.user import User
 from app.models.user_nutrition_profile import UserNutritionProfile
@@ -311,6 +315,90 @@ async def test_replay_checks_current_recipe_and_allergy_inputs(
     allergy = await client.post(URL, json=PAYLOAD, headers=headers)
     assert allergy.status_code == 422
     assert provider.calls == 1
+
+
+async def test_catalog_edit_during_generation_revokes_evidence_and_releases_key(
+    client, db_session, provider, monkeypatch
+):
+    name = "preview-key-allergens"
+    account, headers = await seed_account(db_session, name)
+    headers["Idempotency-Key"] = IDEMPOTENCY_KEY
+    ingredient_id = await db_session.scalar(
+        select(Ingredient.id).where(
+            Ingredient.name == f"Quota account ingredient {name}"
+        )
+    )
+    ingredient_url = f"/api/v1/ingredients/{ingredient_id}"
+    key = (account, sha256(IDEMPOTENCY_KEY.encode()).hexdigest())
+
+    async def record_evidence():
+        db_session.add_all(
+            [
+                IngredientAllergenVerification(
+                    ingredient_id=ingredient_id,
+                    allergen_key=allergen,
+                    status="absent",
+                    source_name="Synthetic evidence",
+                    source_reference="Test-only record",
+                )
+                for allergen in ("soy", "sesame")
+            ]
+        )
+        await db_session.commit()
+
+    db_session.add(UserNutritionProfile(user_id=account, allergies=["Soy"]))
+    await record_evidence()
+
+    select_meals = provider.select_meals
+
+    async def edit_then_select(*, context_json):
+        edited = await client.patch(
+            ingredient_url, headers=headers, json={"category": "Changed"}
+        )
+        assert edited.status_code == 200, edited.text
+        return await select_meals(context_json=context_json)
+
+    with monkeypatch.context() as generation:
+        generation.setattr(provider, "select_meals", edit_then_select)
+        invalidated = await client.post(URL, headers=headers, json=PAYLOAD)
+    assert invalidated.status_code == 422, invalidated.text
+    assert provider.calls == 1
+    assert await db_session.get(AIMealPlanPreviewIdempotency, key) is None
+    assert (
+        await db_session.get(IngredientAllergenVerification, (ingredient_id, "soy"))
+        is None
+    )
+
+    restored = await client.patch(
+        ingredient_url, headers=headers, json={"category": None}
+    )
+    assert restored.status_code == 200, restored.text
+    blocked = await client.post(URL, headers=headers, json=PAYLOAD)
+    assert blocked.status_code == 422
+    assert provider.calls == 1
+
+    await record_evidence()
+    valid = await client.post(URL, headers=headers, json=PAYLOAD)
+    replay = await client.post(URL, headers=headers, json=PAYLOAD)
+    assert valid.status_code == 200, valid.text
+    assert replay.status_code == 200 and replay.json() == valid.json()
+
+    await db_session.execute(
+        update(UserNutritionProfile)
+        .where(UserNutritionProfile.user_id == account)
+        .values(allergies=["Sesame"])
+    )
+    await db_session.commit()
+    changed_allergy = await client.post(URL, headers=headers, json=PAYLOAD)
+    assert changed_allergy.status_code == 409
+
+    renamed = await client.patch(
+        ingredient_url, headers=headers, json={"name": "Changed catalog identity"}
+    )
+    assert renamed.status_code == 200, renamed.text
+    revoked_replay = await client.post(URL, headers=headers, json=PAYLOAD)
+    assert revoked_replay.status_code == 422
+    assert provider.calls == 2
 
 
 async def test_provider_failure_releases_key_for_retry(client, db_session, provider):

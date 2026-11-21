@@ -9,8 +9,9 @@ nutrition totals based on the saved recipes and their current serving yields.
   serving contributes 82.50 kcal to the preview.
 - A provider response that selects a recipe outside the supplied candidates,
   repeats a slot, or supplies its own nutrition returns HTTP 502.
-- With allergies declared, the API returns HTTP 422 before contacting the
-  provider. The catalog has no verified allergen coverage for this feature.
+- With allergies declared, the API considers recipes whose structured
+  ingredients all have verified absence for every declared allergen. Missing
+  eligible slots result in HTTP 422 before contacting the provider.
 - A timed-out provider returns HTTP 503. The caller can retry or continue
   planning manually. Preview requests leave saved plans and recipes untouched.
 
@@ -36,8 +37,8 @@ The API does not promise that targets or a dietary label are clinically verified
 The model receives candidate numbers, slot options, serving yields, stored
 nutrition, diet labels and counts of matching liked ingredients. It also receives
 the requested date and locale, the profile goal, diet label, preferred meal count
-and daily targets. Emails, UUIDs, ingredient names, recipe titles and instructions
-stay on the server. Any declared allergy stops the request before generation.
+and daily targets. Emails, UUIDs, ingredient names, recipe titles, instructions,
+declared allergies and the review evidence stay on the server.
 The server accepts only one selection per requested slot and looks up each
 candidate number in the same snapshot. Portion counts are integer hundredths
 from 1 to 1200 in the model contract and decimals from 0.01 to 12 in the API.
@@ -56,6 +57,51 @@ The comparison uses the same model response.
 
 Nutrition is summed as exact fractions and rounded half up once for the day,
 using the same policy as saved plans.
+
+## Verified allergen information
+
+The preview checks the recipe's structured ingredient list against the allergies
+in the saved profile. An allergen key matches the profile text after trimming
+outer whitespace and applying Python `casefold()`. Each ingredient must have an
+`absent` record for each key. A missing record, `present`, or `possible` excludes
+the recipe. An ingredient whose name matches a declared allergy is also excluded.
+The review covers the listed ingredients. Users must verify the actual products
+used in cooking, including ingredients mentioned only in the instructions.
+
+Generation and idempotent replay recheck the selected recipes' coverage before
+returning a preview. The normalized allergen keys participate in the request
+fingerprint and stay out of the model prompt. A catalog rename or category
+change revokes all verification records for that ingredient in the same database
+transaction. Catalog deletion removes the records as well.
+
+The migration starts with an empty `ingredient_allergen_verifications` table.
+Populate it through a reviewed database operation. Record `absent` only when a
+traceable source supports absence, including cross-contact, for the exact
+ingredient and allergen. Use `possible` for a cross-contact risk and leave the
+record missing when coverage is unknown. Record a source name and a product or
+report reference. Withdraw a record when its evidence ceases to apply.
+
+Use bound parameters for the reviewed catalog identity and evidence. This
+statement locks the matching ingredient during the write. Expect one returned
+row. Zero rows means the ingredient identity must be checked again.
+
+```sql
+WITH reviewed AS (
+    SELECT id FROM public.ingredients
+    WHERE id = :ingredient_id AND name = :reviewed_name
+      AND category IS NOT DISTINCT FROM :reviewed_category
+    FOR UPDATE
+)
+INSERT INTO public.ingredient_allergen_verifications
+    (ingredient_id, allergen_key, status, source_name, source_reference)
+SELECT id, :allergen_key, :status, :source_name, :source_reference FROM reviewed
+ON CONFLICT (ingredient_id, allergen_key) DO UPDATE SET
+    status = EXCLUDED.status,
+    source_name = EXCLUDED.source_name,
+    source_reference = EXCLUDED.source_reference,
+    verified_at = EXCLUDED.verified_at
+RETURNING ingredient_id, allergen_key;
+```
 
 ## Target fit (W14 first slice)
 

@@ -57,6 +57,10 @@ from app.services.recipe_suggestion_personalization import (
 logger = logging.getLogger("uvicorn.error.mealio.ai_meal_plan")
 CANONICAL_SLOTS = get_args(MealSlot)
 TRIAL_SERVING_HUNDREDTHS = (75, 100, 125, 150)
+INSUFFICIENT_ALLERGEN_COVERAGE = (
+    "Not enough eligible saved recipes with verified allergen information "
+    "for the requested meal slots"
+)
 
 
 class _MissingMealSlots(MealPlanProviderInvalidOutput):
@@ -115,15 +119,18 @@ class AIMealPlanPreviewService:
             if stored_profile is not None
             else UserNutritionProfileRead.default()
         )
-        if any(value.strip() for value in profile.allergies):
-            raise HTTPException(
-                422, "AI meal plans do not support declared allergies yet"
-            )
+        allergen_keys = {
+            key for value in profile.allergies if (key := value.strip().casefold())
+        }
 
         recipes = await self.recipes.list_for_plan_preview(
-            user_id=user_id, limit=MAX_PLAN_CANDIDATES
+            user_id=user_id,
+            limit=MAX_PLAN_CANDIDATES,
+            include_allergen_verifications=bool(allergen_keys),
         )
-        candidates = self._build_candidates(recipes, profile, request.meal_types)
+        candidates = self._build_candidates(
+            recipes, profile, request.meal_types, allergen_keys
+        )
         allowed_slots = {
             slot
             for candidate in candidates.values()
@@ -131,7 +138,10 @@ class AIMealPlanPreviewService:
         }
         if not set(request.meal_types) <= allowed_slots:
             raise HTTPException(
-                422, "Not enough eligible saved recipes for the requested meal slots"
+                422,
+                INSUFFICIENT_ALLERGEN_COVERAGE
+                if allergen_keys
+                else "Not enough eligible saved recipes for the requested meal slots",
             )
 
         # Release the read snapshot before reserving a model attempt.
@@ -169,13 +179,13 @@ class AIMealPlanPreviewService:
                 id=uuid.uuid4(),
             )
             # Candidate numbers can refer to different recipes in later snapshots.
-            snapshot = json.dumps(
-                [
-                    context_json,
-                    [str(candidate.recipe_id) for candidate in candidates.values()],
-                ]
-            )
-            input_hash = sha256(snapshot.encode()).hexdigest()
+            snapshot = [
+                context_json,
+                [str(candidate.recipe_id) for candidate in candidates.values()],
+            ]
+            if allergen_keys:
+                snapshot.append(sorted(allergen_keys))
+            input_hash = sha256(json.dumps(snapshot).encode()).hexdigest()
             async with self.db.begin():
                 existing = await self.idempotency.claim(reservation, input_hash)
             if existing is not None:
@@ -191,13 +201,22 @@ class AIMealPlanPreviewService:
                         "AI meal plan preview is already in progress",
                         headers={"Retry-After": "1"},
                     )
-                return AIMealPlanPreview.model_validate(previous_preview)
+                preview = AIMealPlanPreview.model_validate(previous_preview)
+                if allergen_keys:
+                    await self._validate_selected_allergens(
+                        user_id, preview, profile, allergen_keys
+                    )
+                return preview
 
         try:
             preview = await self._generate_preview(
                 user_id, request, candidates, profile, daily_targets, context_json
             )
-        except HTTPException:
+            if allergen_keys:
+                await self._validate_selected_allergens(
+                    user_id, preview, profile, allergen_keys
+                )
+        except (HTTPException, SQLAlchemyError):
             if reservation is not None:
                 try:
                     async with self.db.begin():
@@ -216,6 +235,27 @@ class AIMealPlanPreviewService:
             if not stored:
                 raise HTTPException(409, "AI meal plan preview reservation expired")
         return preview
+
+    async def _validate_selected_allergens(
+        self,
+        user_id: uuid.UUID,
+        preview: AIMealPlanPreview,
+        profile: UserNutritionProfileRead,
+        allergen_keys: set[str],
+    ) -> None:
+        recipe_ids = {item.recipe_id for item in preview.items}
+        async with self.db.begin():
+            recipes = await self.recipes.list_for_plan_preview(
+                user_id=user_id,
+                limit=len(recipe_ids),
+                recipe_ids=recipe_ids,
+                include_allergen_verifications=True,
+            )
+            if len(recipes) != len(recipe_ids) or any(
+                not self._matches_ingredient_preferences(recipe, profile, allergen_keys)
+                for recipe in recipes
+            ):
+                raise HTTPException(422, INSUFFICIENT_ALLERGEN_COVERAGE)
 
     async def _generate_preview(
         self,
@@ -302,6 +342,7 @@ class AIMealPlanPreviewService:
         recipes: list[Recipe],
         profile: UserNutritionProfileRead,
         slots: list[MealSlot],
+        allergen_keys: set[str],
     ) -> dict[int, Candidate]:
         candidates = {}
         preferred_diet = (profile.diet_type or "").strip().casefold()
@@ -314,9 +355,7 @@ class AIMealPlanPreviewService:
                 continue
             if not _recipe_has_complete_nutrition(recipe):
                 continue
-            if self.personalization.should_exclude_recipe(
-                recipe=recipe, nutrition_profile=profile
-            ):
+            if not self._matches_ingredient_preferences(recipe, profile, allergen_keys):
                 continue
             allowed = tuple(
                 slot
@@ -337,6 +376,20 @@ class AIMealPlanPreviewService:
                 ),
             )
         return candidates
+
+    def _matches_ingredient_preferences(
+        self,
+        recipe: Recipe,
+        profile: UserNutritionProfileRead,
+        allergen_keys: set[str],
+    ) -> bool:
+        if allergen_keys and not _recipe_has_verified_allergen_coverage(
+            recipe, allergen_keys
+        ):
+            return False
+        return not self.personalization.should_exclude_recipe(
+            recipe=recipe, nutrition_profile=profile
+        )
 
     async def _build_preview(
         self,
@@ -568,3 +621,18 @@ def _recipe_has_complete_nutrition(recipe: Recipe) -> bool:
         ):
             return False
     return True
+
+
+def _recipe_has_verified_allergen_coverage(
+    recipe: Recipe, allergen_keys: set[str]
+) -> bool:
+    return bool(recipe.recipe_ingredients) and all(
+        row.ingredient is not None
+        and allergen_keys
+        <= {
+            evidence.allergen_key
+            for evidence in row.ingredient.allergen_verifications
+            if evidence.status == "absent"
+        }
+        for row in recipe.recipe_ingredients
+    )
