@@ -133,16 +133,17 @@ class FakeProvider:
         self.db = db
         self.calls = []
         self.result = {"items": [selection("dinner", 2, 50), selection()]}
-        self.failures = []
+        self.responses = []
         self.estimated_cost_usd = None
 
     async def select_meals(self, *, context_json):
         assert self.db.released
         self.calls.append(json.loads(context_json))
-        if self.failures:
-            raise self.failures.pop(0)
+        response = self.responses.pop(0) if self.responses else self.result
+        if isinstance(response, Exception):
+            raise response
         return MealPlanProviderResult(
-            self.result,
+            response,
             input_tokens=410,
             output_tokens=34,
             estimated_cost_usd=self.estimated_cost_usd,
@@ -631,9 +632,11 @@ async def test_missing_profile_reports_actuals_without_fabricating_targets(previ
 @pytest.mark.parametrize(
     "items",
     [
-        [selection()],
+        [],
         [selection(), selection(hundredths=50)],
+        [selection("breakfast")],
         [selection(), selection("breakfast", 2)],
+        [selection(candidate=3)],
         [selection(candidate=3), selection("dinner", 2)],
         [selection(candidate=2), selection("dinner", 2)],
         [selection(hundredths=0), selection("dinner", 2)],
@@ -652,6 +655,49 @@ async def test_invalid_model_output_is_rejected_whole(preview, items):
     assert response.status_code == 502
     assert response.json() == {"detail": "AI provider returned an invalid meal plan"}
     assert db.released and len(db.reads) == 2 and len(provider.calls) == 1
+
+
+@pytest.mark.parametrize("repair_succeeds", [True, False])
+async def test_incomplete_selection_gets_one_repair(preview, repair_succeeds):
+    client, db, provider = preview
+    incomplete = {"items": [selection()]}
+    provider.responses = [
+        incomplete,
+        provider.result if repair_succeeds else incomplete,
+    ]
+
+    response = await client.post(URL, json=REQUEST)
+
+    if repair_succeeds:
+        assert response.status_code == 200
+        assert [item["meal_type"] for item in response.json()["items"]] == REQUEST[
+            "meal_types"
+        ]
+    else:
+        assert response.status_code == 502
+        assert response.json() == {
+            "detail": "AI provider returned an invalid meal plan"
+        }
+    initial, repair = provider.calls
+    assert "missing_meal_types" not in initial
+    assert repair == {**initial, "missing_meal_types": ["dinner"]}
+    assert db.reservations == [db.user_id, db.user_id]
+
+
+@pytest.mark.parametrize("incomplete_first", [False, True])
+async def test_repair_and_transport_failure_share_one_retry(preview, incomplete_first):
+    client, db, provider = preview
+    incomplete = {"items": [selection()]}
+    failure = MealPlanProviderTransientError()
+    provider.responses = (
+        [incomplete, failure] if incomplete_first else [failure, incomplete]
+    )
+
+    response = await client.post(URL, json=REQUEST)
+
+    assert response.status_code == (503 if incomplete_first else 502)
+    assert len(provider.calls) == 2
+    assert db.reservations == [db.user_id, db.user_id]
 
 
 @pytest.mark.parametrize(
@@ -735,7 +781,7 @@ async def test_provider_errors_are_generic_and_count_as_preview_attempts(
     preview, caplog, error, detail
 ):
     client, db, provider = preview
-    provider.failures.append(error("private provider response"))
+    provider.responses.append(error("private provider response"))
     with caplog.at_level(logging.INFO, logger="uvicorn.error.mealio.ai_meal_plan"):
         response = await client.post(URL, json=REQUEST)
     assert response.status_code == 503 and response.json() == {"detail": detail}
@@ -753,7 +799,7 @@ async def test_transient_provider_failure_retries_once(
     preview, caplog, failed_calls, status, last_outcome
 ):
     client, db, provider = preview
-    provider.failures = [
+    provider.responses = [
         MealPlanProviderTransientError("private provider response")
         for _ in range(failed_calls)
     ]
@@ -781,8 +827,9 @@ async def test_transient_provider_failure_retries_once(
 
 
 @pytest.mark.parametrize(("first_elapsed", "expected_calls"), [(6, 2), (11, 1)])
+@pytest.mark.parametrize("incomplete_first", [False, True])
 async def test_retry_shares_the_original_deadline(
-    preview, monkeypatch, first_elapsed, expected_calls
+    preview, monkeypatch, first_elapsed, expected_calls, incomplete_first
 ):
     client, db, provider = preview
     monkeypatch.setattr(get_settings(), "ai_request_timeout_seconds", 10)
@@ -797,6 +844,8 @@ async def test_retry_shares_the_original_deadline(
         provider.calls.append(context_json)
         if len(provider.calls) == 1:
             elapsed += first_elapsed
+            if incomplete_first:
+                return MealPlanProviderResult({"items": [selection()]})
             raise MealPlanProviderTransientError
         elapsed += 5
         await asyncio.sleep(0.01)
