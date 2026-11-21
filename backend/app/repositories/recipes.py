@@ -8,7 +8,11 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models.ingredient import Ingredient, UserIngredient
+from app.models.ingredient import (
+    Ingredient,
+    IngredientAllergenVerification,
+    UserIngredient,
+)
 from app.models.meal_plan import MealPlan, MealPlanItem
 from app.models.recipe import Recipe, RecipeIngredient
 from app.schemas.recipe import RecipeCreate, RecipeNutritionTotals, RecipeUpdate
@@ -79,16 +83,20 @@ class RecipesRepository:
         return list(result.scalars().all())
 
     async def list_for_plan_preview(
-        self, *, user_id: uuid.UUID, limit: int
+        self,
+        *,
+        user_id: uuid.UUID,
+        limit: int,
+        include_allergen_verifications: bool = False,
+        recipe_ids: set[uuid.UUID] | None = None,
     ) -> list[Recipe]:
         # A single read snapshot pairs stored recipe totals with their composition.
+        ingredient = joinedload(Recipe.recipe_ingredients).joinedload(
+            RecipeIngredient.ingredient
+        )
         stmt = (
             select(Recipe)
-            .options(
-                joinedload(Recipe.recipe_ingredients)
-                .joinedload(RecipeIngredient.ingredient)
-                .joinedload(Ingredient.nutrition_value)
-            )
+            .options(ingredient.joinedload(Ingredient.nutrition_value))
             .where(
                 Recipe.created_by_user_id == user_id,
                 Recipe.total_calories.is_not(None),
@@ -99,6 +107,16 @@ class RecipesRepository:
             .order_by(Recipe.created_at.desc(), Recipe.id.asc())
             .limit(limit)
         )
+        if include_allergen_verifications:
+            stmt = stmt.options(
+                ingredient.joinedload(Ingredient.allergen_verifications).load_only(
+                    IngredientAllergenVerification.allergen_key,
+                    IngredientAllergenVerification.status,
+                    raiseload=True,
+                )
+            ).execution_options(populate_existing=True)
+        if recipe_ids is not None:
+            stmt = stmt.where(Recipe.id.in_(recipe_ids))
         return list((await self.db.execute(stmt)).unique().scalars().all())
 
     async def list_for_pantry_suggestions(

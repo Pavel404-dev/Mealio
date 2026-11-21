@@ -65,7 +65,9 @@ def recipe(
             SimpleNamespace(
                 quantity_g=Decimal("200"),
                 ingredient=SimpleNamespace(
-                    name=name, nutrition_value=value if complete else None
+                    name=name,
+                    nutrition_value=value if complete else None,
+                    allergen_verifications=[],
                 ),
             )
         ],
@@ -717,12 +719,14 @@ async def test_bad_request_stops_before_database_and_provider(preview, change):
     assert not db.reads and not provider.calls
 
 
-async def test_declared_allergies_stop_before_candidates_or_provider(preview):
+async def test_unverified_allergies_stop_before_quota_or_provider(preview):
     client, db, provider = preview
     db.profile.allergies = ["Test allergy"]
     response = await client.post(URL, json=REQUEST)
-    assert response.status_code == 422 and "allergies" in response.json()["detail"]
-    assert len(db.reads) == 1 and not provider.calls
+    assert response.status_code == 422
+    assert "verified allergen information" in response.json()["detail"]
+    assert len(db.reads) == 2 and "ingredient_allergen_verifications" in db.reads[1]
+    assert not provider.calls
     assert not db.reservations
 
 

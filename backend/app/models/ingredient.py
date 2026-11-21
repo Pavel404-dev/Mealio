@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    DDL,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -10,12 +11,14 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    event,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.ddl import ingredient_allergen_verification_v1 as allergen_verification
 from app.db.ddl import ingredient_identity_v1 as identity
 from app.db.ingredient_identity import register_identity_ddl
 
@@ -69,8 +72,63 @@ class Ingredient(Base):
         back_populates="ingredient",
     )
 
+    allergen_verifications: Mapped[list["IngredientAllergenVerification"]] = (
+        relationship(lazy="raise", viewonly=True)
+    )
+
 
 register_identity_ddl(Ingredient.__table__)
+
+
+class IngredientAllergenVerification(Base):
+    __tablename__ = "ingredient_allergen_verifications"
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('absent', 'present', 'possible')",
+            name="ck_ingredient_allergen_verifications_status",
+        ),
+        CheckConstraint(
+            "btrim(allergen_key) <> '' AND btrim(source_name) <> '' "
+            "AND btrim(source_reference) <> ''",
+            name="ck_ingredient_allergen_verifications_evidence",
+        ),
+    )
+
+    ingredient_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("ingredients.id", ondelete="CASCADE"), primary_key=True
+    )
+    allergen_key: Mapped[str] = mapped_column(
+        String(255, collation="C"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(String(8), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_reference: Mapped[str] = mapped_column(String(1000), nullable=False)
+    verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+event.listen(
+    IngredientAllergenVerification.__table__,
+    "after_create",
+    DDL(allergen_verification.REVOKE_FUNCTION).execute_if(dialect="postgresql"),
+)
+event.listen(
+    IngredientAllergenVerification.__table__,
+    "after_create",
+    DDL(allergen_verification.REVOKE_TRIGGER).execute_if(dialect="postgresql"),
+)
+event.listen(
+    IngredientAllergenVerification.__table__,
+    "before_drop",
+    DDL(allergen_verification.DROP_REVOKE_TRIGGER).execute_if(dialect="postgresql"),
+)
+event.listen(
+    IngredientAllergenVerification.__table__,
+    "before_drop",
+    DDL(allergen_verification.DROP_REVOKE_FUNCTION).execute_if(dialect="postgresql"),
+)
 
 
 class NutritionValue(Base):

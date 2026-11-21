@@ -1,10 +1,15 @@
 """PostgreSQL witness for owner-scoped candidates, eligibility and read-only preview."""
 
 import json
+from uuid import UUID
+
+import pytest
 
 from app.api.deps import get_meal_plan_generation_provider
 from app.integrations.meal_plan_generation import MealPlanProviderResult
 from app.main import app
+from app.models.ingredient import IngredientAllergenVerification
+from app.models.user_nutrition_profile import UserNutritionProfile
 from tests.test_ai_meal_plan_preview import REQUEST, URL, selection
 from tests.test_meal_plan_portions_api import ingredient, recipe
 from tests.test_meal_plans_api import create_authenticated_user
@@ -62,3 +67,75 @@ async def test_live_repository_excludes_foreign_and_incomplete_recipes(
     assert rejected.status_code == 502
     plans = await client.get("/api/v2/meal-plans", headers=owner)
     assert plans.status_code == 200 and plans.json() == []
+
+
+@pytest.mark.parametrize("sesame_status", [None, "present", "possible"])
+async def test_allergen_coverage_requires_absence_on_every_ingredient(
+    client, db_session, monkeypatch, sesame_status
+):
+    account, headers = await create_authenticated_user(client)
+    reviewed = await ingredient(client, headers)
+    other = await ingredient(client, headers)
+    eligible = await recipe(client, headers, reviewed["id"])
+    mixed = await client.post(
+        "/api/v1/recipes",
+        headers=headers,
+        json={
+            "title": "Partially reviewed recipe",
+            "instructions": "Mix.",
+            "ingredients": [
+                {"ingredient_id": reviewed["id"], "quantity_g": 200},
+                {"ingredient_id": other["id"], "quantity_g": 20},
+            ],
+        },
+    )
+    assert mixed.status_code == 201, mixed.text
+
+    db_session.add(
+        UserNutritionProfile(user_id=UUID(account["id"]), allergies=[" SOY ", "Sesame"])
+    )
+    statuses = [
+        (reviewed["id"], "soy", "absent"),
+        (reviewed["id"], "sesame", "absent"),
+        (other["id"], "soy", "absent"),
+    ]
+    if sesame_status is not None:
+        statuses.append((other["id"], "sesame", sesame_status))
+    db_session.add_all(
+        [
+            IngredientAllergenVerification(
+                ingredient_id=UUID(ingredient_id),
+                allergen_key=key,
+                status=status,
+                source_name="Synthetic review evidence",
+                source_reference="Synthetic record 1",
+            )
+            for ingredient_id, key, status in statuses
+        ]
+    )
+    await db_session.commit()
+
+    class Provider:
+        model = "allergen-test-model"
+
+        async def select_meals(self, *, context_json):
+            context = json.loads(context_json)
+            assert len(context["candidates"]) == 1
+            assert context["preferences"]["allergies"] == []
+            for private_value in (
+                "soy",
+                "sesame",
+                "synthetic",
+                reviewed["name"].lower(),
+            ):
+                assert private_value not in context_json.lower()
+            return MealPlanProviderResult({"items": [selection()]})
+
+    monkeypatch.setitem(
+        app.dependency_overrides, get_meal_plan_generation_provider, Provider
+    )
+    response = await client.post(
+        URL, headers=headers, json={**REQUEST, "meal_types": ["lunch"]}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["items"][0]["recipe_id"] == eligible["id"]
