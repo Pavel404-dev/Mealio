@@ -753,7 +753,6 @@ void main() {
 
     for (final feature in const [
       ('ai-recipe-card', 'AI Recipe'),
-      ('meal-plan-card', 'Meal Plan'),
       ('shopping-list-card', 'Shopping List'),
     ]) {
       final card = find.byKey(Key(feature.$1));

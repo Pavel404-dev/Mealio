@@ -74,6 +74,17 @@ class FakeRecipeRepository implements RecipeRepository {
   final detailCalls = <RecipeDetailRequest>[];
 
   @override
+  Future<Recipe> getRecipe({
+    required String recipeId,
+    required int lifetime,
+    CancelToken? cancelToken,
+  }) async => (await getRecipeDetail(
+    recipeId: recipeId,
+    lifetime: lifetime,
+    cancelToken: cancelToken,
+  )).recipe;
+
+  @override
   Future<RecipeDetail> getRecipeDetail({
     required String recipeId,
     required int lifetime,
