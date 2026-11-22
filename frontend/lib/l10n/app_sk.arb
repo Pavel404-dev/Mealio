@@ -391,9 +391,100 @@
   "@mealPlan": {
     "description": "mealPlan"
   },
-  "mealPlanDescription": "Naplánujte si jedlá na celý týždeň.",
+  "mealPlanDescription": "Zobrazte si denný jedálniček z uložených receptov.",
   "@mealPlanDescription": {
     "description": "mealPlanDescription"
+  },
+  "mealPlanDate": "Dátum",
+  "@mealPlanDate": {
+    "description": "mealPlanDate"
+  },
+  "mealPlanMealTypes": "Jedlá",
+  "@mealPlanMealTypes": {
+    "description": "mealPlanMealTypes"
+  },
+  "mealPlanBreakfast": "Raňajky",
+  "@mealPlanBreakfast": {
+    "description": "mealPlanBreakfast"
+  },
+  "mealPlanLunch": "Obed",
+  "@mealPlanLunch": {
+    "description": "mealPlanLunch"
+  },
+  "mealPlanDinner": "Večera",
+  "@mealPlanDinner": {
+    "description": "mealPlanDinner"
+  },
+  "mealPlanSnack": "Olovrant",
+  "@mealPlanSnack": {
+    "description": "mealPlanSnack"
+  },
+  "mealPlanGenerate": "Vytvoriť náhľad",
+  "@mealPlanGenerate": {
+    "description": "mealPlanGenerate"
+  },
+  "mealPlanRegenerate": "Vygenerovať znova",
+  "@mealPlanRegenerate": {
+    "description": "mealPlanRegenerate"
+  },
+  "mealPlanGenerating": "Vytvára sa náhľad…",
+  "@mealPlanGenerating": {
+    "description": "mealPlanGenerating"
+  },
+  "mealPlanDailyTotals": "Denné nutričné hodnoty",
+  "@mealPlanDailyTotals": {
+    "description": "mealPlanDailyTotals"
+  },
+  "mealPlanOpenRecipe": "Otvoriť recept",
+  "@mealPlanOpenRecipe": {
+    "description": "mealPlanOpenRecipe"
+  },
+  "mealPlanPortions": "Plánované porcie {servings}",
+  "@mealPlanPortions": {
+    "description": "mealPlanPortions",
+    "placeholders": {
+      "servings": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPlanWithinTolerance": "V tolerancii ±{tolerance}% od cieľov",
+  "@mealPlanWithinTolerance": {
+    "description": "mealPlanWithinTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanOutsideTolerance": "Mimo tolerancie ±{tolerance}% od cieľov",
+  "@mealPlanOutsideTolerance": {
+    "description": "mealPlanOutsideTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanAuthentication": "Prihláste sa znova, aby ste mohli vytvoriť náhľad.",
+  "@mealPlanAuthentication": {
+    "description": "mealPlanAuthentication"
+  },
+  "mealPlanNoEligibleRecipes": "Pre vybrané jedlá a váš profil chýbajú vhodné uložené recepty. Zmeňte jedlá alebo pridajte vhodné recepty.",
+  "@mealPlanNoEligibleRecipes": {
+    "description": "mealPlanNoEligibleRecipes"
+  },
+  "mealPlanInProgress": "Náhľad sa ešte vytvára. Skúste to o niekoľko sekúnd.",
+  "@mealPlanInProgress": {
+    "description": "mealPlanInProgress"
+  },
+  "mealPlanInputsChanged": "Vytvorte nový náhľad s aktuálnymi receptmi a profilom.",
+  "@mealPlanInputsChanged": {
+    "description": "mealPlanInputsChanged"
+  },
+  "mealPlanProviderUnavailable": "Služba náhľadu je dočasne nedostupná. Skúste to neskôr.",
+  "@mealPlanProviderUnavailable": {
+    "description": "mealPlanProviderUnavailable"
   },
   "shoppingList": "Nákupný zoznam",
   "@shoppingList": {

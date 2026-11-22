@@ -391,9 +391,100 @@
   "@mealPlan": {
     "description": "mealPlan"
   },
-  "mealPlanDescription": "Плануйте харчування на тиждень.",
+  "mealPlanDescription": "Перегляньте план на день зі збережених рецептів.",
   "@mealPlanDescription": {
     "description": "mealPlanDescription"
+  },
+  "mealPlanDate": "Дата",
+  "@mealPlanDate": {
+    "description": "mealPlanDate"
+  },
+  "mealPlanMealTypes": "Прийоми їжі",
+  "@mealPlanMealTypes": {
+    "description": "mealPlanMealTypes"
+  },
+  "mealPlanBreakfast": "Сніданок",
+  "@mealPlanBreakfast": {
+    "description": "mealPlanBreakfast"
+  },
+  "mealPlanLunch": "Обід",
+  "@mealPlanLunch": {
+    "description": "mealPlanLunch"
+  },
+  "mealPlanDinner": "Вечеря",
+  "@mealPlanDinner": {
+    "description": "mealPlanDinner"
+  },
+  "mealPlanSnack": "Перекус",
+  "@mealPlanSnack": {
+    "description": "mealPlanSnack"
+  },
+  "mealPlanGenerate": "Створити попередній перегляд",
+  "@mealPlanGenerate": {
+    "description": "mealPlanGenerate"
+  },
+  "mealPlanRegenerate": "Згенерувати знову",
+  "@mealPlanRegenerate": {
+    "description": "mealPlanRegenerate"
+  },
+  "mealPlanGenerating": "Створюємо попередній перегляд…",
+  "@mealPlanGenerating": {
+    "description": "mealPlanGenerating"
+  },
+  "mealPlanDailyTotals": "КБЖВ на день",
+  "@mealPlanDailyTotals": {
+    "description": "mealPlanDailyTotals"
+  },
+  "mealPlanOpenRecipe": "Відкрити рецепт",
+  "@mealPlanOpenRecipe": {
+    "description": "mealPlanOpenRecipe"
+  },
+  "mealPlanPortions": "Заплановано порцій {servings}",
+  "@mealPlanPortions": {
+    "description": "mealPlanPortions",
+    "placeholders": {
+      "servings": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPlanWithinTolerance": "У межах допуску ±{tolerance}%",
+  "@mealPlanWithinTolerance": {
+    "description": "mealPlanWithinTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanOutsideTolerance": "За межами допуску ±{tolerance}%",
+  "@mealPlanOutsideTolerance": {
+    "description": "mealPlanOutsideTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanAuthentication": "Увійдіть знову, щоб створити попередній перегляд.",
+  "@mealPlanAuthentication": {
+    "description": "mealPlanAuthentication"
+  },
+  "mealPlanNoEligibleRecipes": "Для вибраних прийомів їжі та вашого профілю бракує відповідних збережених рецептів. Змініть прийоми їжі або додайте відповідні рецепти.",
+  "@mealPlanNoEligibleRecipes": {
+    "description": "mealPlanNoEligibleRecipes"
+  },
+  "mealPlanInProgress": "Попередній перегляд ще готується. Спробуйте за кілька секунд.",
+  "@mealPlanInProgress": {
+    "description": "mealPlanInProgress"
+  },
+  "mealPlanInputsChanged": "Створіть новий попередній перегляд із поточними рецептами й профілем.",
+  "@mealPlanInputsChanged": {
+    "description": "mealPlanInputsChanged"
+  },
+  "mealPlanProviderUnavailable": "Сервіс попереднього перегляду тимчасово недоступний. Спробуйте пізніше.",
+  "@mealPlanProviderUnavailable": {
+    "description": "mealPlanProviderUnavailable"
   },
   "shoppingList": "Список покупок",
   "@shoppingList": {

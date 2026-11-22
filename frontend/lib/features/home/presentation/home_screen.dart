@@ -8,7 +8,7 @@ import '../../../core/localization/language_button.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/auth_controller.dart';
 
-enum _HomeFeature { aiRecipe, mealPlan, shoppingList }
+enum _HomeFeature { aiRecipe, shoppingList }
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -20,7 +20,6 @@ class HomeScreen extends ConsumerWidget {
           builder: (context) {
             final name = switch (feature) {
               _HomeFeature.aiRecipe => context.l10n.aiRecipe,
-              _HomeFeature.mealPlan => context.l10n.mealPlan,
               _HomeFeature.shoppingList => context.l10n.shoppingList,
             };
             return Text(context.l10n.featureComingSoon(name));
@@ -144,7 +143,7 @@ class HomeScreen extends ConsumerWidget {
               description: context.l10n.mealPlanDescription,
               icon: Icons.calendar_month_outlined,
               accentColor: const Color(0xFFB7C9E2),
-              onTap: () => _showPlaceholder(context, _HomeFeature.mealPlan),
+              onTap: () => context.push('/meal-plan'),
             ),
             const SizedBox(height: 14),
             _FeatureCard(

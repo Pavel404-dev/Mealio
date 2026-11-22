@@ -391,9 +391,100 @@
   "@mealPlan": {
     "description": "mealPlan"
   },
-  "mealPlanDescription": "Планируйте питание на неделю.",
+  "mealPlanDescription": "Посмотрите план на день из сохранённых рецептов.",
   "@mealPlanDescription": {
     "description": "mealPlanDescription"
+  },
+  "mealPlanDate": "Дата",
+  "@mealPlanDate": {
+    "description": "mealPlanDate"
+  },
+  "mealPlanMealTypes": "Приёмы пищи",
+  "@mealPlanMealTypes": {
+    "description": "mealPlanMealTypes"
+  },
+  "mealPlanBreakfast": "Завтрак",
+  "@mealPlanBreakfast": {
+    "description": "mealPlanBreakfast"
+  },
+  "mealPlanLunch": "Обед",
+  "@mealPlanLunch": {
+    "description": "mealPlanLunch"
+  },
+  "mealPlanDinner": "Ужин",
+  "@mealPlanDinner": {
+    "description": "mealPlanDinner"
+  },
+  "mealPlanSnack": "Перекус",
+  "@mealPlanSnack": {
+    "description": "mealPlanSnack"
+  },
+  "mealPlanGenerate": "Создать предпросмотр",
+  "@mealPlanGenerate": {
+    "description": "mealPlanGenerate"
+  },
+  "mealPlanRegenerate": "Сгенерировать заново",
+  "@mealPlanRegenerate": {
+    "description": "mealPlanRegenerate"
+  },
+  "mealPlanGenerating": "Создаём предпросмотр…",
+  "@mealPlanGenerating": {
+    "description": "mealPlanGenerating"
+  },
+  "mealPlanDailyTotals": "КБЖУ на день",
+  "@mealPlanDailyTotals": {
+    "description": "mealPlanDailyTotals"
+  },
+  "mealPlanOpenRecipe": "Открыть рецепт",
+  "@mealPlanOpenRecipe": {
+    "description": "mealPlanOpenRecipe"
+  },
+  "mealPlanPortions": "Запланировано порций {servings}",
+  "@mealPlanPortions": {
+    "description": "mealPlanPortions",
+    "placeholders": {
+      "servings": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPlanWithinTolerance": "В пределах допуска ±{tolerance}%",
+  "@mealPlanWithinTolerance": {
+    "description": "mealPlanWithinTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanOutsideTolerance": "За пределами допуска ±{tolerance}%",
+  "@mealPlanOutsideTolerance": {
+    "description": "mealPlanOutsideTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanAuthentication": "Войдите снова, чтобы создать предпросмотр.",
+  "@mealPlanAuthentication": {
+    "description": "mealPlanAuthentication"
+  },
+  "mealPlanNoEligibleRecipes": "Для выбранных приёмов пищи и вашего профиля не хватает подходящих сохранённых рецептов. Измените приёмы пищи или добавьте подходящие рецепты.",
+  "@mealPlanNoEligibleRecipes": {
+    "description": "mealPlanNoEligibleRecipes"
+  },
+  "mealPlanInProgress": "Предпросмотр ещё готовится. Повторите через несколько секунд.",
+  "@mealPlanInProgress": {
+    "description": "mealPlanInProgress"
+  },
+  "mealPlanInputsChanged": "Создайте новый предпросмотр с текущими рецептами и профилем.",
+  "@mealPlanInputsChanged": {
+    "description": "mealPlanInputsChanged"
+  },
+  "mealPlanProviderUnavailable": "Сервис предпросмотра временно недоступен. Попробуйте позже.",
+  "@mealPlanProviderUnavailable": {
+    "description": "mealPlanProviderUnavailable"
   },
   "shoppingList": "Список покупок",
   "@shoppingList": {

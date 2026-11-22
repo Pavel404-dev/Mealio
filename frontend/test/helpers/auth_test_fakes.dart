@@ -169,13 +169,20 @@ class FakeSecureStorageService extends SecureStorageService {
 }
 
 class FakeHttpResponse {
-  const FakeHttpResponse({required this.statusCode, required this.body})
-    : errorType = null;
+  const FakeHttpResponse({
+    required this.statusCode,
+    required this.body,
+    this.headers = const {},
+  }) : errorType = null;
 
-  const FakeHttpResponse.error(this.errorType) : statusCode = 0, body = null;
+  const FakeHttpResponse.error(this.errorType)
+    : statusCode = 0,
+      body = null,
+      headers = const {};
 
   final int statusCode;
   final Object? body;
+  final Map<String, List<String>> headers;
   final DioExceptionType? errorType;
 }
 
@@ -226,6 +233,7 @@ class FakeHttpClientAdapter implements HttpClientAdapter {
       response.statusCode,
       headers: {
         Headers.contentTypeHeader: ['application/json'],
+        ...response.headers,
       },
     );
   }

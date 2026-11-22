@@ -20,11 +20,17 @@ class ApiClient {
   final Dio _dio;
   final SecureStorageService? _storage;
 
-  Options? _options([int? lifetime]) {
+  Options _options({
+    int? lifetime,
+    Map<String, String>? headers,
+    Duration? receiveTimeout,
+  }) {
     final captured = lifetime ?? _storage?.sessionLifetime;
-    return captured == null
-        ? null
-        : Options(extra: {sessionLifetimeKey: captured});
+    return Options(
+      extra: captured == null ? null : {sessionLifetimeKey: captured},
+      headers: headers,
+      receiveTimeout: receiveTimeout,
+    );
   }
 
   Future<Response<T>> get<T>(
@@ -36,7 +42,7 @@ class ApiClient {
     return _dio.get<T>(
       path,
       queryParameters: queryParameters,
-      options: _options(sessionLifetime),
+      options: _options(lifetime: sessionLifetime),
       cancelToken: cancelToken,
     );
   }
@@ -45,12 +51,21 @@ class ApiClient {
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+    Duration? receiveTimeout,
+    int? sessionLifetime,
+    CancelToken? cancelToken,
   }) {
     return _dio.post<T>(
       path,
       data: data,
       queryParameters: queryParameters,
-      options: _options(),
+      options: _options(
+        lifetime: sessionLifetime,
+        headers: headers,
+        receiveTimeout: receiveTimeout,
+      ),
+      cancelToken: cancelToken,
     );
   }
 

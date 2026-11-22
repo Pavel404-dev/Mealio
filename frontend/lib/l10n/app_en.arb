@@ -391,9 +391,100 @@
   "@mealPlan": {
     "description": "mealPlan"
   },
-  "mealPlanDescription": "Organise meals across your week.",
+  "mealPlanDescription": "Preview one day of meals from your saved recipes.",
   "@mealPlanDescription": {
     "description": "mealPlanDescription"
+  },
+  "mealPlanDate": "Date",
+  "@mealPlanDate": {
+    "description": "mealPlanDate"
+  },
+  "mealPlanMealTypes": "Meals",
+  "@mealPlanMealTypes": {
+    "description": "mealPlanMealTypes"
+  },
+  "mealPlanBreakfast": "Breakfast",
+  "@mealPlanBreakfast": {
+    "description": "mealPlanBreakfast"
+  },
+  "mealPlanLunch": "Lunch",
+  "@mealPlanLunch": {
+    "description": "mealPlanLunch"
+  },
+  "mealPlanDinner": "Dinner",
+  "@mealPlanDinner": {
+    "description": "mealPlanDinner"
+  },
+  "mealPlanSnack": "Snack",
+  "@mealPlanSnack": {
+    "description": "mealPlanSnack"
+  },
+  "mealPlanGenerate": "Generate preview",
+  "@mealPlanGenerate": {
+    "description": "mealPlanGenerate"
+  },
+  "mealPlanRegenerate": "Generate again",
+  "@mealPlanRegenerate": {
+    "description": "mealPlanRegenerate"
+  },
+  "mealPlanGenerating": "Generating preview…",
+  "@mealPlanGenerating": {
+    "description": "mealPlanGenerating"
+  },
+  "mealPlanDailyTotals": "Daily nutrition",
+  "@mealPlanDailyTotals": {
+    "description": "mealPlanDailyTotals"
+  },
+  "mealPlanOpenRecipe": "Open recipe",
+  "@mealPlanOpenRecipe": {
+    "description": "mealPlanOpenRecipe"
+  },
+  "mealPlanPortions": "Planned servings {servings}",
+  "@mealPlanPortions": {
+    "description": "mealPlanPortions",
+    "placeholders": {
+      "servings": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPlanWithinTolerance": "Within ±{tolerance}% of your targets",
+  "@mealPlanWithinTolerance": {
+    "description": "mealPlanWithinTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanOutsideTolerance": "Outside the ±{tolerance}% target range",
+  "@mealPlanOutsideTolerance": {
+    "description": "mealPlanOutsideTolerance",
+    "placeholders": {
+      "tolerance": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPlanAuthentication": "Sign in again to generate a meal plan preview.",
+  "@mealPlanAuthentication": {
+    "description": "mealPlanAuthentication"
+  },
+  "mealPlanNoEligibleRecipes": "There aren't enough suitable saved recipes for these meals and your profile. Change the meals or add suitable recipes.",
+  "@mealPlanNoEligibleRecipes": {
+    "description": "mealPlanNoEligibleRecipes"
+  },
+  "mealPlanInProgress": "The preview is still being generated. Try again in a few seconds.",
+  "@mealPlanInProgress": {
+    "description": "mealPlanInProgress"
+  },
+  "mealPlanInputsChanged": "Generate a new preview with your current recipes and profile.",
+  "@mealPlanInputsChanged": {
+    "description": "mealPlanInputsChanged"
+  },
+  "mealPlanProviderUnavailable": "The preview service is temporarily unavailable. Try again later.",
+  "@mealPlanProviderUnavailable": {
+    "description": "mealPlanProviderUnavailable"
   },
   "shoppingList": "Shopping List",
   "@shoppingList": {

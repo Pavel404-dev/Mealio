@@ -44,6 +44,25 @@ class RecipeRepository {
     },
   );
 
+  Future<Recipe> getRecipe({
+    required String recipeId,
+    required int lifetime,
+    CancelToken? cancelToken,
+  }) => _read(
+    '/recipes/${Uri.encodeComponent(recipeId)}',
+    lifetime: lifetime,
+    cancelToken: cancelToken,
+    notFound: RecipeFailureType.unavailable,
+    parse: (data) {
+      final recipe = Recipe.fromJson(data);
+      if (recipe.id != recipeId ||
+          recipe.ingredients.any((item) => item.recipeId != recipeId)) {
+        throw const FormatException('Mismatched recipe response');
+      }
+      return recipe;
+    },
+  );
+
   /// One read attempt owns a single lifetime and cancellation token, including
   /// catalog lookups after awaiting the recipe. Names are not a paginated search.
   Future<RecipeDetail> getRecipeDetail({
@@ -51,19 +70,10 @@ class RecipeRepository {
     required int lifetime,
     CancelToken? cancelToken,
   }) async {
-    final recipe = await _read(
-      '/recipes/${Uri.encodeComponent(recipeId)}',
+    final recipe = await getRecipe(
+      recipeId: recipeId,
       lifetime: lifetime,
       cancelToken: cancelToken,
-      notFound: RecipeFailureType.unavailable,
-      parse: (data) {
-        final recipe = Recipe.fromJson(data);
-        if (recipe.id != recipeId ||
-            recipe.ingredients.any((item) => item.recipeId != recipeId)) {
-          throw const FormatException('Mismatched recipe response');
-        }
-        return recipe;
-      },
     );
     final ids = recipe.ingredients
         .map((item) => item.ingredientId)

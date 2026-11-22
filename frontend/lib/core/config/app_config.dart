@@ -12,6 +12,9 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:8000',
   );
 
+  String get apiV2BaseUrl =>
+      apiBaseUrl.replaceFirst(RegExp(r'/api/v1$'), '/api/v2');
+
   String get apiBaseUrl {
     final normalizedOrigin = _configuredApiOrigin.trim().replaceFirst(
       RegExp(r'/+$'),
