@@ -18,6 +18,7 @@ import '../../../helpers/locale_test_fakes.dart';
 import '../../../helpers/recipe_test_fakes.dart';
 
 const _recipeId = 'c7c69d0e-d6c4-48c6-8b0e-3e068af3e96a';
+const _secondRecipeId = 'c775f031-f980-4843-a8fb-a17e4fd86e05';
 
 class _TestConfig extends AppConfig {
   const _TestConfig();
@@ -26,7 +27,11 @@ class _TestConfig extends AppConfig {
   String get apiBaseUrl => 'http://test.local/api/v1';
 }
 
-FakeHttpResponse previewFor(RequestOptions options) {
+FakeHttpResponse previewFor(
+  RequestOptions options, {
+  String recipeId = _recipeId,
+  String calories = '103.13',
+}) {
   final payload = options.data as Map<String, Object>;
   return FakeHttpResponse(
     statusCode: 200,
@@ -34,14 +39,14 @@ FakeHttpResponse previewFor(RequestOptions options) {
       'items': [
         for (final slot in payload['meal_types']! as List<String>)
           {
-            'recipe_id': _recipeId,
+            'recipe_id': recipeId,
             'planned_date': payload['planned_date'],
             'meal_type': slot,
             'planned_servings': '1.25',
           },
       ],
       'nutrition': {
-        'total_calories': '103.13',
+        'total_calories': calories,
         'total_protein_g': '19.38',
         'total_carbs_g': '0.00',
         'total_fat_g': '2.25',
@@ -92,6 +97,30 @@ void main() {
     await tester.tap(key('meal-plan-card'));
     await tester.pumpAndSettle();
     expect(key('meal-plan-preview-screen'), findsOneWidget);
+  }
+
+  Future<void> chooseDate(WidgetTester tester, DateTime date) async {
+    final dateButton = key('meal-plan-preview-date');
+    await tester.ensureVisible(dateButton);
+    await tester.tap(dateButton);
+    await tester.pumpAndSettle();
+    final dialog = find.byType(DatePickerDialog);
+    final labels = MaterialLocalizations.of(tester.element(dialog));
+    await tester.tap(find.byTooltip(labels.inputDateModeButtonLabel));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(of: dialog, matching: find.byType(TextField)),
+      labels.formatCompactDate(date),
+    );
+    await tester.tap(find.text(labels.okButtonLabel));
+    await tester.pumpAndSettle();
+    expect(find.text(labels.formatFullDate(date)), findsOneWidget);
+  }
+
+  Future<void> submitPreview(WidgetTester tester) async {
+    await tester.ensureVisible(generate);
+    await tester.tap(generate);
+    await tester.pumpAndSettle();
   }
 
   testWidgets(
@@ -195,6 +224,120 @@ void main() {
     );
   });
 
+  testWidgets('restores each date with its own meals, recipe and totals', (
+    tester,
+  ) async {
+    final first = DateTime(2026, 11, 26);
+    final second = DateTime(2026, 11, 27);
+    final lunch = key('meal-plan-slot-lunch');
+    final dinner = key('meal-plan-slot-dinner');
+    adapter.responseHandler = (request) {
+      if (request.method == 'GET') {
+        final id = request.uri.pathSegments.last;
+        return FakeHttpResponse(
+          statusCode: 200,
+          body: recipeJson(
+            id: id,
+            title: id == _recipeId ? 'First day recipe' : 'Second day recipe',
+          ),
+        );
+      }
+      return request.data['planned_date'] == '2026-11-27'
+          ? previewFor(request, recipeId: _secondRecipeId, calories: '206.25')
+          : previewFor(request);
+    };
+    await pumpApp(tester);
+    await openPreview(tester);
+
+    await chooseDate(tester, first);
+    await tester.tap(key('meal-plan-slot-breakfast'));
+    await tester.pump();
+    await tester.tap(dinner);
+    await tester.pump();
+    await submitPreview(tester);
+
+    await chooseDate(tester, second);
+    expect(key('meal-plan-preview-result'), findsNothing);
+    expect(tester.widget<FilterChip>(lunch).selected, isTrue);
+    await tester.tap(lunch);
+    await tester.pump();
+    await tester.tap(dinner);
+    await tester.pump();
+    await submitPreview(tester);
+
+    final posts = adapter.requests.where((request) => request.method == 'POST');
+    expect(posts.map((request) => request.data['planned_date']), [
+      '2026-11-26',
+      '2026-11-27',
+    ]);
+    expect(posts.map((request) => request.data['meal_types']), [
+      ['lunch'],
+      ['dinner'],
+    ]);
+    final requestCount = adapter.requests.length;
+
+    await chooseDate(tester, first);
+    expect(tester.widget<FilterChip>(lunch).selected, isTrue);
+    expect(tester.widget<FilterChip>(dinner).selected, isFalse);
+    expect(find.text('Calories (kcal): 103.13'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('First day recipe'), 100);
+    expect(find.text('Second day recipe'), findsNothing);
+
+    await chooseDate(tester, second);
+    expect(tester.widget<FilterChip>(lunch).selected, isFalse);
+    expect(tester.widget<FilterChip>(dinner).selected, isTrue);
+    expect(find.text('Calories (kcal): 206.25'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Second day recipe'), 100);
+    expect(find.text('First day recipe'), findsNothing);
+
+    await tester.ensureVisible(dinner);
+    await tester.tap(dinner);
+    await tester.pumpAndSettle();
+    expect(key('meal-plan-preview-result'), findsNothing);
+    await chooseDate(tester, first);
+    expect(find.text('Calories (kcal): 103.13'), findsOneWidget);
+    expect(adapter.requests, hasLength(requestCount));
+  });
+
+  testWidgets('returning to a failed date retries the original request', (
+    tester,
+  ) async {
+    final first = DateTime(2026, 11, 26);
+    adapter.responseHandler = (request) {
+      if (request.method == 'GET') {
+        return FakeHttpResponse(
+          statusCode: 200,
+          body: recipeJson(id: _recipeId, title: 'Test recipe'),
+        );
+      }
+      return adapter.requests.length == 1
+          ? const FakeHttpResponse.error(DioExceptionType.connectionError)
+          : previewFor(request);
+    };
+    await pumpApp(tester);
+    await openPreview(tester);
+    await chooseDate(tester, first);
+    await submitPreview(tester);
+    expect(find.text('Retry'), findsOneWidget);
+    final original = adapter.requests.single;
+
+    await chooseDate(tester, DateTime(2026, 11, 27));
+    expect(key('meal-plan-preview-error'), findsNothing);
+    expect(find.text('Generate preview'), findsOneWidget);
+    await chooseDate(tester, first);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(adapter.requests, hasLength(1));
+
+    await submitPreview(tester);
+    final retry = adapter.requests[1];
+    expect(retry.data, original.data);
+    expect(
+      retry.headers['Idempotency-Key'],
+      original.headers['Idempotency-Key'],
+    );
+    expect(key('meal-plan-preview-result'), findsOneWidget);
+  });
+
   testWidgets('an idempotency conflict starts a fresh preview on retry', (
     tester,
   ) async {
@@ -222,6 +365,37 @@ void main() {
     expect(key('login-screen'), findsOneWidget);
     expect(key('meal-plan-preview-screen'), findsNothing);
     expect(adapter.requests, isEmpty);
+  });
+
+  testWidgets('clears a previously viewed day across login sessions', (
+    tester,
+  ) async {
+    final first = DateTime(2026, 11, 26);
+    adapter.responseHandler = (request) => request.method == 'GET'
+        ? FakeHttpResponse(
+            statusCode: 200,
+            body: recipeJson(id: _recipeId, title: 'Test recipe'),
+          )
+        : previewFor(request);
+    await pumpApp(tester);
+    await openPreview(tester);
+    await chooseDate(tester, first);
+    await submitPreview(tester);
+    expect(key('meal-plan-preview-result'), findsOneWidget);
+    await chooseDate(tester, DateTime(2026, 11, 27));
+    final requestCount = adapter.requests.length;
+
+    final auth = container.read(authControllerProvider.notifier);
+    await auth.logout();
+    await tester.pumpAndSettle();
+    expect(key('login-screen'), findsOneWidget);
+    await auth.login(email: testAuthUser.email, password: 'test-only-password');
+    await tester.pumpAndSettle();
+    await openPreview(tester);
+    await chooseDate(tester, first);
+    expect(key('meal-plan-preview-result'), findsNothing);
+    expect(find.text('Generate preview'), findsOneWidget);
+    expect(adapter.requests, hasLength(requestCount));
   });
 
   testWidgets(
