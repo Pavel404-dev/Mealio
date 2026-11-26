@@ -36,18 +36,30 @@ class _PreviewForm extends ConsumerStatefulWidget {
 }
 
 class _PreviewFormState extends ConsumerState<_PreviewForm> {
-  late final MealPlanPreviewController _controller;
+  final _days = <DateTime, _DayPreview>{};
   DateTime _date = DateUtils.dateOnly(DateTime.now());
-  final _slots = {
-    MealPlanSlot.breakfast,
-    MealPlanSlot.lunch,
-    MealPlanSlot.dinner,
-  };
+
+  MealPlanPreviewController get _controller => _days[_date]!.controller;
+  Set<MealPlanSlot> get _slots => _days[_date]!.slots;
 
   @override
   void initState() {
     super.initState();
-    _controller = MealPlanPreviewController(
+    _days[_date] = _createDay(const {
+      MealPlanSlot.breakfast,
+      MealPlanSlot.lunch,
+      MealPlanSlot.dinner,
+    });
+    ref.listenManual(authControllerProvider, (_, _) {
+      for (final day in _days.values) {
+        day.controller.checkOwnership();
+      }
+    });
+  }
+
+  _DayPreview _createDay(Set<MealPlanSlot> slots) => _DayPreview(
+    slots: Set.of(slots),
+    controller: MealPlanPreviewController(
       repository: ref.read(mealPlanPreviewRepositoryProvider),
       recipes: ref.read(recipeRepositoryProvider),
       storage: ref.read(secureStorageServiceProvider),
@@ -55,20 +67,19 @@ class _PreviewFormState extends ConsumerState<_PreviewForm> {
         final auth = ref.read(authControllerProvider);
         return !auth.isLoading && auth.asData?.value.isAuthenticated == true;
       },
-    );
-    ref.listenManual(authControllerProvider, (_, _) {
-      _controller.checkOwnership();
-    });
-  }
+    ),
+  );
 
   @override
   void dispose() {
-    _controller.dispose();
+    for (final day in _days.values) {
+      day.controller.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _selectDate() async {
-    if (_controller.loading) return;
+    if (!_controller.isCurrent || _controller.loading) return;
     final date = await showDatePicker(
       context: context,
       initialDate: _date,
@@ -76,13 +87,17 @@ class _PreviewFormState extends ConsumerState<_PreviewForm> {
       lastDate: DateTime(9999, 12, 31),
     );
     if (!mounted ||
+        !_controller.isCurrent ||
         _controller.loading ||
         date == null ||
         DateUtils.isSameDay(date, _date)) {
       return;
     }
-    setState(() => _date = date);
-    _controller.reset();
+    final nextDate = DateUtils.dateOnly(date);
+    setState(() {
+      _days.putIfAbsent(nextDate, () => _createDay(_slots));
+      _date = nextDate;
+    });
   }
 
   void _generate() {
@@ -212,6 +227,13 @@ class _PreviewFormState extends ConsumerState<_PreviewForm> {
       );
     },
   );
+}
+
+class _DayPreview {
+  const _DayPreview({required this.slots, required this.controller});
+
+  final Set<MealPlanSlot> slots;
+  final MealPlanPreviewController controller;
 }
 
 class _PreviewResult extends StatelessWidget {
