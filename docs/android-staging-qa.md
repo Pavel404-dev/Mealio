@@ -29,9 +29,9 @@ Maestro drives the installed APK through login and Meal Plan. The calendar
 scenario generates lunch (82.5 kcal) and dinner (206.25 kcal) for different
 dates. The runner removes the ADB forwarding before Maestro enables airplane
 mode and verifies both previews through calendar navigation. Explicit
-generation must show **Retry**. The runner restores connectivity and waits
-for the health endpoint to respond from Android. Maestro then presses
-**Retry** and verifies the restored dinner.
+generation must show **Retry**. The runner restores ADB forwarding and checks
+that FastAPI is ready. Maestro presses **Retry** and verifies the restored
+dinner through the app.
 
 Download `mealio-android-ui-<sha>` from the Actions run for JUnit reports,
 screenshots, the source SHA, and the APK checksum. Record the result as

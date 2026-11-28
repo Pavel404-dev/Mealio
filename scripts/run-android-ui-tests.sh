@@ -41,6 +41,7 @@ cleanup() {
   local status=$?
   if (( status != 0 )); then
     "${device[@]}" exec-out screencap -p > "$reports/failure.png" || true
+    "${device[@]}" reverse --list > "$reports/adb-reverse.txt" || true
     tail -n 50 "$reports/backend.log" >&2
   fi
   "${device[@]}" shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
@@ -50,21 +51,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-wait_for_device_network() {
-  local response
+wait_for_backend() {
   for ((attempt = 0; attempt < 25; attempt++)); do
     if ! kill -0 "$backend_pid" 2>/dev/null; then
       echo "Android QA backend stopped before it was ready." >&2
       return 1
     fi
-    if response=$(timeout 4 "${device[@]}" shell \
-      'printf "GET /health/db HTTP/1.0\r\n\r\n" | toybox nc -w 2 127.0.0.1 8120' 2>/dev/null) \
-      && [[ "$response" == "HTTP/1.1 200 "* ]]; then
+    if curl --fail --silent --max-time 2 http://127.0.0.1:8120/health/db >/dev/null; then
       return 0
     fi
     sleep 1
   done
-  echo "The emulator did not reach the Android QA backend." >&2
+  echo "Android QA backend did not become ready." >&2
   return 1
 }
 
@@ -77,10 +75,10 @@ run_flow() {
     "${date_arguments[@]}" ".maestro/$flow.yaml"
 }
 
+wait_for_backend
 "${device[@]}" shell cmd connectivity airplane-mode disable
 "${device[@]}" reverse tcp:8120 tcp:8120
 "${device[@]}" install -r "$apk"
-wait_for_device_network
 run_flow meal-plan-calendar
 
 # ADB forwarding stays active in airplane mode until the runner removes it.
@@ -89,5 +87,5 @@ run_flow meal-plan-offline
 
 "${device[@]}" shell cmd connectivity airplane-mode disable
 "${device[@]}" reverse tcp:8120 tcp:8120
-wait_for_device_network
+wait_for_backend
 run_flow meal-plan-retry
