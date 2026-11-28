@@ -1,5 +1,5 @@
 appId: com.mealio.app
-name: Meal Plan remembers each date offline
+name: Meal Plan generates a preview for each date
 ---
 - launchApp:
     clearState: true
@@ -52,38 +52,3 @@ name: Meal Plan remembers each date offline
     env:
       CALORIES: "206.25"
       RECIPE: "QA Dinner Bowl"
-
-- setAirplaneMode: enabled
-- runFlow:
-    file: helpers/choose-date.yaml
-    env:
-      DATE_INPUT: "${LUNCH_DATE_INPUT}"
-      DATE_LABEL: "${LUNCH_DATE_LABEL}"
-- runFlow:
-    file: helpers/assert-preview.yaml
-    env:
-      CALORIES: "82.5"
-      RECIPE: "QA Lunch Bowl"
-- takeScreenshot: "01-lunch-offline"
-- runFlow:
-    file: helpers/choose-date.yaml
-    env:
-      DATE_INPUT: "${DINNER_DATE_INPUT}"
-      DATE_LABEL: "${DINNER_DATE_LABEL}"
-- runFlow:
-    file: helpers/assert-preview.yaml
-    env:
-      CALORIES: "206.25"
-      RECIPE: "QA Dinner Bowl"
-- takeScreenshot: "02-dinner-offline"
-
-- scrollUntilVisible:
-    element:
-      text: "Generate again"
-    direction: UP
-- tapOn: "Generate again"
-- extendedWaitUntil:
-    visible: "Unable to connect to the server. Please try again."
-    timeout: 45000
-- assertVisible: "Retry"
-- takeScreenshot: "03-offline-error"

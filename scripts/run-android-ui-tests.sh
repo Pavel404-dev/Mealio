@@ -33,7 +33,7 @@ date_arguments=(
 (
   cd backend
   exec python -m uvicorn tests.android_qa:create_app --factory \
-    --host 127.0.0.1 --port 8120
+    --host 127.0.0.1 --port 8120 --timeout-keep-alive 0
 ) > "$reports/backend.log" 2>&1 &
 backend_pid=$!
 
@@ -44,6 +44,7 @@ cleanup() {
     tail -n 50 "$reports/backend.log" >&2
   fi
   "${device[@]}" shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+  "${device[@]}" reverse --remove tcp:8120 >/dev/null 2>&1 || true
   kill "$backend_pid" 2>/dev/null || true
   wait "$backend_pid" 2>/dev/null || true
 }
@@ -57,7 +58,7 @@ wait_for_device_network() {
       return 1
     fi
     if response=$(timeout 4 "${device[@]}" shell \
-      'printf "GET /health/db HTTP/1.0\r\n\r\n" | toybox nc -w 2 10.0.2.2 8120' 2>/dev/null) \
+      'printf "GET /health/db HTTP/1.0\r\n\r\n" | toybox nc -w 2 127.0.0.1 8120' 2>/dev/null) \
       && [[ "$response" == "HTTP/1.1 200 "* ]]; then
       return 0
     fi
@@ -77,11 +78,16 @@ run_flow() {
 }
 
 "${device[@]}" shell cmd connectivity airplane-mode disable
-"${device[@]}" shell cmd wifi connect-network AndroidWifi open
+"${device[@]}" reverse tcp:8120 tcp:8120
 "${device[@]}" install -r "$apk"
 wait_for_device_network
 run_flow meal-plan-calendar
 
+# ADB forwarding stays active in airplane mode until the runner removes it.
+"${device[@]}" reverse --remove tcp:8120
+run_flow meal-plan-offline
+
 "${device[@]}" shell cmd connectivity airplane-mode disable
+"${device[@]}" reverse tcp:8120 tcp:8120
 wait_for_device_network
 run_flow meal-plan-retry

@@ -112,7 +112,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           flutter pub get --enforce-lockfile
           flutter build apk --debug --target-platform=android-x64 --no-pub \
-            --dart-define=API_BASE_URL=http://10.0.2.2:8120
+            --dart-define=API_BASE_URL=http://127.0.0.1:8120
           git diff --exit-code HEAD -- pubspec.lock
           cd android
           ./gradlew --stop
@@ -134,4 +134,5 @@ jobs:
         with:
           name: mealio-android-ui-${{ github.sha }}
           path: ${{ runner.temp }}/android-ui/
+          include-hidden-files: true
           retention-days: 7

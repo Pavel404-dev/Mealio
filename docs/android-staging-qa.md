@@ -21,16 +21,17 @@ Explain skipped, blocked or inapplicable checks and the next action.
 [Android UI Tests](../.github/workflows/android-ui-tests.yml) runs on PRs to
 `main` and pushes to `main` that touch the app, backend, or test workflow. It
 builds a debug APK from the checked-out SHA with an API origin of
-`http://10.0.2.2:8120`. That address reaches the runner from its Android 15
-emulator. The job starts FastAPI with a fresh PostgreSQL database, a synthetic
+`http://127.0.0.1:8120`. ADB forwards that emulator port to FastAPI on the
+runner. The job starts FastAPI with a fresh PostgreSQL database, a synthetic
 account, two saved recipes, and a deterministic meal-plan provider.
 
 Maestro drives the installed APK through login and Meal Plan. The calendar
 scenario generates lunch (82.5 kcal) and dinner (206.25 kcal) for different
-dates, enables airplane mode, and verifies both previews through calendar
-navigation. An explicit generation in airplane mode must show **Retry**.
-The runner waits for the health endpoint to respond from Android before the
-second flow presses **Retry** and verifies the restored dinner.
+dates. The runner removes the ADB forwarding before Maestro enables airplane
+mode and verifies both previews through calendar navigation. Explicit
+generation must show **Retry**. The runner restores connectivity and waits
+for the health endpoint to respond from Android. Maestro then presses
+**Retry** and verifies the restored dinner.
 
 Download `mealio-android-ui-<sha>` from the Actions run for JUnit reports,
 screenshots, the source SHA, and the APK checksum. Record the result as
@@ -57,7 +58,9 @@ backend with a fresh migrated database before the interactive session.
 
 ```bash
 cd backend
-python -m uvicorn tests.android_qa:create_app --factory --host 127.0.0.1 --port 8120
+adb -e reverse tcp:8120 tcp:8120
+python -m uvicorn tests.android_qa:create_app --factory \
+  --host 127.0.0.1 --port 8120 --timeout-keep-alive 0
 ```
 
 ## Build contract
