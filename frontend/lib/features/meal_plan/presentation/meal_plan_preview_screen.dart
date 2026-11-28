@@ -140,12 +140,15 @@ class _PreviewFormState extends ConsumerState<_PreviewForm> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    key: const Key('meal-plan-preview-date'),
-                    onPressed: loading ? null : _selectDate,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    label: Text(
-                      MaterialLocalizations.of(context).formatFullDate(_date),
+                  Semantics(
+                    identifier: 'meal-plan-preview-date',
+                    child: OutlinedButton.icon(
+                      key: const Key('meal-plan-preview-date'),
+                      onPressed: loading ? null : _selectDate,
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      label: Text(
+                        MaterialLocalizations.of(context).formatFullDate(_date),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),

@@ -227,8 +227,12 @@ void main() {
   testWidgets('restores each date with its own meals, recipe and totals', (
     tester,
   ) async {
-    final first = DateTime(2026, 11, 26);
-    final second = DateTime(2026, 11, 27);
+    final first = DateUtils.addDaysToDate(DateTime.now(), 2);
+    final second = DateUtils.addDaysToDate(first, 1);
+    final dates = [
+      first.toIso8601String().split('T').first,
+      second.toIso8601String().split('T').first,
+    ];
     final lunch = key('meal-plan-slot-lunch');
     final dinner = key('meal-plan-slot-dinner');
     adapter.responseHandler = (request) {
@@ -242,7 +246,7 @@ void main() {
           ),
         );
       }
-      return request.data['planned_date'] == '2026-11-27'
+      return request.data['planned_date'] == dates.last
           ? previewFor(request, recipeId: _secondRecipeId, calories: '206.25')
           : previewFor(request);
     };
@@ -266,10 +270,7 @@ void main() {
     await submitPreview(tester);
 
     final posts = adapter.requests.where((request) => request.method == 'POST');
-    expect(posts.map((request) => request.data['planned_date']), [
-      '2026-11-26',
-      '2026-11-27',
-    ]);
+    expect(posts.map((request) => request.data['planned_date']), dates);
     expect(posts.map((request) => request.data['meal_types']), [
       ['lunch'],
       ['dinner'],
