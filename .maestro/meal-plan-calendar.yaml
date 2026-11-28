@@ -1,0 +1,89 @@
+appId: com.mealio.app
+name: Meal Plan remembers each date offline
+---
+- launchApp:
+    clearState: true
+- tapOn: "Email"
+- inputText: "android-qa@example.com"
+- tapOn: "Password"
+- inputText: "Mealio-Android-QA-123"
+- hideKeyboard
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: ".*Android QA.*"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "meal-plan-card"
+    direction: DOWN
+- tapOn:
+    id: "meal-plan-card"
+- runFlow:
+    file: helpers/choose-date.yaml
+    env:
+      DATE_INPUT: "${LUNCH_DATE_INPUT}"
+      DATE_LABEL: "${LUNCH_DATE_LABEL}"
+- tapOn: "Breakfast"
+- tapOn: "Dinner"
+- tapOn: "Generate preview"
+- extendedWaitUntil:
+    visible: "Generate again"
+    timeout: 20000
+- runFlow:
+    file: helpers/assert-preview.yaml
+    env:
+      CALORIES: "82.5"
+      RECIPE: "QA Lunch Bowl"
+
+- runFlow:
+    file: helpers/choose-date.yaml
+    env:
+      DATE_INPUT: "${DINNER_DATE_INPUT}"
+      DATE_LABEL: "${DINNER_DATE_LABEL}"
+- assertNotVisible: '(?s)(?:.*\n)?Daily nutrition(?:\n.*)?'
+- tapOn: "Lunch"
+- tapOn: "Dinner"
+- tapOn: "Generate preview"
+- extendedWaitUntil:
+    visible: "Generate again"
+    timeout: 20000
+- runFlow:
+    file: helpers/assert-preview.yaml
+    env:
+      CALORIES: "206.25"
+      RECIPE: "QA Dinner Bowl"
+
+- setAirplaneMode: enabled
+- runFlow:
+    file: helpers/choose-date.yaml
+    env:
+      DATE_INPUT: "${LUNCH_DATE_INPUT}"
+      DATE_LABEL: "${LUNCH_DATE_LABEL}"
+- runFlow:
+    file: helpers/assert-preview.yaml
+    env:
+      CALORIES: "82.5"
+      RECIPE: "QA Lunch Bowl"
+- takeScreenshot: "01-lunch-offline"
+- runFlow:
+    file: helpers/choose-date.yaml
+    env:
+      DATE_INPUT: "${DINNER_DATE_INPUT}"
+      DATE_LABEL: "${DINNER_DATE_LABEL}"
+- runFlow:
+    file: helpers/assert-preview.yaml
+    env:
+      CALORIES: "206.25"
+      RECIPE: "QA Dinner Bowl"
+- takeScreenshot: "02-dinner-offline"
+
+- scrollUntilVisible:
+    element:
+      text: "Generate again"
+    direction: UP
+- tapOn: "Generate again"
+- extendedWaitUntil:
+    visible: "Unable to connect to the server. Please try again."
+    timeout: 45000
+- assertVisible: "Retry"
+- takeScreenshot: "03-offline-error"

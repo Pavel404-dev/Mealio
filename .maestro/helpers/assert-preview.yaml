@@ -1,0 +1,9 @@
+appId: com.mealio.app
+---
+- assertVisible: '(?s)(?:.*\n)?Daily nutrition(?:\n.*)?'
+- assertVisible: '(?s)(?:.*\n)?Calories \(kcal\): \Q${CALORIES}\E(?:\n.*)?'
+- scrollUntilVisible:
+    element:
+      text: "(?s).*${RECIPE}.*"
+    direction: DOWN
+- assertVisible: "(?s).*${RECIPE}.*"

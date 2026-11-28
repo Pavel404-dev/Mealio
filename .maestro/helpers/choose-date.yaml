@@ -1,0 +1,14 @@
+appId: com.mealio.app
+---
+- scrollUntilVisible:
+    element:
+      id: "meal-plan-preview-date"
+    direction: UP
+- tapOn:
+    id: "meal-plan-preview-date"
+- tapOn: "Switch to input"
+- eraseText: 20
+- inputText: "${DATE_INPUT}"
+- hideKeyboard
+- tapOn: "OK"
+- assertVisible: "${DATE_LABEL}"

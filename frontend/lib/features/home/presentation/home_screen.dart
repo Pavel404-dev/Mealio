@@ -137,13 +137,16 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => _showPlaceholder(context, _HomeFeature.aiRecipe),
             ),
             const SizedBox(height: 14),
-            _FeatureCard(
-              key: const Key('meal-plan-card'),
-              title: context.l10n.mealPlan,
-              description: context.l10n.mealPlanDescription,
-              icon: Icons.calendar_month_outlined,
-              accentColor: const Color(0xFFB7C9E2),
-              onTap: () => context.push('/meal-plan'),
+            Semantics(
+              identifier: 'meal-plan-card',
+              child: _FeatureCard(
+                key: const Key('meal-plan-card'),
+                title: context.l10n.mealPlan,
+                description: context.l10n.mealPlanDescription,
+                icon: Icons.calendar_month_outlined,
+                accentColor: const Color(0xFFB7C9E2),
+                onTap: () => context.push('/meal-plan'),
+              ),
             ),
             const SizedBox(height: 14),
             _FeatureCard(

@@ -16,6 +16,50 @@ build without installation leaves device QA NOT_RUN. Record the backend's own
 observed SHA/as-of independently; do not infer it from the APK or merge SHA.
 Explain skipped, blocked or inapplicable checks and the next action.
 
+## Android UI tests on an emulator
+
+[Android UI Tests](../.github/workflows/android-ui-tests.yml) runs on PRs to
+`main` and pushes to `main` that touch the app, backend, or test workflow. It
+builds a debug APK from the checked-out SHA with an API origin of
+`http://10.0.2.2:8120`. That address reaches the runner from its Android 15
+emulator. The job starts FastAPI with a fresh PostgreSQL database, a synthetic
+account, two saved recipes, and a deterministic meal-plan provider.
+
+Maestro drives the installed APK through login and Meal Plan. The calendar
+scenario generates lunch (82.5 kcal) and dinner (206.25 kcal) for different
+dates, enables airplane mode, and verifies both previews through calendar
+navigation. An explicit generation in airplane mode must show **Retry**.
+The runner waits for the health endpoint to respond from Android before the
+second flow presses **Retry** and verifies the restored dinner.
+
+Download `mealio-android-ui-<sha>` from the Actions run for JUnit reports,
+screenshots, the source SHA, and the APK checksum. Record the result as
+**Android emulator UI QA** against that SHA.
+
+To repeat the flow on Linux, use a fresh English (US) Android 15 emulator and a
+fresh loopback `mealio_android_qa` PostgreSQL database with the settings and
+migrations in the workflow. Build the emulator APK with the command in the
+workflow. Run the following from the repository root with Maestro, ADB, and the
+backend's Python environment on `PATH`.
+
+```bash
+bash scripts/run-android-ui-tests.sh \
+  frontend/build/app/outputs/flutter-apk/app-debug.apk \
+  "$(mktemp -d /tmp/mealio-android-ui.XXXXXX)"
+```
+
+For interactive exploration, connect Codex to the local emulator through
+[Maestro MCP](https://docs.maestro.dev/get-started/maestro-mcp). With Maestro
+installed on the same machine, `codex mcp add maestro -- maestro mcp` registers
+the server. The agent can inspect the UI, navigate the APK, and capture a
+screenshot. Install the emulator APK on the disposable device and start the QA
+backend with a fresh migrated database before the interactive session.
+
+```bash
+cd backend
+python -m uvicorn tests.android_qa:create_app --factory --host 127.0.0.1 --port 8120
+```
+
 ## Build contract
 
 The workflow runs automatically when a push to `main` changes `frontend/**`,

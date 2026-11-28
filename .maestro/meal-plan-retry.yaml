@@ -1,0 +1,15 @@
+appId: com.mealio.app
+name: Meal Plan Retry restores the current date
+---
+- assertVisible: "${DINNER_DATE_LABEL}"
+- tapOn: "Retry"
+- extendedWaitUntil:
+    visible: "Generate again"
+    timeout: 20000
+- assertNotVisible: "Retry"
+- runFlow:
+    file: helpers/assert-preview.yaml
+    env:
+      CALORIES: "206.25"
+      RECIPE: "QA Dinner Bowl"
+- takeScreenshot: "04-retry-restored"
